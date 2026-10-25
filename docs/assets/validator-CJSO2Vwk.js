@@ -1,0 +1,1 @@
+import{cn as e}from"./use-global-config-B_0uTrMs.js";var t=t=>[``,...e].includes(t);export{t};
