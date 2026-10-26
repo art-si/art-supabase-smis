@@ -1,1 +1,0 @@
-import{H as e,S as t,p as n}from"./runtime-core.esm-bundler-jxzlpws6.js";import{t as r}from"./qualification-catalog-page-DSHt5pYw.js";var i=t({name:`SmisPermittedOperationItem`,__name:`index`,setup(t){return(t,i)=>(e(),n(r,{"catalog-type":`permitted_operation_item`}))}});export{i as default};
