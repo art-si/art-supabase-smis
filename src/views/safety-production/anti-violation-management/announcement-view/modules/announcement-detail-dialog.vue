@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+  import { resolveHttpUrl } from '@/utils/http-url'
   import DOMPurify from 'dompurify'
   import dayjs from 'dayjs'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -71,14 +72,8 @@
       return `指定人员 ${announcement.value.audienceEmployees.length} 人`
     return `指定组织 ${announcement.value.audienceOrganizations.length} 个`
   })
-  const safeAttachmentUrl = (value: string): string => {
-    try {
-      const url = new URL(value, window.location.origin)
-      return ['http:', 'https:'].includes(url.protocol) ? url.href : '#'
-    } catch {
-      return '#'
-    }
-  }
+  const safeAttachmentUrl = (value: string): string =>
+    resolveHttpUrl(value, window.location.origin) ?? '#'
   const attachmentName = (url: string, index: number): string => {
     try {
       const name = decodeURIComponent(

@@ -1,7 +1,7 @@
 <template>
   <ArtSectionCard
     :show-scrollbar="false"
-    class="risk-organization"
+    class="risk-organization smis-category-navigator"
     title="组织部门"
     subtitle="数据来自系统管理 / 部门管理"
     :loading="loading"
@@ -44,7 +44,7 @@
           ref="treeRef"
           :data="data"
           :props="treeProps"
-          :filter-node-method="filterNode"
+          :filter-node-method="matchesOrganizationNodeKeyword"
           :default-expanded-keys="defaultExpandedKeys"
           node-key="id"
           highlight-current
@@ -52,8 +52,10 @@
           @node-click="handleNodeClick"
         >
           <template #default="{ data: node }">
-            <div class="risk-organization__node">
-              <span aria-hidden="true"><ArtSvgIcon :icon="getOrganizationIcon(node)" /></span>
+            <div class="risk-organization__node smis-category-navigator__node">
+              <span aria-hidden="true"
+                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
+              /></span>
               <span>
                 <strong :title="node.organizationName">{{ node.organizationName }}</strong>
                 <small :title="node.organizationCode">{{ node.organizationCode }}</small>
@@ -81,9 +83,14 @@
 </template>
 
 <script setup lang="ts">
+  import '../../../components/category-navigator.scss'
+  import {
+    getOrganizationTypeIcon,
+    matchesOrganizationNodeKeyword
+  } from '@/utils/organization-display'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import { computed, nextTick, ref, watch } from 'vue'
-  import type { ElTree, TreeNodeData } from 'element-plus'
+  import type { ElTree } from 'element-plus'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
@@ -109,23 +116,6 @@
     props.data.map((item) => item.id).filter((id): id is string => Boolean(id))
   )
 
-  const filterNode = (value: string, data: TreeNodeData): boolean => {
-    const organization = data as Organization
-    const normalized = value.trim().toLocaleLowerCase('zh-CN')
-    if (!normalized) return true
-    return [organization.organizationName, organization.organizationCode].some((field) =>
-      String(field ?? '')
-        .toLocaleLowerCase('zh-CN')
-        .includes(normalized)
-    )
-  }
-  const getOrganizationIcon = (organization: Organization): string =>
-    ({
-      company: 'ri:building-4-line',
-      division: 'ri:git-branch-line',
-      department: 'ri:team-line',
-      team: 'ri:group-2-line'
-    })[organization.organizationType]
   const handleNodeClick = (organization: Organization): void => {
     if (organization.id) emit('select', organization.id)
   }
@@ -147,6 +137,8 @@
 
 <style scoped lang="scss">
   .risk-organization {
+    --smis-category-node-min-height: 48px;
+
     height: 100%;
 
     :deep(.art-section-card__body),
@@ -214,50 +206,6 @@
     :deep(.el-tree) {
       min-width: 100%;
       background: transparent;
-    }
-
-    :deep(.el-tree-node__content) {
-      min-height: 48px;
-      margin-bottom: 2px;
-      border-radius: var(--el-border-radius-base);
-    }
-
-    :deep(.el-tree-node.is-current > .el-tree-node__content) {
-      background: color-mix(in srgb, var(--theme-color) 10%, var(--default-box-color));
-      box-shadow: inset 3px 0 0 var(--theme-color);
-    }
-
-    &__node {
-      display: grid;
-      flex: 1;
-      grid-template-columns: 20px minmax(0, 1fr) 18px;
-      gap: 7px;
-      align-items: center;
-      min-width: 0;
-      padding-right: 8px;
-
-      > span:nth-child(2) {
-        display: grid;
-        min-width: 0;
-      }
-
-      strong,
-      small {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      strong {
-        font-size: 13px;
-        color: var(--el-text-color-primary);
-      }
-
-      small {
-        margin-top: 1px;
-        font-size: 10px;
-        color: var(--el-text-color-secondary);
-      }
     }
 
     &__check {

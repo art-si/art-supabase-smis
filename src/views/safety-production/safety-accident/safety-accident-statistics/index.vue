@@ -139,6 +139,7 @@
   } from '@/components/business/business-workspace-header/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
+    createEmptySafetyAccidentStatistics,
     fetchSafetyAccidentStatistics,
     type SmisSafetyAccidentOrganizationStat,
     type SmisSafetyAccidentStatisticsSearchParams,
@@ -159,14 +160,6 @@
     ],
     organizationId: undefined
   })
-  const emptyData = (): SmisSafetyAccidentStatisticsResult => ({
-    overview: { total: 0, currentYear: 0, highSeverity: 0, affectedPeople: 0 },
-    trend: [],
-    levels: [],
-    categories: [],
-    organizations: [],
-    organizationOptions: []
-  })
   const query = reactive<StatisticsQuery>(initialQuery())
   const request = useAsyncState(
     async (
@@ -180,7 +173,7 @@
           : request.state.value.organizationOptions
       }
     },
-    emptyData(),
+    createEmptySafetyAccidentStatistics(),
     { immediate: false, resetOnExecute: false, onError: () => undefined }
   )
   const state = reactive({

@@ -69,7 +69,9 @@
             <div
               class="tool-org-nav__node smis-organization-navigator__node smis-category-navigator__node"
             >
-              <span aria-hidden="true"><ArtSvgIcon :icon="getOrganizationIcon(node)" /></span>
+              <span aria-hidden="true"
+                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.type)"
+              /></span>
               <span>
                 <strong :title="node.name">{{ node.name }}</strong>
                 <small :title="node.code" translate="no">{{ node.code }}</small>
@@ -108,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+  import { getOrganizationTypeIcon, matchesOrganizationKeyword } from '@/utils/organization-display'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import '../../../../components/category-navigator.scss'
   import '../../../../components/organization-navigator.scss'
@@ -146,23 +149,8 @@
 
   const filterNode = (value: string, data: TreeNodeData): boolean => {
     const node = data as SmisToolScopeOption
-    const normalized = value.trim().toLocaleLowerCase('zh-CN')
-    return (
-      !normalized ||
-      [node.name, node.code].some((field) =>
-        String(field ?? '')
-          .toLocaleLowerCase('zh-CN')
-          .includes(normalized)
-      )
-    )
+    return matchesOrganizationKeyword(value, node.name, node.code)
   }
-  const getOrganizationIcon = (node: SmisToolScopeOption): string =>
-    ({
-      company: 'ri:building-4-line',
-      division: 'ri:git-branch-line',
-      department: 'ri:team-line',
-      team: 'ri:group-2-line'
-    })[node.type || ''] || 'ri:node-tree'
   const handleNodeClick = (node: SmisToolScopeOption): void => emit('select', node.id)
   const syncCurrentNode = async (): Promise<void> => {
     await nextTick()

@@ -56,7 +56,7 @@
           ref="treeRef"
           :data="data"
           :props="treeProps"
-          :filter-node-method="filterNode"
+          :filter-node-method="matchesOrganizationNodeKeyword"
           :default-expanded-keys="defaultExpandedKeys"
           node-key="id"
           highlight-current
@@ -65,7 +65,9 @@
         >
           <template #default="{ data: node }">
             <div class="organization-navigator__node">
-              <span aria-hidden="true"><ArtSvgIcon :icon="getOrganizationIcon(node)" /></span>
+              <span aria-hidden="true"
+                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
+              /></span>
               <span>
                 <strong :title="node.organizationName">{{ node.organizationName }}</strong>
                 <small :title="node.organizationCode">{{ node.organizationCode }}</small>
@@ -93,9 +95,13 @@
 </template>
 
 <script setup lang="ts">
+  import {
+    getOrganizationTypeIcon,
+    matchesOrganizationNodeKeyword
+  } from '@/utils/organization-display'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import { computed, nextTick, ref, watch } from 'vue'
-  import type { ElTree, TreeNodeData } from 'element-plus'
+  import type { ElTree } from 'element-plus'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
@@ -122,27 +128,6 @@
   const defaultExpandedKeys = computed(() =>
     props.data.map((organization) => organization.id).filter((id): id is string => Boolean(id))
   )
-
-  const filterNode = (value: string, data: TreeNodeData): boolean => {
-    const organization = data as Organization
-    const normalized = value.trim().toLocaleLowerCase('zh-CN')
-    if (!normalized) return true
-    return [organization.organizationName, organization.organizationCode].some((field) =>
-      String(field ?? '')
-        .toLocaleLowerCase('zh-CN')
-        .includes(normalized)
-    )
-  }
-
-  const getOrganizationIcon = (organization: Organization): string => {
-    const iconMap: Record<Api.SystemManage.OrganizationType, string> = {
-      company: 'ri:building-4-line',
-      division: 'ri:git-branch-line',
-      department: 'ri:team-line',
-      team: 'ri:group-2-line'
-    }
-    return iconMap[organization.organizationType]
-  }
 
   const handleNodeClick = (organization: Organization): void => {
     if (organization.id) emit('select', organization.id)

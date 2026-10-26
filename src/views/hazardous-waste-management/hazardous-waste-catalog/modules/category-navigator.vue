@@ -1,7 +1,7 @@
 <template>
   <ArtSectionCard
     :show-scrollbar="loading || Boolean(error) || !data.length"
-    class="hazardous-category-nav flex h-full min-h-0 flex-col overflow-hidden"
+    class="hazardous-category-nav smis-category-navigator flex h-full min-h-0 flex-col overflow-hidden"
     title="危废分类"
     subtitle="分类上下文与名录同步"
     :loading="loading"
@@ -67,11 +67,13 @@
           @node-click="handleNodeClick"
         >
           <template #default="{ data: node }"
-            ><div class="hazardous-category-nav__node"
+            ><div class="hazardous-category-nav__node smis-category-navigator__node"
               ><ArtSvgIcon
                 :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:price-tag-3-line'" /><span
-                ><strong>{{ node.categoryName }}</strong
-                ><small>{{ node.categoryCode }} · {{ node.catalogCount || 0 }} 项</small></span
+                ><strong :title="node.categoryName">{{ node.categoryName }}</strong
+                ><small :title="node.categoryCode"
+                  >{{ node.categoryCode }} · {{ node.catalogCount || 0 }} 项</small
+                ></span
               ><ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" /></div
           ></template>
           <template #empty>
@@ -88,6 +90,7 @@
   </ArtSectionCard>
 </template>
 <script setup lang="ts">
+  import '../../../components/category-navigator.scss'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import type { ElTree, TreeNodeData } from 'element-plus'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
@@ -189,45 +192,17 @@
       min-height: 0;
     }
 
-    :deep(.el-tree-node__content) {
-      min-height: 50px;
-      margin-bottom: 2px;
-      border-radius: var(--el-border-radius-base);
-    }
-
-    :deep(.el-tree-node.is-current > .el-tree-node__content) {
-      background: color-mix(in srgb, var(--theme-color) 10%, var(--default-box-color));
-      box-shadow: inset 3px 0 0 var(--theme-color);
-    }
-
     &__node {
-      display: grid;
-      flex: 1;
-      grid-template-columns: 20px minmax(0, 1fr) 18px;
-      gap: 7px;
-      align-items: center;
-      min-width: 0;
-      padding-right: 8px;
-
       > svg {
         color: var(--theme-color);
       }
 
-      span {
-        display: grid;
-        min-width: 0;
-      }
-
-      strong,
-      small {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      strong {
+        font-size: inherit;
       }
 
       small {
-        font-size: 10px;
-        color: var(--el-text-color-secondary);
+        margin-top: 0;
       }
     }
   }

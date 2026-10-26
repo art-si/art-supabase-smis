@@ -336,6 +336,7 @@ export {
   deleteAccidentReports,
   deleteHistoricalAccidentCases,
   deleteWorkInjuryDeclarations,
+  createEmptySafetyAccidentStatistics,
   fetchAccidentAnalysisList,
   fetchAccidentEmployeeCandidates,
   fetchAccidentReportList,

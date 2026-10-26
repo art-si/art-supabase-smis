@@ -107,7 +107,12 @@
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import dayjs from 'dayjs'
   import { ElButton, ElInput, ElInputNumber, type FormRules } from 'element-plus'
-  import type { EmployeeIntegrationItem } from '@/api/integration/employees'
+  import {
+    createIssuanceEmployeeSnapshot,
+    createIssuanceRecordEditState,
+    type IssuanceRecordFormModel,
+    type IssuanceRecordSelectionState
+  } from '../../../issuance-record-model'
   import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtTableMultipleSelect from '@/components/core/forms/art-data-select/table-multiple.vue'
@@ -136,25 +141,6 @@
     row?: SmisPpeIssuanceRecord
   }
 
-  interface FormModel {
-    id?: string
-    issuanceNo: string
-    employeeId?: string
-    warehouseId?: string
-    issuerEmployeeId?: string
-    issueDate: string
-    remark: string
-    items: SmisPpeIssuanceRecordItem[]
-  }
-
-  interface SelectionState {
-    employee: EmployeeIntegrationItem[]
-    issuer: EmployeeIntegrationItem[]
-    warehouse: SmisStorageLocation[]
-    materialIds: string[]
-    materials: SmisMaterial[]
-  }
-
   const emit = defineEmits<{ success: [] }>()
   const dialogRef = ref<ArtDialogExpose<OpenData>>()
   const formRef = ref<{ validate: () => Promise<boolean>; clearValidate: () => void }>()
@@ -162,7 +148,7 @@
   const userStore = useUserStore()
   const { getUserInfo } = storeToRefs(userStore)
 
-  const createInitialForm = (): FormModel => ({
+  const createInitialForm = (): IssuanceRecordFormModel => ({
     id: undefined,
     issuanceNo: '',
     employeeId: undefined,
@@ -173,7 +159,10 @@
     items: []
   })
 
-  const form = reactive<{ model: FormModel; rules: FormRules<FormModel> }>({
+  const form = reactive<{
+    model: IssuanceRecordFormModel
+    rules: FormRules<IssuanceRecordFormModel>
+  }>({
     model: createInitialForm(),
     rules: {
       employeeId: [{ required: true, message: '请选择领用人', trigger: 'change' }],
@@ -182,7 +171,7 @@
       issueDate: [{ required: true, message: '请选择发放日期', trigger: 'change' }]
     }
   })
-  const selection = reactive<SelectionState>({
+  const selection = reactive<IssuanceRecordSelectionState>({
     employee: [],
     issuer: [],
     warehouse: [],
@@ -348,47 +337,13 @@
     selection.materials = selection.materials.filter((item) => item.id !== materialId)
   }
 
-  const employeeSnapshot = (
-    id: string,
-    employeeNo: string,
-    employeeName: string,
-    jobTitle?: string | null
-  ): EmployeeIntegrationItem => ({
-    id,
-    tenantId: getUserInfo.value.tenantId || '',
-    employeeNo,
-    employeeName,
-    jobTitle,
-    employmentStatus: 'active'
-  })
-
-  const materialSnapshot = (item: SmisPpeIssuanceRecordItem): SmisMaterial => ({
-    id: item.materialId,
-    tenantId: getUserInfo.value.tenantId || '',
-    materialCode: '',
-    materialName: item.materialName,
-    categoryId: '',
-    category: { id: '', categoryCode: '', categoryName: item.materialCategory || '' },
-    specificationModel: item.specificationModel,
-    drawingNo: null,
-    basicUnit: item.unit,
-    materialType: 'protective_equipment',
-    materialSource: 'purchase',
-    brand: null,
-    materialComposition: null,
-    placeOfOrigin: null,
-    imageUrls: [],
-    description: null,
-    status: 'enabled',
-    sort: 10
-  })
-
   const resetForm = async (): Promise<void> => {
     Object.assign(form.model, createInitialForm())
     selection.employee = []
     selection.issuer = getUserInfo.value.hrEmployee
       ? [
-          employeeSnapshot(
+          createIssuanceEmployeeSnapshot(
+            getUserInfo.value.tenantId || '',
             getUserInfo.value.hrEmployee.id,
             getUserInfo.value.hrEmployee.employeeNo,
             getUserInfo.value.hrEmployee.employeeName,
@@ -402,41 +357,6 @@
     await nextTick()
     formRef.value?.clearValidate()
     detailTableRef.value?.clearValidate()
-  }
-
-  const initializeFromRecord = (row: SmisPpeIssuanceRecord, copy: boolean): void => {
-    Object.assign(form.model, {
-      id: copy ? undefined : row.id,
-      issuanceNo: copy ? '' : row.issuanceNo,
-      employeeId: row.employeeId,
-      warehouseId: row.warehouseId,
-      issuerEmployeeId: row.issuerEmployeeId,
-      issueDate: copy ? dayjs().format('YYYY-MM-DD') : row.issueDate,
-      remark: row.remark || '',
-      items: row.items.map((item) => ({ ...item, id: undefined }))
-    })
-    selection.employee = [
-      employeeSnapshot(row.employeeId, row.employeeNo, row.employeeName, row.positionName)
-    ]
-    selection.issuer = [employeeSnapshot(row.issuerEmployeeId, '', row.issuerName)]
-    selection.warehouse = [
-      {
-        id: row.warehouseId,
-        tenantId: row.tenantId,
-        organizationId: row.organizationId || '',
-        locationCode: '',
-        locationName: row.warehouseName,
-        status: 'enabled',
-        childCount: 0,
-        organization: {
-          id: row.organizationId || '',
-          organizationCode: '',
-          organizationName: row.organizationName || ''
-        }
-      }
-    ]
-    selection.materialIds = row.items.map((item) => item.materialId)
-    selection.materials = row.items.map(materialSnapshot)
   }
 
   const handleSubmit = async (): Promise<boolean> => {
@@ -474,7 +394,15 @@
 
   const handleOpen = async (data: OpenData): Promise<void> => {
     await resetForm()
-    if (data.row) initializeFromRecord(data.row, data.mode === 'copy')
+    if (data.row) {
+      const state = createIssuanceRecordEditState(data.row, {
+        copy: data.mode === 'copy',
+        today: dayjs().format('YYYY-MM-DD'),
+        materialType: 'protective_equipment'
+      })
+      Object.assign(form.model, state.form)
+      Object.assign(selection, state.selection)
+    }
     await dialogRef.value?.handleOpen(data, {
       title:
         data.mode === 'edit'

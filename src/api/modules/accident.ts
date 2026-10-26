@@ -28,7 +28,7 @@ const accidentOverview = () => ({ total: 0, currentMonth: 0, highSeverity: 0, af
 const accidentAnalysisOverview = () => ({ total: 0, complete: 0, pending: 0, participantCount: 0 })
 const workInjuryOverview = () => ({ total: 0, slight: 0, minor: 0, serious: 0, fatal: 0 })
 const historicalCaseOverview = () => ({ total: 0, inUse: 0, currentYear: 0, highSeverity: 0 })
-const accidentStatistics = (): SmisSafetyAccidentStatisticsResult => ({
+export const createEmptySafetyAccidentStatistics = (): SmisSafetyAccidentStatisticsResult => ({
   overview: { total: 0, currentYear: 0, highSeverity: 0, affectedPeople: 0 },
   trend: [],
   levels: [],
@@ -168,7 +168,7 @@ export async function fetchSafetyAccidentStatistics(
       }),
     { showErrorMessage: false, breakReturn: true }
   )
-  const data = result.data ?? accidentStatistics()
+  const data = result.data ?? createEmptySafetyAccidentStatistics()
   return {
     ...data,
     organizationOptions: buildOrganizationTree(data.organizationOptions),

@@ -281,6 +281,7 @@
 </template>
 
 <script setup lang="tsx">
+  import { resolveHttpUrl } from '@/utils/http-url'
   import { toDictionaryOption } from '@/utils/form/option'
 
   import { replaceReactiveModel } from '@/utils/form/model'
@@ -640,14 +641,8 @@
     if (!end) return `${formatDateTime(start)} 起`
     return `${formatDateTime(start)} 至 ${formatDateTime(end)}`
   }
-  const safeAttachmentUrl = (value: string): string => {
-    try {
-      const url = new URL(value, window.location.origin)
-      return ['http:', 'https:'].includes(url.protocol) ? url.href : '#'
-    } catch {
-      return '#'
-    }
-  }
+  const safeAttachmentUrl = (value: string): string =>
+    resolveHttpUrl(value, window.location.origin) ?? '#'
   const attachmentName = (url: string, index: number, prefix: string): string => {
     try {
       const name = decodeURIComponent(
