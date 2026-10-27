@@ -490,7 +490,7 @@
       width: 44px;
       height: 32px;
       object-fit: cover;
-      border-radius: calc(var(--el-border-radius-small) - 1px);
+      border-radius: var(--art-surface-radius);
     }
   }
 </style>

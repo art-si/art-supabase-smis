@@ -179,7 +179,7 @@
     height: 40px;
     color: var(--el-color-warning);
     background: var(--default-box-color);
-    border-radius: 9px;
+    border-radius: var(--art-surface-radius);
   }
 
   .evaluation-dialog__subject div {
@@ -224,7 +224,7 @@
     height: 34px;
     color: var(--theme-color);
     background: color-mix(in srgb, var(--theme-color) 9%, var(--el-bg-color));
-    border-radius: 7px;
+    border-radius: var(--art-surface-radius);
   }
 
   .evaluation-dialog__method button.is-active {
@@ -253,7 +253,7 @@
     height: 24px;
     color: #fff;
     background: var(--theme-color);
-    border-radius: 6px;
+    border-radius: var(--art-surface-radius);
   }
 
   .evaluation-dialog__factors :deep(.el-select) {

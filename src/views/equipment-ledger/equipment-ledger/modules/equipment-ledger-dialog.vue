@@ -1053,7 +1053,7 @@
         color-mix(in srgb, #14b8a6 6%, var(--default-box-color))
       );
       border: 1px solid color-mix(in srgb, var(--theme-color) 16%, transparent);
-      border-radius: 12px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__context > span {
@@ -1063,7 +1063,7 @@
       height: 44px;
       color: var(--theme-color);
       background: var(--default-box-color);
-      border-radius: 11px;
+      border-radius: var(--art-surface-radius);
       box-shadow: 0 8px 20px rgb(15 23 42 / 8%);
     }
 

@@ -1035,7 +1035,7 @@
       margin-bottom: 14px;
       background: #fff;
       border: 1px solid var(--el-border-color-lighter);
-      border-radius: 18px;
+      border-radius: var(--art-surface-radius);
       box-shadow: 0 18px 40px rgb(15 23 42 / 10%);
     }
 
@@ -1071,7 +1071,7 @@
       height: 42px;
       color: var(--theme-color);
       background: color-mix(in srgb, var(--theme-color) 9%, var(--default-box-color));
-      border-radius: 11px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__drawer-title > div {
@@ -1099,7 +1099,7 @@
       text-align: center;
       background: var(--art-gray-100);
       border: 1px solid var(--el-border-color-lighter);
-      border-radius: 12px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__lifecycle-grid svg {
@@ -1142,7 +1142,7 @@
       margin-bottom: 8px;
       background: var(--art-gray-100);
       border: 1px solid var(--el-border-color-lighter);
-      border-radius: 10px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__attachments article > span {
@@ -1152,7 +1152,7 @@
       height: 42px;
       color: var(--theme-color);
       background: var(--default-box-color);
-      border-radius: 9px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__attachments article > div {

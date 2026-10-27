@@ -591,7 +591,7 @@
 
   .permit-detail__view-switch :deep(.el-segmented__item) {
     min-width: 88px;
-    border-radius: calc(var(--art-control-radius) - 2px);
+    border-radius: var(--art-surface-radius);
   }
 
   .permit-detail__identity {

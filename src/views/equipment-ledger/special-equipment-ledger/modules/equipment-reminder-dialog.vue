@@ -284,7 +284,7 @@
       padding: 13px 15px;
       background: color-mix(in srgb, #f59e0b 8%, var(--default-box-color));
       border-left: 3px solid #f59e0b;
-      border-radius: 10px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__summary > span {
@@ -294,7 +294,7 @@
       height: 44px;
       color: #d97706;
       background: var(--default-box-color);
-      border-radius: 10px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__summary p {
@@ -322,7 +322,7 @@
       font-size: 11px;
       color: var(--theme-color);
       background: color-mix(in srgb, var(--theme-color) 8%, var(--default-box-color));
-      border-radius: 6px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__deliveries {
@@ -337,7 +337,7 @@
       align-items: center;
       padding: 9px 10px;
       background: var(--art-gray-100);
-      border-radius: 8px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__deliveries article > span {

@@ -549,7 +549,7 @@
       color: var(--theme-color);
       background: color-mix(in srgb, var(--theme-color) 7%, var(--el-bg-color));
       border: 1px dashed color-mix(in srgb, var(--theme-color) 35%, var(--el-border-color));
-      border-radius: 12px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__identity-copy {
@@ -627,7 +627,7 @@
         padding: 12px;
         background: var(--el-fill-color-lighter);
         border: 1px solid var(--el-border-color-lighter);
-        border-radius: 10px;
+        border-radius: var(--art-surface-radius);
       }
 
       article > span {
@@ -637,7 +637,7 @@
         height: 42px;
         color: var(--theme-color);
         background: var(--el-bg-color);
-        border-radius: 9px;
+        border-radius: var(--art-surface-radius);
       }
 
       article > div {
@@ -664,7 +664,7 @@
         padding: 15px;
         background: var(--el-bg-color);
         border: 1px solid var(--el-border-color-lighter);
-        border-radius: 10px;
+        border-radius: var(--art-surface-radius);
       }
 
       header,
@@ -710,7 +710,7 @@
       height: 44px;
       color: var(--el-color-success);
       background: var(--el-color-success-light-9);
-      border-radius: 10px;
+      border-radius: var(--art-surface-radius);
     }
   }
 

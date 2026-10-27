@@ -634,7 +634,7 @@
   :deep(.hazard-page__name-link:focus-visible) {
     outline: 2px solid color-mix(in srgb, var(--theme-color) 45%, transparent);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--art-surface-radius);
   }
 
   :deep(.hazard-page__identity small) {

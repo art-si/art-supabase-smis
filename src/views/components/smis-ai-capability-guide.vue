@@ -83,7 +83,7 @@
       font-size: 15px;
       color: rgb(var(--guide-rgb));
       background: rgb(var(--guide-rgb) / 10%);
-      border-radius: 9px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__copy {

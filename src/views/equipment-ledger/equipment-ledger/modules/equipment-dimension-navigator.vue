@@ -176,7 +176,7 @@
       cursor: pointer;
       background: var(--art-gray-100);
       border: 1px solid transparent;
-      border-radius: 10px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__all:hover,
@@ -197,7 +197,7 @@
       height: 36px;
       color: var(--theme-color);
       background: var(--default-box-color);
-      border-radius: 9px;
+      border-radius: var(--art-surface-radius);
     }
 
     &__all > span:nth-child(2),
@@ -247,7 +247,7 @@
     :deep(.el-tree-node__content) {
       min-height: 50px;
       margin-bottom: 2px;
-      border-radius: 9px;
+      border-radius: var(--art-surface-radius);
     }
 
     :deep(.el-tree-node.is-current > .el-tree-node__content) {

@@ -239,7 +239,7 @@
       color: var(--el-color-success);
       background: color-mix(in srgb, var(--el-color-success) 9%, var(--default-box-color));
       border: 1px solid color-mix(in srgb, var(--el-color-success) 28%, var(--el-border-color));
-      border-radius: 18px;
+      border-radius: var(--art-surface-radius);
 
       strong {
         align-self: end;
