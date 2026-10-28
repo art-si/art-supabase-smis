@@ -42,7 +42,7 @@
             rel="noopener noreferrer"
           >
             <ArtSvgIcon icon="ri:attachment-2" />
-            <span>{{ attachmentName(url, index) }}</span>
+            <span>{{ getAttachmentNameFromUrl(url, `公告附件 ${index + 1}`) }}</span>
             <ArtSvgIcon icon="ri:external-link-line" />
           </a>
         </div>
@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
   import { resolveHttpUrl } from '@/utils/http-url'
+  import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import DOMPurify from 'dompurify'
   import dayjs from 'dayjs'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -74,16 +75,6 @@
   })
   const safeAttachmentUrl = (value: string): string =>
     resolveHttpUrl(value, window.location.origin) ?? '#'
-  const attachmentName = (url: string, index: number): string => {
-    try {
-      const name = decodeURIComponent(
-        new URL(url, window.location.origin).pathname.split('/').pop() || ''
-      )
-      return name || `公告附件 ${index + 1}`
-    } catch {
-      return `公告附件 ${index + 1}`
-    }
-  }
   const handleOpen = async (row: SmisAnnouncement): Promise<void> => {
     announcement.value = row
     await dialogRef.value?.handleOpen(row, {

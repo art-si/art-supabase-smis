@@ -187,13 +187,7 @@
 
     &__icon,
     &__marker {
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
-      border-radius: var(--el-border-radius-base);
+      @include business-icon-box;
     }
 
     &__marker i {

@@ -23,13 +23,13 @@
         primary-min="250px"
         primary-max="400px"
         :breakpoint="900"
-        stacked-primary-size="36vh"
+        :stacked-primary-size="treeError || !tree.data.length ? 'auto' : '36vh'"
       >
         <template #primary>
           <StorageLocationNavigator
             :data="tree.data"
-            :loading="tree.loading"
-            :error="tree.error"
+            :loading="treeLoading"
+            :error="treeError"
             :selected-key="tree.selectedKey"
             :global-scope="isAllTenants"
             @select="handleTreeSelect"
@@ -42,6 +42,9 @@
           v-model="table.searchQuery"
           class="storage-location-page__table"
           :api-fn="fetchTableData"
+          :response-adapter="adaptStorageLocationResponse"
+          :on-success="acceptStorageLocationResponse"
+          :on-cache-hit="acceptStorageLocationResponse"
           :search-items="table.searchItems"
           :columns-factory="columnsFactory"
           :header-actions="table.headerActions"
@@ -73,6 +76,8 @@
   import { toDictionaryOption } from '@/utils/form/option'
 
   import type { TableRequestOptions } from '@/hooks/core/useTable'
+  import type { ApiResponse } from '@/utils/table/table-cache'
+  import { defaultResponseAdapter } from '@/utils/table/table-utils'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
     ArtTableQueryExpose,
@@ -130,8 +135,6 @@
   interface TreeGroup {
     data: SmisStorageLocation[]
     selectedKey: string
-    loading: boolean
-    error: string | null
   }
 
   const { confirmDelete } = useArtFeedback()
@@ -141,18 +144,26 @@
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const overview = reactive<SmisStorageLocationOverview>({
-    total: 0,
-    enabled: 0,
-    rootCount: 0,
-    managedCount: 0
-  })
+  const overview = shallowRef<SmisStorageLocationOverview | null>(null)
   const tree = reactive<TreeGroup>({
     data: [],
-    selectedKey: ALL_KEY,
-    loading: false,
-    error: null
+    selectedKey: ALL_KEY
   })
+  const treeKnown = ref(false)
+  const tableState = computed(() => tableQueryRef.value?.dataState)
+  const treeLoading = computed(() => tableState.value?.loading.value ?? true)
+  const treeError = computed(() =>
+    tableState.value?.error.value
+      ? '存放位置树加载失败，请稍后重试。'
+      : !treeLoading.value && !treeKnown.value
+        ? '位置层级暂不可用，请重新加载。'
+        : null
+  )
+  const visibleOverview = computed(() =>
+    tableState.value && !tableState.value.loading.value && !tableState.value.error.value
+      ? overview.value
+      : null
+  )
 
   const statusOptions = computed(() =>
     (getDictMap.value.commonEnabledStatus ?? []).map(toDictionaryOption)
@@ -165,26 +176,26 @@
   const workspaceMetrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
       label: '位置总数',
-      value: overview.total,
+      value: visibleOverview.value?.total ?? '—',
       description: `${scopeLabel.value}位置节点`,
       icon: 'ri:map-pin-range-line'
     },
     {
       label: '已启用',
-      value: overview.enabled,
+      value: visibleOverview.value?.enabled ?? '—',
       description: '可用于新增设备',
       icon: 'ri:checkbox-circle-line',
       tone: 'success'
     },
     {
       label: '一级位置',
-      value: overview.rootCount,
+      value: visibleOverview.value?.rootCount ?? '—',
       description: '位置树根节点',
       icon: 'ri:git-branch-line'
     },
     {
       label: '已配置负责人',
-      value: overview.managedCount,
+      value: visibleOverview.value?.managedCount ?? '—',
       description: '已明确位置责任人',
       icon: 'ri:user-star-line',
       tone: 'warning'
@@ -359,29 +370,40 @@
     }
   ]
 
-  const fetchTableData = async (params: TableParams, options?: TableRequestOptions) => {
+  const adaptStorageLocationResponse = (
+    response: Awaited<ReturnType<typeof fetchStorageLocationList>>
+  ) => {
+    // 独立模块固定的旧主仓适配器尚不拒绝读取错误。
+    if (response.error) throw response.error
+    return {
+      ...defaultResponseAdapter<SmisStorageLocation>(response),
+      tree: response.tree,
+      overview: response.overview
+    }
+  }
+  const acceptStorageLocationResponse = (
+    _rows: SmisStorageLocation[],
+    response: ApiResponse<SmisStorageLocation> & {
+      tree?: SmisStorageLocation[] | null
+      overview?: SmisStorageLocationOverview | null
+    }
+  ): void => {
+    overview.value = response.overview ?? null
+    if (response.tree) tree.data = response.tree
+    treeKnown.value = response.tree !== null && response.tree !== undefined
+  }
+  const fetchTableData = (params: TableParams, options?: TableRequestOptions) => {
     const { from, to } = buildSupabasePageRange({ current: params.current, size: params.size })
-    tree.loading = true
-    tree.error = null
-    try {
-      const response = await fetchStorageLocationList({
+    return fetchStorageLocationList(
+      {
         keyword: params.keyword,
         status: params.status,
         ancestorId: params.ancestorId,
         from,
         to
-      })
-      if (!options?.signal?.aborted) {
-        Object.assign(overview, response.overview)
-        tree.data = response.tree
-      }
-      return response
-    } catch (error) {
-      if (!options?.signal?.aborted) tree.error = '存放位置树加载失败，请稍后重试。'
-      throw error
-    } finally {
-      if (!options?.signal?.aborted) tree.loading = false
-    }
+      },
+      { ...options, showErrorMessage: false }
+    )
   }
 
   const resetTreeSelection = (): void => {

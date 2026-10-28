@@ -2,9 +2,13 @@ import { buildSupabaseRpcRange } from '@/utils/supabase'
 import { normalizeNullableText } from '@/utils/form/normalize'
 import { omit } from 'lodash-es'
 import { useSupabase } from '@/hooks/core/useSupabase'
+import type { ApiFeedbackOptions, ApiRequestOptions } from '@/types/api/request'
+import { withRequestOptions } from '@/api/providers/supabase/query'
+import { isPlainObjectRecord } from '@/utils/type-guards'
 
 export interface SmisSafetyInspectionOrganization {
   id: string
+  tenantId: string
   parentId?: string | null
   organizationCode: string
   organizationName: string
@@ -15,6 +19,7 @@ export interface SmisSafetyInspectionOrganization {
 
 export interface SmisSafetyInspectionTypeOption {
   id: string
+  tenantId: string
   typeCode: string
   typeName: string
   textColor?: string | null
@@ -73,6 +78,7 @@ export interface SmisSafetyInspectionOverview {
 
 export interface SmisSafetyInspectionPayload {
   id?: string
+  tenantId: string
   inspectionTypeId: string
   inspectionName: string
   inspectionOrganizationId: string
@@ -96,46 +102,74 @@ interface SafetyInspectionListResult {
 
 const { supabase, keysToSnakeDeep, responseHandle } = useSupabase()
 
-const emptyOverview = (): SmisSafetyInspectionOverview => ({
-  total: 0,
-  thisMonth: 0,
-  organizationCount: 0,
-  inspectorCount: 0
-})
-
-export async function fetchSafetyInspectionOptions() {
+export async function fetchSafetyInspectionOptions(
+  options: ApiRequestOptions & ApiFeedbackOptions = {}
+): Promise<{
+  inspectionTypes: SmisSafetyInspectionTypeOption[]
+  organizations: SmisSafetyInspectionOrganization[]
+}> {
   const result = await responseHandle<SafetyInspectionOptionsResult>(
-    () => supabase.rpc('smis_list_safety_inspection_options_secure'),
-    { showErrorMessage: true }
+    () => withRequestOptions(supabase.rpc('smis_list_safety_inspection_options_secure'), options),
+    { breakReturn: true, showErrorMessage: options.showErrorMessage ?? true }
   )
+  if (!Array.isArray(result.data?.inspectionTypes) || !Array.isArray(result.data?.organizations)) {
+    throw new Error('检查导航数据不完整，请重新加载')
+  }
+  if (
+    ![...result.data.inspectionTypes, ...result.data.organizations].every(
+      (item) =>
+        isPlainObjectRecord(item) && typeof item.tenantId === 'string' && item.tenantId.trim()
+    )
+  ) {
+    throw new Error('检查导航缺少租户归属，请重新加载')
+  }
   return {
-    inspectionTypes: result.data?.inspectionTypes ?? [],
-    organizations: result.data?.organizations ?? []
+    inspectionTypes: result.data.inspectionTypes,
+    organizations: result.data.organizations
   }
 }
 
-export async function fetchSafetyInspectionList(params: SmisSafetyInspectionSearchParams = {}) {
+export async function fetchSafetyInspectionList(
+  params: SmisSafetyInspectionSearchParams = {},
+  options: ApiRequestOptions & ApiFeedbackOptions = {}
+): Promise<{
+  data: SmisSafetyInspectionRecord[]
+  total: number
+  overview: SmisSafetyInspectionOverview | null
+  error: unknown
+}> {
   const from = Math.max(params.from ?? 0, 0)
   const result = await responseHandle<SafetyInspectionListResult>(
     () =>
-      supabase.rpc('smis_list_safety_inspections_secure', {
-        ...buildSupabaseRpcRange(from, params.to ?? from + 19),
-        p_inspection_name: normalizeNullableText(params.inspectionName),
-        p_inspection_from: params.inspectionFrom || null,
-        p_inspection_to: params.inspectionTo || null,
-        p_inspected_organization_id: params.inspectedOrganizationId || null,
-        p_inspection_type_id: params.inspectionTypeId || null,
-        p_inspector_keyword: normalizeNullableText(params.inspectorKeyword)
-      }),
-    { showErrorMessage: true }
+      withRequestOptions(
+        supabase.rpc('smis_list_safety_inspections_secure', {
+          ...buildSupabaseRpcRange(from, params.to ?? from + 19),
+          p_inspection_name: normalizeNullableText(params.inspectionName),
+          p_inspection_from: params.inspectionFrom || null,
+          p_inspection_to: params.inspectionTo || null,
+          p_inspected_organization_id: params.inspectedOrganizationId || null,
+          p_inspection_type_id: params.inspectionTypeId || null,
+          p_inspector_keyword: normalizeNullableText(params.inspectorKeyword)
+        }),
+        options
+      ),
+    { showErrorMessage: options.showErrorMessage ?? true }
   )
   const records = result.data?.records ?? []
   const idSet = params.ids?.length ? new Set(params.ids) : null
   const data = idSet ? records.filter((record) => idSet.has(record.id)) : records
+  const overview = result.data?.overview
+  const validOverview =
+    isPlainObjectRecord(overview) &&
+    [overview.total, overview.thisMonth, overview.organizationCount, overview.inspectorCount].every(
+      (count) => Number.isSafeInteger(count) && count >= 0
+    )
+      ? overview
+      : null
   return {
     data,
     total: idSet ? data.length : (result.data?.total ?? 0),
-    overview: result.data?.overview ?? emptyOverview(),
+    overview: result.error ? null : validOverview,
     error: result.error
   }
 }
@@ -163,9 +197,16 @@ export async function copySafetyInspection(id: string) {
   )
 }
 
-export async function deleteSafetyInspections(ids: string[]) {
+export async function deleteSafetyInspections(ids: string[], options: ApiFeedbackOptions = {}) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_safety_inspections_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '安全检查已删除' }
+    {
+      showMessage: options.showMessage ?? true,
+      showErrorMessage: options.showErrorMessage ?? true,
+      showReferenceFeedback: false,
+      breakReturn: true,
+      requireAffected: true,
+      message: '安全检查已删除'
+    }
   )
 }

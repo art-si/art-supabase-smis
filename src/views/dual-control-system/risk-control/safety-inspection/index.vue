@@ -21,7 +21,11 @@
           primary-max="320px"
           :breakpoint="980"
           narrow-mode="stack"
-          stacked-primary-size="320px"
+          :stacked-primary-size="
+            options.error || (!options.inspectionTypes.length && !options.organizations.length)
+              ? 'auto'
+              : '320px'
+          "
           stacked-secondary-min-size="760px"
         >
           <template #primary>
@@ -42,6 +46,7 @@
             class="safety-inspection-page__table"
             :search-items="searchItems"
             :api-fn="fetchTableData"
+            :response-adapter="adaptInspectionResponse"
             :columns-factory="columnsFactory"
             :header-actions="headerActions"
             header-actions-placement="workspace"
@@ -59,6 +64,7 @@
               showOverflowTooltip: true
             }"
             :on-success="handleTableSuccess"
+            :on-cache-hit="handleTableSuccess"
             focusable
             focus-scope-selector=".safety-inspection-page__workspace"
           />
@@ -66,6 +72,7 @@
       </div>
 
       <SafetyInspectionDialog ref="dialogRef" @success="handleDialogSuccess" />
+      <MasterDataDeleteGuard ref="deleteGuardRef" />
     </div>
   </ArtPermissionGuard>
 </template>
@@ -74,6 +81,12 @@
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { useAuth } from '@/hooks/core/useAuth'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { uniqBy } from 'lodash-es'
+  import type { TableRequestOptions } from '@/hooks/core/useTable'
+  import type { ApiResponse } from '@/utils/table/table-cache'
+  import { defaultResponseAdapter } from '@/utils/table/table-utils'
   import dayjs from 'dayjs'
   import { ElMessage, ElTag } from 'element-plus'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -88,8 +101,7 @@
   import type {
     ArtTableQueryExpose,
     ArtTableQueryHeaderAction,
-    ArtTableQueryHeaderActionContext,
-    ArtTableQueryProps
+    ArtTableQueryHeaderActionContext
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
@@ -111,6 +123,7 @@
     type SafetyInspectionDialogOpenData
   } from './modules/safety-inspection-dialog.vue'
   import { printHtmlDocument } from '@/utils/file/print-document'
+  import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import { buildRectificationNoticeHtml } from './modules/safety-inspection-document'
 
   const formatTableDateTime = createDateTimeFormatter({
@@ -121,36 +134,52 @@
 
   defineOptions({ name: 'SmisDualControlSafetyInspection' })
   const { hasAnyAuth } = useAuth()
+  const { deleteGuardRef, deleteRecords, deleteBusy } = useRecordDeleteGuard(
+    'smis_safety_inspection',
+    '安全检查'
+  )
 
   type TableSearchModel = SmisSafetyInspectionSearchParams & { inspectionRange?: string[] }
   type TableParams = TableSearchModel & Pick<Api.Common.PaginationParams, 'current' | 'size'>
   interface DialogExpose {
     handleOpen: (data: SafetyInspectionDialogOpenData) => Promise<void>
   }
+  interface InspectionOptionsGroup {
+    inspectionTypes: SmisSafetyInspectionTypeOption[]
+    organizations: SmisSafetyInspectionOrganization[]
+    loading: boolean
+    error: string | null
+  }
+  interface InspectionTableGroup {
+    searchQuery: TableSearchModel
+    overview: SmisSafetyInspectionOverview | null
+  }
 
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const navigation = reactive({ value: '' })
-  const options = reactive({
-    inspectionTypes: [] as SmisSafetyInspectionTypeOption[],
-    organizations: [] as SmisSafetyInspectionOrganization[],
+  const options = reactive<InspectionOptionsGroup>({
+    inspectionTypes: [],
+    organizations: [],
     loading: false,
-    error: null as string | null
+    error: null
   })
-  const table = reactive({
+  const table = reactive<InspectionTableGroup>({
     searchQuery: {
       inspectionName: '',
       inspectionRange: [],
       inspectedOrganizationId: '',
       inspectorKeyword: ''
-    } as TableSearchModel,
-    overview: {
-      total: 0,
-      thisMonth: 0,
-      organizationCount: 0,
-      inspectorCount: 0
-    } as SmisSafetyInspectionOverview
+    },
+    overview: null
   })
+  const visibleOverview = computed(() =>
+    tableQueryRef.value?.dataState &&
+    !tableQueryRef.value.dataState.loading.value &&
+    !tableQueryRef.value.dataState.error.value
+      ? table.overview
+      : null
+  )
 
   const workspaceTags: BusinessWorkspaceTag[] = [
     { label: '类型联动', type: 'primary', effect: 'plain' },
@@ -159,27 +188,27 @@
   const workspaceMetrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
       label: '检查记录',
-      value: table.overview.total,
+      value: visibleOverview.value?.total ?? '—',
       description: '当前查询范围',
       icon: 'ri:file-list-3-line'
     },
     {
       label: '本月检查',
-      value: table.overview.thisMonth,
+      value: visibleOverview.value?.thisMonth ?? '—',
       description: '按检查时间统计',
       icon: 'ri:calendar-check-line',
       tone: 'success'
     },
     {
       label: '覆盖单位',
-      value: table.overview.organizationCount,
+      value: visibleOverview.value?.organizationCount ?? '—',
       description: '去重被检查组织',
       icon: 'ri:building-4-line',
       tone: 'info'
     },
     {
       label: '参与检查人',
-      value: table.overview.inspectorCount,
+      value: visibleOverview.value?.inspectorCount ?? '—',
       description: '当前范围去重人数',
       icon: 'ri:team-line',
       tone: 'warning'
@@ -228,14 +257,6 @@
     }
   ])
 
-  const filenameFromUrl = (url: string): string => {
-    const rawName = url.split('/').pop() || '检查计划附件'
-    try {
-      return decodeURIComponent(rawName)
-    } catch {
-      return rawName
-    }
-  }
   const columnsFactory = (): ColumnOption<SmisSafetyInspectionRecord>[] => {
     const columns: ColumnOption<SmisSafetyInspectionRecord>[] = [
       { type: 'selection', width: 48, reserveSelection: true },
@@ -272,7 +293,9 @@
           const url = row.planAttachmentUrls[0]
           return url ? (
             <div class="safety-inspection-page__attachment">
-              <ArtAttachmentLink file={{ url, name: filenameFromUrl(url) }} />
+              <ArtAttachmentLink
+                file={{ url, name: getAttachmentNameFromUrl(url, '检查计划附件') }}
+              />
               {row.planAttachmentUrls.length > 1 ? (
                 <span>+{row.planAttachmentUrls.length - 1}</span>
               ) : null}
@@ -383,10 +406,13 @@
       exportApi: async ({ selectedIds, searchParams }) => {
         const params = normalizeSearchParams(searchParams as TableSearchModel)
         const selected = new Set(selectedIds.map(String))
-        const rows = await loadAllDocumentPages(fetchSafetyInspectionList, {
-          ...params,
-          ids: undefined
-        })
+        const rows = await loadAllDocumentPages(
+          (page) => fetchSafetyInspectionList(page, { showErrorMessage: false }),
+          {
+            ...params,
+            ids: undefined
+          }
+        )
         return {
           data: rows.filter((row) => !selected.size || selected.has(row.id))
         }
@@ -396,11 +422,25 @@
       type: 'delete',
       label: '删除',
       permission: 'SmisDualControlSafetyInspection:Delete',
-      content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
-        `确定删除选中的 ${selectedCount} 条安全检查记录吗？删除后无法恢复。`,
+      confirm: false,
+      disabled: deleteBusy.value,
       onClick: async ({ selectedRows, api }) => {
-        await deleteSafetyInspections(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        const rows = uniqBy(selectedRows as SmisSafetyInspectionRecord[], 'id')
+        const ids = rows.map((row) => row.id)
+        await deleteRecords({
+          resources: rows.map((row) => ({ id: row.id, label: row.inspectionName })),
+          permission: 'SmisDualControlSafetyInspection:Delete',
+          remove: async () => {
+            const result = await deleteSafetyInspections(ids, {
+              showMessage: false,
+              showErrorMessage: false
+            })
+            if (result.data !== ids.length)
+              throw new Error('安全检查未全部删除，请刷新列表后核对并重试')
+          },
+          onDeleted: () => api.refreshRemove(),
+          successMessage: '安全检查已删除'
+        })
       }
     }
   ])
@@ -422,13 +462,29 @@
       inspectorKeyword: params.inspectorKeyword
     }
   }
-  const fetchTableData = (params: TableParams) => {
+  const fetchTableData = (params: TableParams, options?: TableRequestOptions) => {
     const { from, to } = buildSupabasePageRange({ current: params.current, size: params.size })
-    return fetchSafetyInspectionList({ ...normalizeSearchParams(params), from, to })
+    return fetchSafetyInspectionList(
+      { ...normalizeSearchParams(params), from, to },
+      { ...options, showErrorMessage: false }
+    )
   }
-  const handleTableSuccess: NonNullable<ArtTableQueryProps['onSuccess']> = (_records, response) => {
-    const result = response as typeof response & { overview?: SmisSafetyInspectionOverview }
-    Object.assign(table.overview, result.overview ?? { total: response.total ?? 0 })
+  const adaptInspectionResponse = (
+    response: Awaited<ReturnType<typeof fetchSafetyInspectionList>>
+  ) => {
+    if (response.error) throw response.error
+    return {
+      ...defaultResponseAdapter<SmisSafetyInspectionRecord>(response),
+      overview: response.overview
+    }
+  }
+  const handleTableSuccess = (
+    _records: SmisSafetyInspectionRecord[],
+    response: ApiResponse<SmisSafetyInspectionRecord> & {
+      overview?: SmisSafetyInspectionOverview | null
+    }
+  ): void => {
+    table.overview = response.overview ?? null
   }
   const handleNavigationChange = (): void => {
     if (navigation.value.startsWith('organization:')) {
@@ -436,20 +492,36 @@
     }
     void tableQueryRef.value?.refreshContext()
   }
+  let optionsController: AbortController | undefined
+  onScopeDispose(() => optionsController?.abort())
   const loadOptions = async (): Promise<void> => {
+    optionsController?.abort()
+    const controller = new AbortController()
+    optionsController = controller
     options.loading = true
     options.error = null
     try {
-      const result = await fetchSafetyInspectionOptions()
+      const result = await fetchSafetyInspectionOptions({
+        signal: controller.signal,
+        showErrorMessage: false
+      })
+      if (controller.signal.aborted) return
       options.inspectionTypes = result.inspectionTypes
       options.organizations = toDualControlOrganizationTree(result.organizations)
     } catch {
-      options.error = '检查导航加载失败，请稍后重试'
+      if (!controller.signal.aborted) options.error = '检查导航加载失败，请稍后重试'
     } finally {
-      options.loading = false
+      if (optionsController === controller) {
+        if (!controller.signal.aborted) options.loading = false
+        optionsController = undefined
+      }
     }
   }
   const openDialog = (row?: SmisSafetyInspectionRecord): void => {
+    if (options.loading || options.error) {
+      ElMessage.warning('检查导航暂不可用，请先重新加载后重试')
+      return
+    }
     if (!options.inspectionTypes.length || !options.organizations.length) {
       ElMessage.warning('请先维护并启用排查类型和系统组织')
       return

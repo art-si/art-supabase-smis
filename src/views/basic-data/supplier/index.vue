@@ -21,6 +21,9 @@
       ref="tableQueryRef"
       v-model="table.searchQuery"
       :api-fn="fetchTableData"
+      :response-adapter="adaptSupplierResponse"
+      :on-success="acceptSupplierResponse"
+      :on-cache-hit="acceptSupplierResponse"
       :search-items="table.searchItems"
       :columns-factory="columnsFactory"
       :header-actions="table.headerActions"
@@ -44,6 +47,8 @@
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import type { TableRequestOptions } from '@/hooks/core/useTable'
+  import type { ApiResponse } from '@/utils/table/table-cache'
+  import { defaultResponseAdapter } from '@/utils/table/table-utils'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
     ArtTableQueryExcelColumn,
@@ -102,12 +107,14 @@
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const overview = reactive<SmisSupplierOverview>({
-    total: 0,
-    keySuppliers: 0,
-    categoryCount: 0,
-    contactComplete: 0
-  })
+  const overview = shallowRef<SmisSupplierOverview | null>(null)
+  const visibleOverview = computed(() =>
+    tableQueryRef.value?.dataState &&
+    !tableQueryRef.value.dataState.loading.value &&
+    !tableQueryRef.value.dataState.error.value
+      ? overview.value
+      : null
+  )
 
   const resolveDictLabel = (code: SupplierDictionaryCode, value?: string | null) =>
     resolveSupplierDictionaryLabel(code, value, getDictMap.value[code])
@@ -115,26 +122,26 @@
   const workspaceMetrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
       label: '供应商总数',
-      value: overview.total,
+      value: visibleOverview.value?.total ?? '—',
       description: '当前租户统一主数据',
       icon: 'ri:store-3-line'
     },
     {
       label: '重点供应商',
-      value: overview.keySuppliers,
+      value: visibleOverview.value?.keySuppliers ?? '—',
       description: '需重点协同与维护',
       icon: 'ri:star-smile-line',
       tone: 'warning'
     },
     {
       label: '覆盖类别',
-      value: overview.categoryCount,
+      value: visibleOverview.value?.categoryCount ?? '—',
       description: '当前已建档类别数',
       icon: 'ri:stack-line'
     },
     {
       label: '联络信息完整',
-      value: overview.contactComplete,
+      value: visibleOverview.value?.contactComplete ?? '—',
       description: '联系人及电话均已维护',
       icon: 'ri:contacts-book-2-line',
       tone: 'success'
@@ -180,7 +187,7 @@
           ids: selectedIds.map(String)
         }
         await Promise.all(SUPPLIER_DICTIONARY_CODES.map((code) => userStore.ensureDictLoaded(code)))
-        const response = await exportSupplierList(query)
+        const response = await exportSupplierList(query, { showErrorMessage: false })
         return {
           data: response.data.map((row) => ({
             ...row,
@@ -359,19 +366,34 @@
     }
   ]
 
-  const fetchTableData = async (params: TableParams, options?: TableRequestOptions) => {
+  const adaptSupplierResponse = (response: Awaited<ReturnType<typeof fetchSupplierList>>) => {
+    // 独立模块固定的旧主仓适配器尚不保留读取错误。
+    if (response.error) throw response.error
+    return {
+      ...defaultResponseAdapter<SmisSupplier>(response),
+      overview: response.overview
+    }
+  }
+  const acceptSupplierResponse = (
+    _rows: SmisSupplier[],
+    response: ApiResponse<SmisSupplier> & { overview?: SmisSupplierOverview | null }
+  ): void => {
+    overview.value = response.overview ?? null
+  }
+  const fetchTableData = (params: TableParams, options?: TableRequestOptions) => {
     const { from, to } = buildSupabasePageRange({ current: params.current, size: params.size })
-    const response = await fetchSupplierList({
-      keyword: params.keyword,
-      supplierCategory: params.supplierCategory,
-      supplierType: params.supplierType,
-      enterpriseNature: params.enterpriseNature,
-      industry: params.industry,
-      from,
-      to
-    })
-    if (!options?.signal?.aborted) Object.assign(overview, response.overview)
-    return response
+    return fetchSupplierList(
+      {
+        keyword: params.keyword,
+        supplierCategory: params.supplierCategory,
+        supplierType: params.supplierType,
+        enterpriseNature: params.enterpriseNature,
+        industry: params.industry,
+        from,
+        to
+      },
+      { ...options, showErrorMessage: false }
+    )
   }
 
   const handleSaveSuccess = (type: 'add' | 'edit'): void => {

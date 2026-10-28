@@ -3,6 +3,9 @@ import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
 import { normalizeNullableText } from '@/utils/form/normalize'
 import { omit } from 'lodash-es'
 import { useSupabase } from '@/hooks/core/useSupabase'
+import type { ApiFeedbackOptions, ApiRequestOptions } from '@/types/api/request'
+import { withRequestOptions } from '@/api/providers/supabase/query'
+import { isPlainObjectRecord } from '@/utils/type-guards'
 import type {
   SmisSupplier,
   SmisSupplierOverview,
@@ -15,13 +18,6 @@ interface SupplierListResult {
   total?: number
   overview?: SmisSupplierOverview
 }
-
-const emptyOverview = (): SmisSupplierOverview => ({
-  total: 0,
-  keySuppliers: 0,
-  categoryCount: 0,
-  contactComplete: 0
-})
 
 const { supabase, keysToSnakeDeep, responseHandle } = useSupabase()
 
@@ -39,31 +35,49 @@ const buildListParams = (params: SmisSupplierSearchParams) => {
   }
 }
 
-export async function fetchSupplierList(params: SmisSupplierSearchParams = {}) {
+export async function fetchSupplierList(
+  params: SmisSupplierSearchParams = {},
+  options: ApiRequestOptions & ApiFeedbackOptions = {}
+): Promise<{
+  data: SmisSupplier[]
+  total: number
+  overview: SmisSupplierOverview | null
+  error: unknown
+}> {
   const result = await responseHandle<SupplierListResult>(
-    () => supabase.rpc('smis_list_suppliers_secure', buildListParams(params)),
-    { showErrorMessage: true }
+    () =>
+      withRequestOptions(
+        supabase.rpc('smis_list_suppliers_secure', buildListParams(params)),
+        options
+      ),
+    { showErrorMessage: options.showErrorMessage ?? true }
   )
 
+  const overview = result.data?.overview
+  const validOverview =
+    isPlainObjectRecord(overview) &&
+    [overview.total, overview.keySuppliers, overview.categoryCount, overview.contactComplete].every(
+      (count) => Number.isSafeInteger(count) && count >= 0
+    )
+      ? overview
+      : null
   return {
     data: result.data?.records ?? [],
     total: result.data?.total ?? 0,
-    overview: result.data?.overview ?? emptyOverview(),
+    overview: result.error ? null : validOverview,
     error: result.error
   }
 }
 
-export async function exportSupplierList(params: SmisSupplierSearchParams = {}) {
-  let overview = emptyOverview()
-  const data = await loadAllDocumentPages(
-    async (page) => {
-      const result = await fetchSupplierList(page)
-      if (page.from === 0) overview = result.overview
-      return result
-    },
-    { ...params, purpose: 'export' as const }
-  )
-  return { data, total: data.length, overview, error: null }
+export async function exportSupplierList(
+  params: SmisSupplierSearchParams = {},
+  options: ApiRequestOptions & ApiFeedbackOptions = {}
+): Promise<{ data: SmisSupplier[]; total: number; error: null }> {
+  const data = await loadAllDocumentPages((page) => fetchSupplierList(page, options), {
+    ...params,
+    purpose: 'export' as const
+  })
+  return { data, total: data.length, error: null }
 }
 
 export async function saveSupplier(params: SmisSupplierSavePayload) {

@@ -249,47 +249,15 @@
 </script>
 
 <style scoped lang="scss">
+  @use '../../../shared/detail-identity' as detail;
+
   .hazard-governance-detail {
     display: grid;
     gap: 18px;
     min-width: 0;
 
     &__identity {
-      display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) auto;
-      gap: 12px;
-      align-items: center;
-      padding: 16px;
-      background: color-mix(in srgb, var(--theme-color) 7%, var(--default-box-color));
-      border-left: 3px solid var(--theme-color);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__identity > span {
-      display: grid;
-      place-items: center;
-      width: 48px;
-      height: 48px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__identity small,
-    &__identity strong,
-    &__identity p {
-      display: block;
-      margin: 0;
-    }
-
-    &__identity strong {
-      margin: 2px 0;
-    }
-
-    &__identity small,
-    &__identity p {
-      font-size: 12px;
-      color: var(--el-text-color-secondary);
+      @include detail.identity('> span');
     }
 
     &__grid {

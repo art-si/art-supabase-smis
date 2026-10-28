@@ -104,8 +104,13 @@ export interface SmisHiddenHazardInspectionPlanPayload {
 }
 
 export interface SmisHiddenHazardPlanOptions {
-  inspectionTypes: SmisSafetyInspectionTypeOption[]
-  organizations: SmisSafetyInspectionOrganization[]
+  // This separate RPC does not return the tenant identity added to safety-inspection options.
+  inspectionTypes: Omit<SmisSafetyInspectionTypeOption, 'tenantId'>[]
+  organizations: Array<
+    Omit<SmisSafetyInspectionOrganization, 'tenantId' | 'children'> & {
+      children?: SmisHiddenHazardPlanOptions['organizations']
+    }
+  >
 }
 
 export interface SmisHiddenHazardTaskOverview {

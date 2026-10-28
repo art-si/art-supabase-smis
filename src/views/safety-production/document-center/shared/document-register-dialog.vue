@@ -62,6 +62,7 @@
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
+  import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import dayjs from 'dayjs'
   import type { FormRules } from 'element-plus'
   import { fetchEnabledOrganizationTree } from '@/api/system-manage'
@@ -293,8 +294,7 @@
     const resource = resources[0]
     if (!resource) return
     form.attachmentUrl = resource.url ?? ''
-    form.attachmentName =
-      resource.originName || decodeURIComponent(resource.url?.split('/').pop() || '')
+    form.attachmentName = resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
     form.attachmentType = resource.suffix || resource.mimeType || ''
     form.attachmentSize = resource.sizeByte
     if (!form.fileName) form.fileName = form.attachmentName.replace(/\.[^.]+$/, '')

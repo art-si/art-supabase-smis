@@ -88,6 +88,7 @@
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
+  import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import dayjs from 'dayjs'
   import { ElMessage, type FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -309,7 +310,7 @@
     const resource = resources[0]
     if (!resource) return
     form.fileUrl = resource.url ?? ''
-    form.fileName = resource.originName || decodeURIComponent(resource.url?.split('/').pop() || '')
+    form.fileName = resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
     form.fileType = resource.suffix || resource.mimeType || ''
     form.fileSize = resource.sizeByte
     if (!form.title) form.title = form.fileName.replace(/\.[^.]+$/, '')

@@ -576,6 +576,8 @@
 </script>
 
 <style scoped lang="scss">
+  @use '../inspection-type-navigator' as navigator;
+
   .hidden-hazard-plan-page {
     gap: 12px;
     min-width: 0;
@@ -616,32 +618,7 @@
     }
 
     &__navigator button {
-      display: grid;
-      grid-template-columns: 38px minmax(0, 1fr);
-      gap: 10px;
-      align-items: center;
-      width: 100%;
-      min-height: 52px;
-      padding: 7px 10px;
-      color: var(--el-text-color-regular);
-      text-align: left;
-      background: transparent;
-      border: 0;
-      border-radius: var(--el-border-radius-base);
-      transition:
-        color var(--art-motion-duration-fast),
-        background-color var(--art-motion-duration-fast),
-        box-shadow var(--art-motion-duration-fast);
-    }
-
-    &__navigator button:hover {
-      background: var(--el-fill-color-light);
-    }
-
-    &__navigator button.is-active {
-      color: var(--theme-color);
-      background: color-mix(in srgb, var(--theme-color) 10%, var(--default-box-color));
-      box-shadow: inset 3px 0 0 var(--theme-color);
+      @include navigator.button;
     }
 
     &__navigator button:focus-visible {
@@ -664,13 +641,7 @@
     }
 
     &__type-mark {
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
-      border-radius: var(--el-border-radius-base);
+      @include business-icon-box;
     }
 
     &__main {
@@ -700,13 +671,7 @@
     }
 
     &__scope > span {
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
-      border-radius: var(--el-border-radius-base);
+      @include business-icon-box;
     }
 
     &__scope small,

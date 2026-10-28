@@ -1,6 +1,8 @@
-import type { ApiFeedbackOptions } from '@/types/api/request'
+import type { ApiFeedbackOptions, ApiRequestOptions } from '@/types/api/request'
+import { withRequestOptions } from '@/api/providers/supabase/query'
 import { buildSupabaseRpcRange } from '@/utils/supabase'
 import { normalizeNullableText } from '@/utils/form/normalize'
+import { isPlainObjectRecord } from '@/utils/type-guards'
 import { omit } from 'lodash-es'
 import { useSupabase } from '@/hooks/core/useSupabase'
 import TreeUtils from '@/utils/tree'
@@ -18,13 +20,6 @@ interface StorageLocationListResult {
   overview?: SmisStorageLocationOverview
 }
 
-const emptyOverview = (): SmisStorageLocationOverview => ({
-  total: 0,
-  enabled: 0,
-  rootCount: 0,
-  managedCount: 0
-})
-
 const treeUtils = new TreeUtils({
   idKey: 'id',
   parentKey: 'parentId',
@@ -34,32 +29,62 @@ const { supabase, keysToSnakeDeep, responseHandle } = useSupabase()
 
 export async function fetchStorageLocationList(
   params: SmisStorageLocationSearchParams = {},
-  options: ApiFeedbackOptions = {}
-) {
+  options: ApiRequestOptions & ApiFeedbackOptions = {}
+): Promise<{
+  data: SmisStorageLocation[]
+  total: number
+  tree: SmisStorageLocation[] | null
+  overview: SmisStorageLocationOverview | null
+  error: unknown
+}> {
   const from = Math.max(params.from ?? 0, 0)
   const result = await responseHandle<StorageLocationListResult>(
     () =>
-      supabase.rpc('smis_list_storage_locations_secure', {
-        ...buildSupabaseRpcRange(from, params.to ?? from + 19),
-        p_keyword: normalizeNullableText(params.keyword),
-        p_status: params.status || null,
-        p_ancestor_id: params.ancestorId || null
-      }),
+      withRequestOptions(
+        supabase.rpc('smis_list_storage_locations_secure', {
+          ...buildSupabaseRpcRange(from, params.to ?? from + 19),
+          p_keyword: normalizeNullableText(params.keyword),
+          p_status: params.status || null,
+          p_ancestor_id: params.ancestorId || null
+        }),
+        options
+      ),
     { showErrorMessage: options.showErrorMessage ?? true }
   )
 
-  const flatTree = (result.data?.tree ?? []).map((item) => ({
+  const sourceTree = result.data?.tree
+  const validTree =
+    Array.isArray(sourceTree) &&
+    sourceTree.every(
+      (item) =>
+        isPlainObjectRecord(item) &&
+        typeof item.id === 'string' &&
+        typeof item.locationName === 'string' &&
+        (item.parentId == null || typeof item.parentId === 'string')
+    )
+  const flatTree = (Array.isArray(sourceTree) && validTree ? sourceTree : []).map((item) => ({
     ...item,
     childCount: item.childCount ?? 0
   }))
+  const overview = result.data?.overview
+  const validOverview =
+    isPlainObjectRecord(overview) &&
+    [overview.total, overview.enabled, overview.rootCount, overview.managedCount].every(
+      (count) => Number.isSafeInteger(count) && count >= 0
+    )
+      ? overview
+      : null
 
   return {
     data: result.data?.records ?? [],
     total: result.data?.total ?? 0,
-    tree: treeUtils.listToTree(flatTree, (a, b) =>
-      a.locationName.localeCompare(b.locationName, 'zh-CN')
-    ),
-    overview: result.data?.overview ?? emptyOverview(),
+    tree:
+      !result.error && validTree
+        ? treeUtils.listToTree(flatTree, (a, b) =>
+            a.locationName.localeCompare(b.locationName, 'zh-CN')
+          )
+        : null,
+    overview: result.error ? null : validOverview,
     error: result.error
   }
 }

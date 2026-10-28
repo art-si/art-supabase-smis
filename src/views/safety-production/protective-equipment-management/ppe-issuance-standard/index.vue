@@ -33,7 +33,7 @@
         }"
         focusable
       />
-      <IssuanceStandardDialog ref="dialogRef" @success="refresh" />
+      <IssuanceStandardDialog ref="dialogRef" kind="ppe" @success="refresh" />
     </div>
   </ArtPermissionGuard>
 </template>
@@ -70,8 +70,8 @@
     type SmisPpeIssuanceStandardSearchParams
   } from '@smis/api'
   import IssuanceStandardDialog, {
-    type IssuanceStandardDialogOpenData
-  } from './modules/issuance-standard-dialog.vue'
+    type IssuanceStandardDialogExpose
+  } from '../../shared/issuance-standard-dialog.vue'
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -82,13 +82,10 @@
   defineOptions({ name: 'SmisPpeIssuanceStandard' })
   type TableParams = SmisPpeIssuanceStandardSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
-  interface DialogExpose {
-    handleOpen: (data: IssuanceStandardDialogOpenData) => Promise<void>
-  }
   const userStore = useUserStore()
   const { confirmDelete } = useArtFeedback()
   const tableQueryRef = ref<ArtTableQueryExpose>()
-  const dialogRef = ref<DialogExpose>()
+  const dialogRef = ref<IssuanceStandardDialogExpose>()
   const searchQuery = reactive<SmisPpeIssuanceStandardSearchParams>({})
   const overview = reactive<SmisPpeIssuanceStandardOverview>({
     total: 0,

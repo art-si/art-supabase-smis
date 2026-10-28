@@ -99,7 +99,7 @@
                   rel="noopener noreferrer"
                 >
                   <ArtSvgIcon icon="ri:attachment-2" />
-                  <span>{{ attachmentName(url, index, '培训附件') }}</span>
+                  <span>{{ getAttachmentNameFromUrl(url, `培训附件 ${index + 1}`) }}</span>
                   <ArtSvgIcon icon="ri:external-link-line" />
                 </a>
               </div>
@@ -125,7 +125,7 @@
                   rel="noopener noreferrer"
                 >
                   <ArtSvgIcon icon="ri:file-list-3-line" />
-                  <span>{{ attachmentName(url, index, '签到附件') }}</span>
+                  <span>{{ getAttachmentNameFromUrl(url, `签到附件 ${index + 1}`) }}</span>
                   <ArtSvgIcon icon="ri:external-link-line" />
                 </a>
               </div>
@@ -282,6 +282,7 @@
 
 <script setup lang="tsx">
   import { resolveHttpUrl } from '@/utils/http-url'
+  import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import { toDictionaryOption } from '@/utils/form/option'
 
   import { replaceReactiveModel } from '@/utils/form/model'
@@ -643,16 +644,6 @@
   }
   const safeAttachmentUrl = (value: string): string =>
     resolveHttpUrl(value, window.location.origin) ?? '#'
-  const attachmentName = (url: string, index: number, prefix: string): string => {
-    try {
-      const name = decodeURIComponent(
-        new URL(url, window.location.origin).pathname.split('/').pop() || ''
-      )
-      return name || `${prefix} ${index + 1}`
-    } catch {
-      return `${prefix} ${index + 1}`
-    }
-  }
   const textArea = (placeholder: string, rows = 3, maxlength = 2000) => ({
     rows,
     maxlength,
