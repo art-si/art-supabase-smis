@@ -66,6 +66,7 @@
     </div>
 
     <StorageLocationDialog ref="dialogRef" @success="handleSaveSuccess" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
@@ -86,7 +87,14 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { ElMessage } from 'element-plus'
+  import { isPlainObjectRecord } from '@/utils/type-guards'
+  import { recordDeleteGuardOptions, useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import { useAuth } from '@/hooks/core/useAuth'
+  import MasterDataDeleteGuard, {
+    type MasterDataDeleteDependencyMeta,
+    type MasterDataDeleteResource
+  } from '@/components/business/master-data-delete-guard/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import TreeUtils from '@/utils/tree'
@@ -109,6 +117,7 @@
   import StorageLocationDialog, {
     type StorageLocationDialogOpenData
   } from './modules/storage-location-dialog.vue'
+  import { filterSelectedStorageLocationChildren } from './storage-location-delete-references'
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -121,6 +130,15 @@
   const ALL_KEY = 'all'
   type TableParams = SmisStorageLocationSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
+  type SavedStorageLocation = SmisStorageLocation & { id: string }
+
+  const isStorageLocationRow = (value: unknown): value is SavedStorageLocation =>
+    isPlainObjectRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.tenantId === 'string' &&
+    typeof value.locationName === 'string' &&
+    typeof value.locationCode === 'string' &&
+    (value.status === 'enabled' || value.status === 'disabled')
 
   interface DialogExpose {
     handleOpen: (data: StorageLocationDialogOpenData) => Promise<void>
@@ -137,7 +155,34 @@
     selectedKey: string
   }
 
-  const { confirmDelete } = useArtFeedback()
+  const route = useRoute()
+  const { hasAuth } = useAuth()
+  const storageReferenceMeta: Record<string, Partial<MasterDataDeleteDependencyMeta>> = {
+    mdm_storage_location: {
+      label: '下级存放位置',
+      statusDictCode: 'commonEnabledStatus',
+      routeName: 'SmisStorageLocation',
+      routeQuery: (record) => ({ storageLocationId: record.targetId }),
+      canNavigate: () => hasAuth('SmisStorageLocation:View')
+    },
+    smis_ppe_issuance_record: {
+      label: '劳保用品发放记录',
+      statusDictCode: 'commonIssuancePostingStatus',
+      routeName: 'SmisPpeIssuanceRecord',
+      canNavigate: () => hasAuth('SmisPpeIssuanceRecord:View')
+    },
+    smis_tool_issuance_record: {
+      label: '工器具发放记录',
+      statusDictCode: 'commonIssuancePostingStatus',
+      routeName: 'SmisToolIssuanceRecord',
+      canNavigate: () => hasAuth('SmisToolIssuanceRecord:View')
+    }
+  }
+  const { deleteGuardRef, deleteRecords, deleteBusy } = useRecordDeleteGuard(
+    'mdm_storage_location',
+    '存放位置',
+    storageReferenceMeta
+  )
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
   const { effectiveTenantId, isAllTenants, scopeLabel } = storeToRefs(useTenantScopeStore())
@@ -226,15 +271,14 @@
     {
       permission: 'SmisStorageLocation:Delete',
       type: 'delete',
-      content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
-        `确定删除选中的 ${selectedCount} 个存放位置吗？存在未选中的下级位置时将无法删除。`,
-      onClick: async ({ selectedRows, api }) => {
-        const ids = selectedRows
-          .map((row) => row.id)
-          .filter((id): id is string => typeof id === 'string')
-        if (ids.includes(tree.selectedKey)) resetTreeSelection()
-        await deleteStorageLocations(ids)
-        await api.refreshRemove()
+      confirm: false,
+      disabled: deleteBusy.value,
+      onClick: ({ selectedRows }: ArtTableQueryHeaderActionContext) => {
+        if (!selectedRows.every(isStorageLocationRow)) {
+          ElMessage.error('选中的位置记录已变化，请刷新列表后重试')
+          return
+        }
+        return handleDelete(selectedRows)
       }
     }
   ])
@@ -363,7 +407,14 @@
           <ArtButtonTable
             type="delete"
             permission="SmisStorageLocation:Delete"
-            onClick={() => void handleDelete(row)}
+            disabled={deleteBusy.value}
+            onClick={() => {
+              if (!isStorageLocationRow(row)) {
+                ElMessage.error('位置记录已变化，请刷新列表后重试')
+                return
+              }
+              void handleDelete([row])
+            }}
           />
         </div>
       )
@@ -427,19 +478,82 @@
       : tableQueryRef.value?.refreshUpdate())
   }
 
-  const handleDelete = async (row: SmisStorageLocation): Promise<void> => {
-    if (!row.id) return
-    try {
-      await confirmDelete(
-        `确定删除存放位置“${row.locationName}”吗？存在下级位置或已被设备引用时将无法删除。`
-      )
-      if (tree.selectedKey === row.id) resetTreeSelection()
-      await deleteStorageLocations([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或业务校验未通过 */
+  const inspectStorageReferences = async (
+    resources: MasterDataDeleteResource[],
+    constraint?: string
+  ): Promise<boolean> => {
+    if (!deleteGuardRef.value) {
+      ElMessage.error('关联校验尚未就绪，请刷新页面后重试删除')
+      return true
     }
+    const options = recordDeleteGuardOptions(
+      { table: 'mdm_storage_location', ids: resources.map((resource) => resource.id), constraint },
+      '存放位置',
+      resources,
+      storageReferenceMeta
+    )
+    const fetchDependencies = options.fetchDependencies
+    if (!fetchDependencies) {
+      ElMessage.error('关联校验暂不可用，请刷新页面后重试删除')
+      return true
+    }
+    return deleteGuardRef.value.inspect({
+      ...options,
+      fetchDependencies: async (resourceIds) =>
+        filterSelectedStorageLocationChildren(await fetchDependencies(resourceIds), resourceIds)
+    })
   }
+
+  const handleDelete = async (rows: SavedStorageLocation[]): Promise<void> => {
+    if (
+      !rows.length ||
+      rows.some(
+        (row) => effectiveTenantId.value !== null && row.tenantId !== effectiveTenantId.value
+      )
+    ) {
+      ElMessage.error('位置记录或当前租户范围已变化，请刷新列表后重试')
+      return
+    }
+    const resources = rows.map((row) => ({
+      id: row.id,
+      label: `${row.locationName} · ${row.locationCode}`,
+      status: row.status,
+      statusDictCode: 'commonEnabledStatus'
+    }))
+    await deleteRecords({
+      resources,
+      permission: 'SmisStorageLocation:Delete',
+      inspectReferences: inspectStorageReferences,
+      remove: async () => {
+        if (
+          rows.some(
+            (row) => effectiveTenantId.value !== null && row.tenantId !== effectiveTenantId.value
+          )
+        )
+          throw new Error('当前租户范围已变化，请刷新列表后重试')
+        await deleteStorageLocations(resources.map((resource) => resource.id))
+      },
+      onDeleted: async () => {
+        if (resources.some((resource) => resource.id === tree.selectedKey)) resetTreeSelection()
+        await tableQueryRef.value?.refreshRemove()
+      },
+      successMessage:
+        resources.length > 1 ? `已删除 ${resources.length} 个存放位置` : '存放位置已删除',
+      failureMessage: '存放位置删除失败，请检查关联记录并重试'
+    })
+  }
+
+  const consumedLocationTarget = ref<string | null>(null)
+  watch(
+    [() => route.query.storageLocationId, () => tree.data],
+    ([targetId]) => {
+      if (typeof targetId !== 'string' || targetId === consumedLocationTarget.value) return
+      if (!treeUtils.findNode(tree.data, targetId)) return
+      consumedLocationTarget.value = targetId
+      if (targetId !== tree.selectedKey) handleTreeSelect(targetId)
+    },
+    { immediate: true }
+  )
 
   onMounted(async () => {
     await userStore.ensureDictLoaded('commonEnabledStatus')

@@ -11,12 +11,22 @@
           { label: '同一领用人批量过账', type: 'success', effect: 'light' },
           { label: '发放快照可追溯', type: 'info', effect: 'plain' }
         ]"
-        :metrics="metrics"
+        :metrics="deleteReference.active ? [] : metrics"
       >
         <template #actions>
           <BusinessTableWorkspaceActions :table="tableQueryRef" />
         </template>
       </BusinessWorkspaceHeader>
+
+      <MasterDeleteProcessingNotice :table="tableQueryRef" />
+
+      <ElAlert
+        v-if="referenceError"
+        :title="referenceError"
+        type="error"
+        show-icon
+        :closable="false"
+      />
 
       <ArtTableQuery
         ref="tableQueryRef"
@@ -45,6 +55,10 @@
 
 <script setup lang="tsx">
   import { replaceReactiveModel } from '@/utils/form/model'
+  import { useMasterDataDeleteProcessingContext } from '@/hooks/core/useMasterDataDeleteProcessing'
+  import MasterDeleteProcessingNotice from '@/components/business/master-delete-processing-notice/index.vue'
+  import { createTenantScopeReadGuard } from '@/utils/tenant-scope-context'
+  import { fetchIssuanceReference } from '../../shared/issuance-reference'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { withSupabaseTableRange } from '@/utils/supabase/pagination'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
@@ -111,12 +125,33 @@
   }
 
   const tableQueryRef = ref<ArtTableQueryExpose>()
+  const deleteReference = useMasterDataDeleteProcessingContext()
   const userStore = useUserStore()
   const { defaultWriteTenantId } = useTenantScopeFormPolicy()
   const { confirmAction } = useArtFeedback()
   const recordDialogRef = ref<RecordDialogExpose>()
   const statisticsDialogRef = ref<StatisticsDialogExpose>()
   const searchQuery = reactive<SmisPpeIssuanceRecordSearchParams>({})
+  const referenceError = ref('')
+  watch(
+    () => [
+      deleteReference.value.active,
+      deleteReference.value.recordId,
+      deleteReference.value.recordNo
+    ],
+    ([active, recordId, recordNo]) => {
+      referenceError.value = ''
+      if (!active) {
+        replaceReactiveModel(searchQuery, {})
+        void tableQueryRef.value?.getData()
+        return
+      }
+      if (!recordId || !recordNo) return
+      replaceReactiveModel(searchQuery, { keyword: recordNo })
+      void tableQueryRef.value?.getData()
+    },
+    { immediate: true }
+  )
   const organizationOptions = ref<SmisPpeScopeOption[]>([])
   const overview = reactive<SmisPpeIssuanceRecordOverview>({
     total: 0,
@@ -474,6 +509,32 @@
   ]
 
   const fetchTableData = async (params: TableParams, options?: TableRequestOptions) => {
+    const reference = deleteReference.value
+    if (reference.active) {
+      const isCurrentReference = () =>
+        !options?.signal?.aborted &&
+        deleteReference.value.recordId === reference.recordId &&
+        deleteReference.value.recordNo === reference.recordNo
+      try {
+        const result = await fetchIssuanceReference(
+          fetchPpeIssuanceRecordList,
+          reference,
+          '劳保用品发放记录',
+          createTenantScopeReadGuard()
+        )
+        if (isCurrentReference()) {
+          Object.assign(overview, result.overview)
+          referenceError.value = ''
+        }
+        return { records: [result.record], total: 1 }
+      } catch (error) {
+        if (isCurrentReference()) {
+          referenceError.value = '关联劳保用品发放记录定位失败，请返回存放位置重新检查引用。'
+        }
+        throw error
+      }
+    }
+    referenceError.value = ''
     const result = await fetchPpeIssuanceRecordList(withSupabaseTableRange(params))
     if (!options?.signal?.aborted) Object.assign(overview, result.overview)
     return { records: result.data, total: result.total }

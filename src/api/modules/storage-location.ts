@@ -105,8 +105,24 @@ export async function saveStorageLocation(params: SmisStorageLocationSavePayload
 }
 
 export async function deleteStorageLocations(ids: string[]) {
-  return await responseHandle<number>(
+  const expectedCount = new Set(ids).size
+  const result = await responseHandle<number>(
     () => supabase.rpc('smis_delete_storage_locations_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '存放位置已删除' }
+    {
+      showMessage: false,
+      showErrorMessage: false,
+      breakReturn: true,
+      requireAffected: true,
+      noAffectedMessage: '所选存放位置未删除，请刷新列表核对权限和引用后重试',
+      errorMessage: '存放位置删除失败，请检查关联记录后重试'
+    }
   )
+  if (typeof result.data !== 'number' || !Number.isSafeInteger(result.data) || result.data <= 0)
+    throw new Error('删除结果无法确认，请刷新存放位置列表后重试', { cause: result })
+  if (result.data !== expectedCount)
+    throw new Error(
+      `实际删除 ${result.data} 条，与所选 ${expectedCount} 条不一致，请刷新列表核对后重试`,
+      { cause: result }
+    )
+  return result
 }
