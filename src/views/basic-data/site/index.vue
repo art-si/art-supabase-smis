@@ -697,7 +697,6 @@
 
 <style scoped lang="scss">
   .site-page {
-    gap: 12px;
     min-width: 0;
 
     &__overview {

@@ -13,7 +13,7 @@
   import { toDictionaryOption } from '@/utils/form/option'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
-  import { ElColorPicker, ElMessage, type FormRules } from 'element-plus'
+  import { ElMessage, type FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
@@ -70,12 +70,11 @@
     {
       label: '等级颜色',
       key: 'color',
-      render: () =>
-        h(ElColorPicker, {
-          modelValue: model.value.color,
-          predefine: ['#2563EB', '#059669', '#FACC15', '#F97316', '#DC2626'],
-          'onUpdate:modelValue': (v: string | null) => (model.value.color = v || '#2563EB')
-        })
+      type: 'colorPicker',
+      props: {
+        predefine: ['#2563EB', '#059669', '#FACC15', '#F97316', '#DC2626'],
+        onChange: (v: string | null) => (model.value.color = v || '#2563EB')
+      }
     },
     {
       label: '标签样式',

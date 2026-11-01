@@ -15,41 +15,7 @@
         :span="12"
         :gutter="24"
         label-position="top"
-      >
-        <template #categoryId>
-          <ElTreeSelect
-            v-model="form.categoryId"
-            :data="categories"
-            :props="categoryProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            default-expand-all
-            filterable
-            clearable
-            class="w-full"
-            placeholder="请选择文档分类"
-          />
-        </template>
-
-        <template #attachmentUrl>
-          <div class="document-register-dialog__upload">
-            <ArtUploadFile
-              v-model="form.attachmentUrl"
-              :show-file-list="true"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-              title="选择文档附件"
-              tip="支持常见文档、表格、演示稿、压缩包与图片，单个文件不超过 20 MB"
-              @resource-change="handleUploadSuccess"
-            />
-            <p v-if="mode === 'edit' && existingAttachmentName">
-              <ArtSvgIcon icon="ri:attachment-2" /> 当前附件：{{
-                existingAttachmentName
-              }}。不重新上传则保留现有版本。
-            </p>
-          </div>
-        </template>
-      </ArtForm>
+      />
     </div>
   </ArtDialog>
 </template>
@@ -69,7 +35,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
     saveDocumentRegister,
@@ -184,7 +149,25 @@
       span: 12,
       props: { maxlength: 100, showWordLimit: true, placeholder: '请输入文件编号' }
     },
-    { label: '文档分类', key: 'categoryId', type: 'text', span: 12 },
+    {
+      label: '文档分类',
+      key: 'categoryId',
+      span: 12,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: categories.value,
+          props: categoryProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          defaultExpandAll: true,
+          filterable: true,
+          clearable: true,
+          placeholder: '请选择文档分类'
+        }
+      }
+    },
     {
       label: '生效日期',
       key: 'effectiveDate',
@@ -243,8 +226,19 @@
     {
       label: mode.value === 'edit' ? '更新附件' : '文档附件',
       key: 'attachmentUrl',
-      type: 'text',
-      span: 24
+      type: 'uploadFile',
+      span: 24,
+      description:
+        mode.value === 'edit' && existingAttachmentName.value
+          ? '当前附件：' + existingAttachmentName.value + '。不重新上传则保留现有版本。'
+          : undefined,
+      props: {
+        showFileList: true,
+        accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+        title: '选择文档附件',
+        tip: '支持常见文档、表格、演示稿、压缩包与图片，单个文件不超过 20 MB',
+        onResourceChange: handleUploadSuccess
+      }
     },
     {
       label: '备注',

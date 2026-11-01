@@ -26,49 +26,6 @@
         :gutter="20"
         label-position="top"
       >
-        <template #positionIds>
-          <ArtTableMultipleSelect
-            v-model="form.positionIds"
-            :selected-data="selectedPositions"
-            :api-fn="fetchPositions"
-            :columns="positionColumns"
-            row-key="id"
-            label-key="name"
-            description-key="organizationName"
-            title="选择适用工种 / 岗位"
-            subtitle="数据来源 HR 岗位主数据，支持跨组织多选"
-            placeholder="请选择适用岗位"
-            search-placeholder="搜索岗位名称或编码"
-            empty-text="暂无可选岗位"
-            empty-description="请先在 HR 岗位管理中新增并启用岗位。"
-            @update:selected-data="selectedPositions = normalizeScopeRows($event)"
-          >
-            <template #empty><SmisDataSourceEmptyActions source="position" /></template>
-          </ArtTableMultipleSelect>
-        </template>
-        <template #organizationIds>
-          <ArtTreeMultipleSelect
-            v-model="form.organizationIds"
-            :selected-data="selectedOrganizations"
-            :data="organizationTree"
-            row-key="id"
-            label-key="name"
-            description-key="code"
-            children-key="children"
-            title="选择适用公司 / 部门"
-            subtitle="数据来源系统组织管理，可跨层级多选"
-            placeholder="请选择适用公司或部门"
-            search-placeholder="搜索组织名称或编码"
-            :tree-check-strictly="true"
-            :show-selected-panel="true"
-            :max-tag-count="4"
-            empty-text="暂无可选组织"
-            empty-description="请先在系统组织管理中维护当前租户的公司或部门。"
-            @update:selected-data="selectedOrganizations = normalizeScopeRows($event)"
-          >
-            <template #empty><SmisDataSourceEmptyActions source="organization" /></template>
-          </ArtTreeMultipleSelect>
-        </template>
         <template #detailItems
           ><ArtSectionCard
             :title="isTool ? '工器具明细标准' : '防护用品明细标准'"
@@ -118,6 +75,7 @@
 </template>
 
 <script setup lang="tsx">
+  import { h } from 'vue'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { toDictionaryOption } from '@/utils/form/option'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
@@ -134,7 +92,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtTableMultipleSelect from '@/components/core/forms/art-data-select/table-multiple.vue'
-  import ArtTreeMultipleSelect from '@/components/core/forms/art-data-select/tree-multiple.vue'
   import type {
     DataSelectColumn,
     DataSelectFetchParams,
@@ -254,8 +211,68 @@
       props: { clearable: false }
     },
     { label: '适用范围', key: 'scopeSection', type: 'divider', span: 24 },
-    { label: '适用工种 / 岗位', key: 'positionIds', type: 'input', span: 12 },
-    { label: '适用公司 / 部门', key: 'organizationIds', type: 'input', span: 12 },
+    {
+      label: '适用工种 / 岗位',
+      key: 'positionIds',
+      span: 12,
+      type: 'dataSelect',
+      get props(): FormItem['props'] {
+        return {
+          mode: 'table',
+          multiple: true,
+          showSelectedPanel: true,
+          showPagination: true,
+          selectedData: selectedPositions.value,
+          apiFn: fetchPositions,
+          columns: positionColumns,
+          rowKey: 'id',
+          labelKey: 'name',
+          descriptionKey: 'organizationName',
+          title: '选择适用工种 / 岗位',
+          subtitle: '数据来源 HR 岗位主数据，支持跨组织多选',
+          placeholder: '请选择适用岗位',
+          searchPlaceholder: '搜索岗位名称或编码',
+          emptyText: '暂无可选岗位',
+          emptyDescription: '请先在 HR 岗位管理中新增并启用岗位。',
+          'onUpdate:selectedData': ($event: DataSelectRecord[]) => {
+            selectedPositions.value = normalizeScopeRows($event)
+          }
+        }
+      },
+      slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'position' }) }
+    },
+    {
+      label: '适用公司 / 部门',
+      key: 'organizationIds',
+      span: 12,
+      type: 'dataSelect',
+      get props(): FormItem['props'] {
+        return {
+          mode: 'tree',
+          multiple: true,
+          showPagination: false,
+          selectedData: selectedOrganizations.value,
+          data: organizationTree.value,
+          rowKey: 'id',
+          labelKey: 'name',
+          descriptionKey: 'code',
+          childrenKey: 'children',
+          title: '选择适用公司 / 部门',
+          subtitle: '数据来源系统组织管理，可跨层级多选',
+          placeholder: '请选择适用公司或部门',
+          searchPlaceholder: '搜索组织名称或编码',
+          treeCheckStrictly: true,
+          showSelectedPanel: true,
+          maxTagCount: 4,
+          emptyText: '暂无可选组织',
+          emptyDescription: '请先在系统组织管理中维护当前租户的公司或部门。',
+          'onUpdate:selectedData': ($event: DataSelectRecord[]) => {
+            selectedOrganizations.value = normalizeScopeRows($event)
+          }
+        }
+      },
+      slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'organization' }) }
+    },
     {
       label: '标准说明',
       key: 'description',

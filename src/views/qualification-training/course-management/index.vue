@@ -90,32 +90,13 @@
           :span="12"
           :gutter="24"
           label-position="top"
-        >
-          <template #coverUrl
-            ><ArtUploadImage
-              v-model="courseForm.coverUrl"
-              title="上传课程封面"
-              :limit="1"
-              :size="112"
-          /></template>
-          <template #employeeIds
-            ><ArtEmployeeSelect
-              multiple
-              v-if="hasAuth('SmisCourseManagement:Assign')"
-              v-model:model-values="courseForm.employeeIds"
-              v-model:selected-data="employeeSelection"
-              title="选择学习人员"
-              placeholder="批量选择学习人员"
-            /><ElAlert
-              v-else
+          ><template #assignmentNotice
+            ><ElAlert
               title="当前账号可维护课程内容，但没有分配学习人员的权限。"
               type="info"
               :closable="false"
               show-icon
-            /><small class="mt-[7px] block text-[var(--el-text-color-secondary)]"
-              >已选择 {{ courseForm.employeeIds.length }} 人，保存后生成个人学习任务。</small
-            ></template
-          >
+          /></template>
         </ArtForm>
         <template #footer="{ api }"
           ><ElButton @click="api.handleClose()">取消</ElButton
@@ -203,12 +184,10 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import BusinessWorkspaceHeader, {
     type BusinessWorkspaceMetric
   } from '@/components/business/business-workspace-header/index.vue'
   import BusinessTableWorkspaceActions from '@/components/business/business-table-workspace-actions/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import {
     deleteCourses,
     fetchCourseLearningRecordList,
@@ -415,18 +394,26 @@
       span: 24,
       props: { placeholder: '视频、PDF 或学习链接地址' }
     },
-    { label: '课程封面', key: 'coverUrl', span: 24 },
+    {
+      label: '课程封面',
+      key: 'coverUrl',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传课程封面', limit: 1, size: 112 }
+      }
+    },
 
     {
       label: '最低学习时长（分钟）',
       key: 'minimumLearningMinutes',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 100000, class: '!w-full' }
     },
     {
       label: '课程学时',
       key: 'creditHours',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 9999, precision: 1, class: '!w-full' }
     },
     {
@@ -454,7 +441,35 @@
       span: 24,
       props: { rows: 4, maxlength: 8000, showWordLimit: true }
     },
-    { label: '学习人员', key: 'employeeIds', span: 24 }
+    {
+      label: '学习人员',
+      key: 'employeeIds',
+      span: 24,
+      type: 'employeeSelect',
+      hidden: !hasAuth('SmisCourseManagement:Assign'),
+      description:
+        '已选择 ' + courseForm.value.employeeIds.length + ' 人，保存后生成个人学习任务。',
+      props: {
+        multiple: true,
+        modelValues: courseForm.value.employeeIds,
+        'onUpdate:modelValues': (value: string[]) => {
+          courseForm.value.employeeIds = value
+        },
+        selectedData: employeeSelection.value,
+        'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
+          employeeSelection.value = value
+        },
+        title: '选择学习人员',
+        placeholder: '批量选择学习人员'
+      }
+    },
+    {
+      key: 'assignmentNotice',
+      label: '',
+      type: 'custom',
+      span: 24,
+      hidden: hasAuth('SmisCourseManagement:Assign')
+    }
   ])
   const courseRules: FormRules = {
     courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],

@@ -16,16 +16,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            v-model:selected-data="responsibleSelection"
-            :tenant-id="targetTenantId"
-            title="选择位置负责人"
-            subtitle="数据来自当前租户员工花名册，可按姓名、工号、组织或岗位检索"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -45,7 +35,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useTenantScopeFormPolicy } from '@/hooks/core/useTenantScopeFormPolicy'
   import { useUserStore } from '@/store/modules/user'
@@ -202,7 +191,23 @@
           placeholder: '请选择系统组织部门'
         }
       },
-      { label: '位置负责人', key: 'responsibleEmployeeId', type: 'text' },
+      {
+        label: '位置负责人',
+        key: 'responsibleEmployeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: responsibleSelection.value,
+            'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+              responsibleSelection.value = $event
+            },
+            tenantId: targetTenantId.value,
+            title: '选择位置负责人',
+            subtitle: '数据来自当前租户员工花名册，可按姓名、工号、组织或岗位检索',
+            placeholder: '点击从员工花名册选择'
+          }
+        }
+      },
       { label: '位置说明', key: 'detailSection', type: 'divider', span: 24 },
       {
         label: '详细位置',

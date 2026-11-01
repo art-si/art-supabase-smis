@@ -170,31 +170,11 @@
       <ArtForm
         ref="activityFormRef"
         v-model="activityForm"
-        :items="[]"
+        :items="activityItems"
         :rules="activityRules"
-        custom-layout
+        :span="24"
         root-class="p-0! md:p-0!"
-      >
-        <ElFormItem label="作业活动" prop="activityName" required>
-          <ElInput
-            v-model="activityForm.activityName"
-            maxlength="300"
-            show-word-limit
-            placeholder="例如：设备停机检修"
-          />
-        </ElFormItem>
-        <ElFormItem label="关键作业步骤" prop="workStep" required>
-          <ElInput
-            v-model="activityForm.workStep"
-            type="textarea"
-            :rows="5"
-            maxlength="1000"
-            show-word-limit
-            resize="none"
-            placeholder="按实际顺序描述关键操作步骤"
-          />
-        </ElFormItem>
-      </ArtForm>
+      />
     </div>
   </ArtDialog>
 
@@ -207,87 +187,11 @@
       <ArtForm
         ref="hazardFormRef"
         v-model="hazardForm"
-        :items="[]"
+        :items="hazardItems"
         :rules="hazardRules"
-        custom-layout
+        :span="12"
         root-class="p-0! md:p-0!"
-      >
-        <div class="hazard-editor__grid">
-          <ElFormItem label="危害编号">
-            <ElInput :model-value="hazardForm.hazardNo" disabled placeholder="保存后自动生成" />
-          </ElFormItem>
-          <ElFormItem label="危害因素类别" prop="factorCategoryId" required>
-            <ElSelect
-              v-model="hazardForm.factorCategoryId"
-              filterable
-              class="w-full"
-              placeholder="选择危害因素类别"
-            >
-              <ElOption
-                v-for="item in options.hazardCategories"
-                :key="item.id"
-                :label="`${item.categoryName} · ${item.categoryCode}`"
-                :value="item.id"
-              />
-            </ElSelect>
-          </ElFormItem>
-        </div>
-        <ElFormItem label="危害因素" prop="hazardFactor" required>
-          <ElInput
-            v-model="hazardForm.hazardFactor"
-            type="textarea"
-            :rows="4"
-            maxlength="1500"
-            show-word-limit
-            resize="none"
-            placeholder="描述人的、物的、环境或管理方面的危害因素"
-          />
-        </ElFormItem>
-        <div class="hazard-editor__grid">
-          <ElFormItem label="事故类型">
-            <ElSelect
-              v-model="hazardForm.accidentTypes"
-              multiple
-              filterable
-              collapse-tags
-              collapse-tags-tooltip
-              class="w-full"
-              placeholder="选择可能导致的事故类型"
-            >
-              <ElOption v-for="item in accidentTypeOptions" :key="item.value" v-bind="item" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="关联作业活动">
-            <ElSelect
-              v-model="hazardForm.activityIds"
-              multiple
-              filterable
-              collapse-tags
-              collapse-tags-tooltip
-              class="w-full"
-              placeholder="选择相关作业活动"
-            >
-              <ElOption
-                v-for="item in activities"
-                :key="item.id"
-                :label="item.activityName"
-                :value="item.id"
-              />
-            </ElSelect>
-          </ElFormItem>
-        </div>
-        <ElFormItem label="后果及影响">
-          <ElInput
-            v-model="hazardForm.consequence"
-            type="textarea"
-            :rows="4"
-            maxlength="2000"
-            show-word-limit
-            resize="none"
-            placeholder="说明可能造成的人员、设备、环境或经营影响"
-          />
-        </ElFormItem>
-      </ArtForm>
+      />
     </div>
     <MasterDataDeleteGuard ref="deleteActivityGuardRef" />
     <MasterDataDeleteGuard ref="deleteHazardGuardRef" />
@@ -304,7 +208,7 @@
   import type { FormRules } from 'element-plus'
   import { ElMessage } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
-  import ArtForm from '@/components/core/forms/art-form/index.vue'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -397,6 +301,84 @@
   const accidentTypeOptions = computed(() =>
     (getDictMap.value.smisAccidentCategory ?? []).map(toDictionaryOption)
   )
+
+  const activityItems: FormItem[] = [
+    {
+      key: 'activityName',
+      label: '作业活动',
+      type: 'input',
+      formItemProps: { required: true },
+      props: { maxlength: 300, showWordLimit: true, placeholder: '例如：设备停机检修' }
+    },
+    {
+      key: 'workStep',
+      label: '关键作业步骤',
+      type: 'textarea',
+      formItemProps: { required: true },
+      props: { rows: 5, maxlength: 1000, resize: 'none', placeholder: '按实际顺序描述关键操作步骤' }
+    }
+  ]
+  const hazardItems = computed<FormItem[]>(() => [
+    { key: 'hazardNo', label: '危害编号', type: 'text', props: { emptyText: '保存后自动生成' } },
+    {
+      key: 'factorCategoryId',
+      label: '危害因素类别',
+      type: 'select',
+      formItemProps: { required: true },
+      options: options.value.hazardCategories.map((item) => ({
+        label: item.categoryName + ' · ' + item.categoryCode,
+        value: item.id
+      })),
+      props: { filterable: true, placeholder: '选择危害因素类别' }
+    },
+    {
+      key: 'hazardFactor',
+      label: '危害因素',
+      type: 'textarea',
+      formItemProps: { required: true },
+      props: {
+        maxlength: 1500,
+        resize: 'none',
+        placeholder: '描述人的、物的、环境或管理方面的危害因素'
+      }
+    },
+    {
+      key: 'accidentTypes',
+      label: '事故类型',
+      type: 'select',
+      options: accidentTypeOptions.value,
+      props: {
+        multiple: true,
+        filterable: true,
+        collapseTags: true,
+        collapseTagsTooltip: true,
+        placeholder: '选择可能导致的事故类型'
+      }
+    },
+    {
+      key: 'activityIds',
+      label: '关联作业活动',
+      type: 'select',
+      options: activities.value.map((item) => ({ label: item.activityName, value: item.id })),
+      props: {
+        multiple: true,
+        filterable: true,
+        collapseTags: true,
+        collapseTagsTooltip: true,
+        placeholder: '选择相关作业活动'
+      }
+    },
+    {
+      key: 'consequence',
+      label: '后果及影响',
+      type: 'textarea',
+      props: {
+        maxlength: 2000,
+        resize: 'none',
+        placeholder: '说明可能造成的人员、设备、环境或经营影响'
+      }
+    }
+  ])
 
   const loadWorkspace = async (): Promise<void> => {
     if (!riskPoint.value) return

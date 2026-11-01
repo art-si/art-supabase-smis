@@ -14,18 +14,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #violatorEmployeeIds>
-          <ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.model.violatorEmployeeIds"
-            v-model:selected-data="violatorSelection"
-            :tenant-id="recordTenantId"
-            title="选择违章人员"
-            placeholder="从员工花名册批量选择"
-            :display-fields="['organization', 'jobTitle']"
-          />
-        </template>
-
         <template #siteId>
           <AntiViolationSiteSelect
             v-model="form.model.siteId"
@@ -39,27 +27,6 @@
             v-model="form.model.standardIds"
             v-model:selected-data="standardSelection"
             :standards="standards"
-          />
-        </template>
-
-        <template #checkerEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.checkerEmployeeId"
-            v-model:selected-data="checkerSelection"
-            :tenant-id="recordTenantId"
-            title="选择检查人"
-            subtitle="数据来自当前租户员工花名册"
-            placeholder="从员工花名册选择"
-          />
-        </template>
-
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            title="上传违章现场图片"
-            multiple
-            :limit="12"
-            :size="104"
           />
         </template>
       </ArtForm>
@@ -77,8 +44,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import {
     saveViolationRecord,
     type SmisAntiViolationStandardOption,
@@ -146,7 +111,29 @@
     model: createInitialForm(),
     items: computed(() => [
       { label: '记录对象', key: 'peopleSection', type: 'divider', span: 24 },
-      { label: '违章人员', key: 'violatorEmployeeIds', type: 'text', span: 16 },
+      {
+        label: '违章人员',
+        key: 'violatorEmployeeIds',
+        span: 16,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            modelValues: form.model.violatorEmployeeIds,
+            'onUpdate:modelValues': ($event: typeof form.model.violatorEmployeeIds) => {
+              form.model.violatorEmployeeIds = $event
+            },
+            selectedData: violatorSelection.value,
+            'onUpdate:selectedData': ($event: typeof violatorSelection.value) => {
+              violatorSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择违章人员',
+            placeholder: '从员工花名册批量选择',
+            displayFields: ['organization', 'jobTitle']
+          }
+        }
+      },
       {
         label: '违章时间',
         key: 'violationTime',
@@ -161,7 +148,24 @@
         }
       },
       { label: '违章地点', key: 'siteId', type: 'text', span: 12 },
-      { label: '检查人', key: 'checkerEmployeeId', type: 'text', span: 12 },
+      {
+        label: '检查人',
+        key: 'checkerEmployeeId',
+        span: 12,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: checkerSelection.value,
+            'onUpdate:selectedData': ($event: typeof checkerSelection.value) => {
+              checkerSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择检查人',
+            subtitle: '数据来自当前租户员工花名册',
+            placeholder: '从员工花名册选择'
+          }
+        }
+      },
       { label: '违章项目', key: 'standardSection', type: 'divider', span: 24 },
       { label: '选择违章项目', key: 'standardIds', type: 'text', span: 24 },
       {
@@ -193,7 +197,15 @@
         }
       },
       { label: '现场证据', key: 'evidenceSection', type: 'divider', span: 24 },
-      { label: '违章图片', key: 'imageUrls', type: 'text', span: 24 },
+      {
+        label: '违章图片',
+        key: 'imageUrls',
+        span: 24,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { title: '上传违章现场图片', multiple: true, limit: 12, size: 104 }
+        }
+      },
       {
         label: '备注',
         key: 'remark',

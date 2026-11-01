@@ -19,54 +19,11 @@
         :gutter="24"
         label-position="top"
       >
-        <template #audienceEmployeeIds>
-          <ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.model.audienceEmployeeIds"
-            v-model:selected-data="employeeSelection"
-            :tenant-id="recordTenantId"
-            title="选择公告接收人员"
-            placeholder="从员工花名册批量选择"
-            :display-fields="['organization', 'jobTitle']"
-          />
-        </template>
-
-        <template #audienceOrganizationIds>
-          <ElTreeSelect
-            v-model="form.model.audienceOrganizationIds"
-            class="announcement-editor-dialog__full-control"
-            :data="organizations"
-            :props="organizationTreeProps"
-            node-key="id"
-            value-key="id"
-            multiple
-            show-checkbox
-            check-strictly
-            collapse-tags
-            collapse-tags-tooltip
-            :max-collapse-tags="3"
-            filterable
-            clearable
-            default-expand-all
-            placeholder="选择一个或多个发布组织"
-          />
-        </template>
-
         <template #contentHtml>
           <ArtTiptapEditor
             v-model="form.model.contentHtml"
             height="340px"
             placeholder="请输入公告正文，可使用标题、列表、表格与链接组织内容…"
-          />
-        </template>
-
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.model.attachmentUrls"
-            multiple
-            :limit="20"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,image/*"
-            tip="支持文档、表格、演示稿、压缩包和图片，最多 20 个附件"
           />
         </template>
       </ArtForm>
@@ -90,7 +47,6 @@
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
   import ArtTiptapEditor from '@/components/core/forms/art-tiptap-editor/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
     saveAnnouncement,
@@ -99,7 +55,6 @@
     type SmisAnnouncementOrganization,
     type SmisAnnouncementSavePayload
   } from '@smis/api'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
 
   export interface AnnouncementEditorDialogOpenData {
     row?: SmisAnnouncement
@@ -213,18 +168,66 @@
       {
         label: '指定人员',
         key: 'audienceEmployeeIds',
-        type: 'text',
         span: 24,
-        hidden: announcementModel.audienceType !== 'employees'
+        hidden: announcementModel.audienceType !== 'employees',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            modelValues: form.model.audienceEmployeeIds,
+            'onUpdate:modelValues': ($event: typeof form.model.audienceEmployeeIds) => {
+              form.model.audienceEmployeeIds = $event
+            },
+            selectedData: employeeSelection.value,
+            'onUpdate:selectedData': ($event: typeof employeeSelection.value) => {
+              employeeSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择公告接收人员',
+            placeholder: '从员工花名册批量选择',
+            displayFields: ['organization', 'jobTitle']
+          }
+        }
       },
       {
         label: '指定组织',
         key: 'audienceOrganizationIds',
-        type: 'text',
         span: 24,
-        hidden: announcementModel.audienceType !== 'organizations'
+        hidden: announcementModel.audienceType !== 'organizations',
+        type: 'treeSelect',
+        get props(): FormItem['props'] {
+          return {
+            data: organizations.value,
+            props: organizationTreeProps,
+            nodeKey: 'id',
+            valueKey: 'id',
+            multiple: true,
+            showCheckbox: true,
+            checkStrictly: true,
+            collapseTags: true,
+            collapseTagsTooltip: true,
+            maxCollapseTags: 3,
+            filterable: true,
+            clearable: true,
+            defaultExpandAll: true,
+            placeholder: '选择一个或多个发布组织'
+          }
+        }
       },
-      { label: '相关附件', key: 'attachmentUrls', type: 'text', span: 24 }
+      {
+        label: '相关附件',
+        key: 'attachmentUrls',
+        span: 24,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            limit: 20,
+            accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,image/*',
+            tip: '支持文档、表格、演示稿、压缩包和图片，最多 20 个附件'
+          }
+        }
+      }
     ]),
     rules: {
       title: [

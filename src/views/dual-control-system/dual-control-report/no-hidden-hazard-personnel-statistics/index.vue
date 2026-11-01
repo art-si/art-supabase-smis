@@ -213,7 +213,7 @@
       label: '隐患数量上限',
       key: 'maxHazardCount',
       span: 4,
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 9999, controlsPosition: 'right', placeholder: '默认 0' }
     },
     {

@@ -355,7 +355,6 @@
 
 <style scoped lang="scss">
   .analysis-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

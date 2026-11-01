@@ -27,37 +27,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #inspectedEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.inspectedEmployeeId"
-            v-model:selected-data="inspectedSelection"
-            :tenant-id="recordTenantId"
-            title="选择被检查人"
-            subtitle="人员、照片、组织和岗位均来自当前租户员工花名册"
-            placeholder="请选择被检查人"
-          />
-        </template>
-        <template #checkerEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.checkerEmployeeId"
-            v-model:selected-data="checkerSelection"
-            :tenant-id="recordTenantId"
-            title="选择检查人"
-            subtitle="按姓名、工号、组织或岗位检索"
-            placeholder="请选择检查人"
-          />
-        </template>
-        <template #responsibleEmployeeIds>
-          <ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.model.responsibleEmployeeIds"
-            v-model:selected-data="responsibleSelection"
-            :tenant-id="recordTenantId"
-            title="选择教育负责人"
-            subtitle="支持多选，教育台账将保留负责人快照"
-            placeholder="请选择一名或多名教育负责人"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -78,7 +47,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -173,8 +141,42 @@
     model: initial(),
     items: computed(() => [
       { label: '人员与检查信息', key: 'inspection', type: 'divider', span: 24 },
-      { label: '被检查人', key: 'inspectedEmployeeId', span: 12 },
-      { label: '检查人', key: 'checkerEmployeeId', span: 12 },
+      {
+        label: '被检查人',
+        key: 'inspectedEmployeeId',
+        span: 12,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: inspectedSelection.value,
+            'onUpdate:selectedData': ($event: typeof inspectedSelection.value) => {
+              inspectedSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择被检查人',
+            subtitle: '人员、照片、组织和岗位均来自当前租户员工花名册',
+            placeholder: '请选择被检查人'
+          }
+        }
+      },
+      {
+        label: '检查人',
+        key: 'checkerEmployeeId',
+        span: 12,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: checkerSelection.value,
+            'onUpdate:selectedData': ($event: typeof checkerSelection.value) => {
+              checkerSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择检查人',
+            subtitle: '按姓名、工号、组织或岗位检索',
+            placeholder: '请选择检查人'
+          }
+        }
+      },
       {
         label: '检查时间',
         key: 'inspectionTime',
@@ -213,7 +215,29 @@
         props: textareaProps('描述违章时间、地点、行为和现场情况', 3000, 5)
       },
       { label: '教育安排', key: 'education', type: 'divider', span: 24 },
-      { label: '教育负责人', key: 'responsibleEmployeeIds', span: 24 },
+      {
+        label: '教育负责人',
+        key: 'responsibleEmployeeIds',
+        span: 24,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            modelValues: form.model.responsibleEmployeeIds,
+            'onUpdate:modelValues': ($event: typeof form.model.responsibleEmployeeIds) => {
+              form.model.responsibleEmployeeIds = $event
+            },
+            selectedData: responsibleSelection.value,
+            'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+              responsibleSelection.value = $event
+            },
+            tenantId: recordTenantId.value,
+            title: '选择教育负责人',
+            subtitle: '支持多选，教育台账将保留负责人快照',
+            placeholder: '请选择一名或多名教育负责人'
+          }
+        }
+      },
       {
         label: '拟教育内容',
         key: 'plannedEducationContent',

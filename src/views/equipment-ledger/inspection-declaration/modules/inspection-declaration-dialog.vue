@@ -31,59 +31,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #equipmentId>
-          <ArtTableSingleSelect
-            v-model="form.model.equipmentId"
-            :selected-data="equipmentSelection"
-            :api-fn="fetchEquipmentOptions"
-            :columns="equipmentColumns"
-            title="选择检验设备"
-            subtitle="数据来自当前租户设备台账"
-            label-key="equipmentName"
-            description-key="equipmentCode"
-            placeholder="点击选择设备"
-            empty-text="暂无可检验设备"
-            empty-description="请先维护当前租户的设备台账，再创建检验申报。"
-            show-pagination
-          >
-            <template #empty>
-              <SmisDataSourceEmptyActions source="equipment" />
-            </template>
-          </ArtTableSingleSelect>
-        </template>
-
-        <template #inspectionInstitutionId>
-          <ArtTableSingleSelect
-            v-model="form.model.inspectionInstitutionId"
-            :selected-data="institutionSelection"
-            :api-fn="fetchInstitutionOptions"
-            :columns="institutionColumns"
-            title="选择检验机构"
-            subtitle="仅展示供应商主数据中分类为“检验机构”的单位"
-            label-key="supplierName"
-            description-key="supplierCode"
-            placeholder="点击选择检验机构"
-            empty-text="暂无可选检验机构"
-            empty-description="请在供应商主数据中新增单位，并将供应商类别设为“检验机构”。"
-            show-pagination
-          >
-            <template #empty>
-              <SmisDataSourceEmptyActions source="supplier" />
-            </template>
-          </ArtTableSingleSelect>
-        </template>
-
-        <template #images>
-          <ArtUploadImage
-            v-model="imageUrls"
-            title="上传检验图片"
-            :size="88"
-            :limit="9"
-            multiple
-            @resource-change="handleImageResourceChange"
-          />
-          <p class="inspection-dialog__upload-help">支持直接上传或从资源库选择，最多 9 张。</p>
-        </template>
       </ArtForm>
 
       <SmisAiDocumentOcrPanel
@@ -98,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { toDictionaryOption } from '@/utils/form/option'
 
@@ -113,8 +61,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtTableSingleSelect from '@/components/core/forms/art-data-select/table-single.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import SmisDataSourceEmptyActions from '@smis/views/components/smis-data-source-empty-actions.vue'
   import SmisAiDocumentOcrPanel from '@smis/views/components/smis-ai-document-ocr-panel.vue'
@@ -156,7 +102,7 @@
     extensionDate: string
     reminderMonths: 1 | 2 | 3
     status: SmisEquipmentInspectionStatus
-    images: string
+    images: string[]
     remark: string
   }
   interface FormExpose {
@@ -217,12 +163,17 @@
     extensionDate: '',
     reminderMonths: 1,
     status: 'completed',
-    images: '',
+    images: [],
     remark: ''
   })
   const formModel = reactive<InspectionForm>(initialForm())
   const images = shallowRef<SmisEquipmentInspectionImage[]>([])
-  const imageUrls = ref<string[]>([])
+  const imageUrls = computed({
+    get: () => formModel.images,
+    set: (value: string[]) => {
+      formModel.images = value
+    }
+  })
   const ocrArtifactId = ref('')
 
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
@@ -265,7 +216,31 @@
         options: statusOptions.value,
         props: { clearable: false }
       },
-      { label: '检验设备', key: 'equipmentId', type: 'text', span: 12 },
+      {
+        label: '检验设备',
+        key: 'equipmentId',
+        span: 12,
+        type: 'dataSelect',
+        get props(): FormItem['props'] {
+          return {
+            mode: 'table',
+            multiple: false,
+            showSelectedPanel: false,
+            selectedData: equipmentSelection.value,
+            apiFn: fetchEquipmentOptions,
+            columns: equipmentColumns,
+            title: '选择检验设备',
+            subtitle: '数据来自当前租户设备台账',
+            labelKey: 'equipmentName',
+            descriptionKey: 'equipmentCode',
+            placeholder: '点击选择设备',
+            emptyText: '暂无可检验设备',
+            emptyDescription: '请先维护当前租户的设备台账，再创建检验申报。',
+            showPagination: true
+          }
+        },
+        slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'equipment' }) }
+      },
       {
         label: '检验类别',
         key: 'inspectionCategoryId',
@@ -296,7 +271,31 @@
         options: conclusionOptions.value,
         props: { clearable: false }
       },
-      { label: '检验机构', key: 'inspectionInstitutionId', type: 'text', span: 12 },
+      {
+        label: '检验机构',
+        key: 'inspectionInstitutionId',
+        span: 12,
+        type: 'dataSelect',
+        get props(): FormItem['props'] {
+          return {
+            mode: 'table',
+            multiple: false,
+            showSelectedPanel: false,
+            selectedData: institutionSelection.value,
+            apiFn: fetchInstitutionOptions,
+            columns: institutionColumns,
+            title: '选择检验机构',
+            subtitle: '仅展示供应商主数据中分类为“检验机构”的单位',
+            labelKey: 'supplierName',
+            descriptionKey: 'supplierCode',
+            placeholder: '点击选择检验机构',
+            emptyText: '暂无可选检验机构',
+            emptyDescription: '请在供应商主数据中新增单位，并将供应商类别设为“检验机构”。',
+            showPagination: true
+          }
+        },
+        slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'supplier' }) }
+      },
       {
         label: '下次检验日期',
         key: 'nextDueDate',
@@ -333,7 +332,20 @@
         props: { clearable: false }
       },
 
-      { label: '检验图片', key: 'images', type: 'text', span: 24 },
+      {
+        label: '检验图片',
+        key: 'images',
+        span: 24,
+        type: 'uploadImage',
+        description: '支持直接上传或从资源库选择，最多 9 张。',
+        props: {
+          title: '上传检验图片',
+          size: 88,
+          limit: 9,
+          multiple: true,
+          onResourceChange: handleImageResourceChange
+        }
+      },
       {
         label: '备注',
         key: 'remark',

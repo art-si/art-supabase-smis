@@ -24,17 +24,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            :resource-tenant-id="selectedTenantId || ''"
-            :disabled="!selectedTenantId"
-            title="上传物料图片"
-            multiple
-            :limit="5"
-            :size="108"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -52,7 +41,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import TreeUtils from '@/utils/tree'
@@ -290,7 +278,22 @@
           class: '!w-full'
         }
       },
-      { label: '物料图片', key: 'imageUrls', type: 'text', span: 24 },
+      {
+        label: '物料图片',
+        key: 'imageUrls',
+        span: 24,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return {
+            resourceTenantId: selectedTenantId.value || '',
+            disabled: !selectedTenantId.value,
+            title: '上传物料图片',
+            multiple: true,
+            limit: 5,
+            size: 108
+          }
+        }
+      },
       {
         label: '说明',
         key: 'description',

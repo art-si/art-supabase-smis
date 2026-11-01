@@ -337,7 +337,6 @@
 
 <style scoped lang="scss">
   .inspection-report-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

@@ -1,5 +1,5 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg">
+  <ArtDialog ref="dialogRef" size="lg" :confirm-disabled="!formRef?.readyToSubmit">
     <div class="evaluation-dialog">
       <div class="evaluation-dialog__subject"
         ><span><ArtSvgIcon icon="ri:alert-line" /></span
@@ -21,28 +21,14 @@
           ><span>{{ modelOption.modelName }}</span></button
         ></div
       >
-      <div v-if="activeModel" class="evaluation-dialog__factors">
-        <label v-for="dimension in activeModel.dimensions" :key="dimension.id"
-          ><span
-            ><strong>{{ dimension.dimensionCode }}</strong
-            >{{ dimension.dimensionName }}</span
-          ><ElSelect
-            v-model="factorValues[dimension.dimensionCode]"
-            filterable
-            placeholder="请选择判定标准"
-            ><ElOption
-              v-for="criterion in dimension.criteria"
-              :key="criterion.id"
-              :label="`${criterion.score} · ${criterion.criterionText}`"
-              :value="criterion.score"
-              ><span class="evaluation-dialog__option"
-                ><strong>{{ criterion.score }}</strong
-                ><span>{{ criterion.criterionText }}</span></span
-              ></ElOption
-            ></ElSelect
-          ></label
-        >
-      </div>
+      <ArtForm
+        v-if="activeModel"
+        ref="formRef"
+        v-model="factorValues"
+        :items="factorItems"
+        :span="12"
+        label-position="top"
+      />
       <div class="evaluation-dialog__result"
         ><div
           ><small>{{ model.methodCode === 'LEC' ? 'D 值' : 'R 值' }}</small
@@ -58,6 +44,12 @@
   </ArtDialog>
 </template>
 <script setup lang="ts">
+  import { h } from 'vue'
+  import ArtForm, {
+    type FormItem,
+    type FormItemOption
+  } from '@/components/core/forms/art-form/index.vue'
+  import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
@@ -77,26 +69,60 @@
   const emit = defineEmits<{ success: [] }>()
   const dialogRef = ref<ArtDialogExpose<EvaluationDialogOpenData>>()
   const models = ref<SmisRiskAssessmentModel[]>([])
+  const formRef = ref<InstanceType<typeof ArtForm>>()
   const item = reactive<Partial<SmisRiskItem>>({})
   const model = reactive<{ methodCode: SmisRiskAssessmentMethod }>({ methodCode: 'LEC' })
-  const factorValues = reactive<Partial<Record<SmisRiskDimensionCode, number>>>({})
+  const factorValues = ref<Partial<Record<SmisRiskDimensionCode, number>>>({})
   const activeModel = computed(() => models.value.find((i) => i.methodCode === model.methodCode))
+  const factorItems = computed<FormItem[]>(() =>
+    (activeModel.value?.dimensions || []).map((dimension) => ({
+      key: dimension.dimensionCode,
+      label: dimension.dimensionCode + ' · ' + dimension.dimensionName,
+      type: 'select',
+      props: { filterable: true, placeholder: '请选择判定标准' },
+      options: dimension.criteria.map((criterion) => ({
+        label: criterion.score + ' · ' + criterion.criterionText,
+        value: criterion.score,
+        criterionText: criterion.criterionText
+      })),
+      optionComponent: ({ option }: { option: FormItemOption }) =>
+        h('span', { class: 'flex items-center gap-2' }, [
+          h(
+            'strong',
+            { class: 'w-[38px] shrink-0 text-[var(--theme-color)]' },
+            String(option.value)
+          ),
+          h('span', String(option.criterionText))
+        ]),
+      formItemProps: {
+        rules: [
+          {
+            required: true,
+            message: '请选择' + dimension.dimensionName + '判定标准',
+            trigger: 'change'
+          }
+        ]
+      }
+    }))
+  )
   const requiredCodes = computed<SmisRiskDimensionCode[]>(() =>
     model.methodCode === 'LEC' ? ['L', 'E', 'C'] : ['L', 'S']
   )
   const completed = computed(() =>
-    requiredCodes.value.every((code) => typeof factorValues[code] === 'number')
+    requiredCodes.value.every((code) => typeof factorValues.value[code] === 'number')
   )
   const calculatedScore = computed(() => {
     if (!completed.value) return '—'
     return model.methodCode === 'LEC'
-      ? (factorValues.L || 0) * (factorValues.E || 0) * (factorValues.C || 0)
-      : (factorValues.L || 0) * (factorValues.S || 0)
+      ? (factorValues.value.L || 0) * (factorValues.value.E || 0) * (factorValues.value.C || 0)
+      : (factorValues.value.L || 0) * (factorValues.value.S || 0)
   })
   const formula = computed(() =>
-    model.methodCode === 'LEC'
-      ? `${factorValues.L ?? 'L'} × ${factorValues.E ?? 'E'} × ${factorValues.C ?? 'C'}`
-      : `${factorValues.L ?? 'L'} × ${factorValues.S ?? 'S'}`
+    requiredCodes.value
+      .map((code) =>
+        typeof factorValues.value[code] === 'number' ? String(factorValues.value[code]) : code
+      )
+      .join(' × ')
   )
   const matchedLevel = computed(() => {
     const score = calculatedScore.value
@@ -109,18 +135,21 @@
   })
   const selectMethod = (method: SmisRiskAssessmentMethod) => {
     model.methodCode = method
-    Object.keys(factorValues).forEach((key) => delete factorValues[key as SmisRiskDimensionCode])
+    Object.keys(factorValues.value).forEach(
+      (key) => delete factorValues.value[key as SmisRiskDimensionCode]
+    )
   }
   const submit = async () => {
+    if (!(await validateArtFormForSubmit(formRef.value))) return false
     if (!item.id || !completed.value || !matchedLevel.value) return false
     try {
       await saveRiskEvaluation({
         riskItemId: item.id,
         methodCode: model.methodCode,
-        lValue: factorValues.L!,
-        eValue: model.methodCode === 'LEC' ? factorValues.E : null,
-        cValue: model.methodCode === 'LEC' ? factorValues.C : null,
-        sValue: model.methodCode === 'LS' ? factorValues.S : null
+        lValue: factorValues.value.L!,
+        eValue: model.methodCode === 'LEC' ? factorValues.value.E : null,
+        cValue: model.methodCode === 'LEC' ? factorValues.value.C : null,
+        sValue: model.methodCode === 'LS' ? factorValues.value.S : null
       })
       emit('success')
       return true
@@ -133,9 +162,11 @@
     Object.assign(item, data.item)
     models.value = []
     model.methodCode = data.item.evaluation?.methodCode || 'LEC'
-    Object.keys(factorValues).forEach((key) => delete factorValues[key as SmisRiskDimensionCode])
+    Object.keys(factorValues.value).forEach(
+      (key) => delete factorValues.value[key as SmisRiskDimensionCode]
+    )
     if (data.item.evaluation)
-      Object.assign(factorValues, {
+      Object.assign(factorValues.value, {
         L: data.item.evaluation.lValue,
         E: data.item.evaluation.eValue ?? undefined,
         C: data.item.evaluation.cValue ?? undefined,

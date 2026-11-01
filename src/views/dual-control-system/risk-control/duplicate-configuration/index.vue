@@ -449,7 +449,6 @@
 </script>
 <style scoped lang="scss">
   .duplicate-page {
-    gap: 12px;
     min-width: 0;
 
     &__overview {

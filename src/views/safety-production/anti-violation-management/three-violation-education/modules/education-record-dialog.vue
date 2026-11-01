@@ -34,26 +34,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #responsibleEmployeeIds>
-          <ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.model.responsibleEmployeeIds"
-            v-model:selected-data="responsibleSelection"
-            :tenant-id="currentRow?.tenantId"
-            title="选择教育负责人"
-            subtitle="支持多选，提交后同步更新安全教育台账"
-            placeholder="请选择一名或多名教育负责人"
-          />
-        </template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.model.attachmentUrls"
-            multiple
-            :limit="20"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="上传签到表、试卷、照片或教育材料，最多 20 个文件"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -69,9 +49,7 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import {
     recordThreeViolationEducation,
     type SmisThreeViolationEducation,
@@ -129,7 +107,29 @@
     model: initial(),
     items: [
       { label: '教育实施', key: 'implementation', type: 'divider', span: 24 },
-      { label: '教育负责人', key: 'responsibleEmployeeIds', span: 24 },
+      {
+        label: '教育负责人',
+        key: 'responsibleEmployeeIds',
+        span: 24,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            modelValues: form.model.responsibleEmployeeIds,
+            'onUpdate:modelValues': ($event: typeof form.model.responsibleEmployeeIds) => {
+              form.model.responsibleEmployeeIds = $event
+            },
+            selectedData: responsibleSelection.value,
+            'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+              responsibleSelection.value = $event
+            },
+            tenantId: currentRow.value?.tenantId,
+            title: '选择教育负责人',
+            subtitle: '支持多选，提交后同步更新安全教育台账',
+            placeholder: '请选择一名或多名教育负责人'
+          }
+        }
+      },
       {
         label: '教育开始时间',
         key: 'educationStartTime',
@@ -181,7 +181,20 @@
         props: textareaProps('记录考核结论、认识改进、班组通报或后续要求', 2000, 4)
       },
       { label: '教育证据', key: 'evidence', type: 'divider', span: 24 },
-      { label: '教育相关材料', key: 'attachmentUrls', span: 24 },
+      {
+        label: '教育相关材料',
+        key: 'attachmentUrls',
+        span: 24,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            limit: 20,
+            accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+            tip: '上传签到表、试卷、照片或教育材料，最多 20 个文件'
+          }
+        }
+      },
       {
         label: '教育备注',
         key: 'educationRemark',

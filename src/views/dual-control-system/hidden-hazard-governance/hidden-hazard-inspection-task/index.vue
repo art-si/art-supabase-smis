@@ -439,7 +439,6 @@
 
 <style scoped lang="scss">
   .hidden-hazard-task-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

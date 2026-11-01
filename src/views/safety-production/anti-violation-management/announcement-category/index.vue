@@ -272,7 +272,6 @@
 
 <style scoped lang="scss">
   .announcement-category-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

@@ -43,24 +43,6 @@
             placeholder="点击选择适用公司"
           />
         </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.imageUrls"
-            title="上传事故现场或示意图片"
-            multiple
-            :limit="9"
-            :size="112"
-          />
-        </template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.attachmentUrls"
-            multiple
-            :limit="8"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持文档、压缩包和图片，单个文件不超过 20 MB"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -77,8 +59,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -210,8 +190,29 @@
         placeholder: '完整记录事故经过、原因分析、处置过程及防范建议'
       }
     },
-    { label: '图片资料', key: 'imageUrls', type: 'text', span: 24 },
-    { label: '案例附件', key: 'attachmentUrls', type: 'text', span: 24 }
+    {
+      label: '图片资料',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传事故现场或示意图片', multiple: true, limit: 9, size: 112 }
+      }
+    },
+    {
+      label: '案例附件',
+      key: 'attachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持文档、压缩包和图片，单个文件不超过 20 MB'
+        }
+      }
+    }
   ])
   const rules: FormRules<HistoricalAccidentCaseForm> = {
     accidentName: [{ required: true, message: '请输入事故名称', trigger: 'blur' }],

@@ -3,21 +3,7 @@
     <div class="hazard-statistics">
       <ArtSectionCard title="查询条件" subtitle="按系统组织部门统计已提交危险源">
         <div class="hazard-statistics__query">
-          <label class="hazard-statistics__field">
-            <span>系统组织部门</span>
-            <ElTreeSelect
-              v-model="organizationId"
-              :data="organizations"
-              :props="treeProps"
-              node-key="id"
-              value-key="id"
-              check-strictly
-              filterable
-              clearable
-              default-expand-all
-              placeholder="全部组织部门"
-            />
-          </label>
+          <ArtForm v-model="query" :items="queryItems" :span="24" label-position="top" />
           <ElButton type="primary" :loading="loading" @click="loadStatistics"
             ><ArtSvgIcon icon="ri:search-line" /> 查询</ElButton
           >
@@ -58,6 +44,7 @@
 <script setup lang="ts">
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtTable from '@/components/core/tables/art-table/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -74,10 +61,27 @@
   const userStore = useUserStore()
   const dialogRef = ref<ArtDialogExpose<HazardStatisticsDialogOpenData>>()
   const organizations = shallowRef<SmisTreeOrganization[]>([])
-  const organizationId = ref<string>()
+  const query = ref<{ organizationId?: string }>({})
   const loading = ref(false)
   const statistics = reactive<SmisHazardSourceStatistics>({ rows: [], total: 0 })
-  const treeProps = { label: 'organizationName', children: 'children' }
+  const queryItems = computed<FormItem[]>(() => [
+    {
+      key: 'organizationId',
+      label: '系统组织部门',
+      type: 'treeSelect',
+      props: {
+        data: organizations.value,
+        props: { label: 'organizationName', children: 'children' },
+        nodeKey: 'id',
+        valueKey: 'id',
+        checkStrictly: true,
+        filterable: true,
+        clearable: true,
+        defaultExpandAll: true,
+        placeholder: '全部组织部门'
+      }
+    }
+  ])
   const displayRows = computed(() =>
     statistics.rows.map((row) => ({
       ...row,
@@ -89,7 +93,7 @@
   const loadStatistics = async (): Promise<void> => {
     loading.value = true
     try {
-      const response = await fetchHazardSourceStatistics(organizationId.value)
+      const response = await fetchHazardSourceStatistics(query.value.organizationId)
       Object.assign(statistics, response.data ?? { rows: [], total: 0 })
     } finally {
       loading.value = false
@@ -97,7 +101,7 @@
   }
   const handleOpen = async (data: HazardStatisticsDialogOpenData): Promise<void> => {
     organizations.value = data.organizations
-    organizationId.value = undefined
+    query.value = {}
     await dialogRef.value?.handleOpen(data, {
       title: '危险源统计分析',
       subtitle: '按管控组织汇总已提交危险源的危险等级分布',
@@ -122,18 +126,6 @@
     grid-template-columns: minmax(260px, 1fr) auto;
     gap: 12px;
     align-items: end;
-  }
-
-  .hazard-statistics__field {
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-    font-size: 13px;
-    color: var(--el-text-color-regular);
-  }
-
-  .hazard-statistics__field :deep(.el-select) {
-    width: 100%;
   }
 
   .hazard-statistics__summary {

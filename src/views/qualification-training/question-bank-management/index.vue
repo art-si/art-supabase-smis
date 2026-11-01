@@ -381,7 +381,7 @@
     {
       label: '排序',
       key: 'sort',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 9999, class: '!w-full' }
     },
     {
@@ -413,7 +413,7 @@
     {
       label: '默认分值',
       key: 'defaultScore',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0.01, max: 999, precision: 2, class: '!w-full' }
     },
     {

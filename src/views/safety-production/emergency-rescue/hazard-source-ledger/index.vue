@@ -592,7 +592,6 @@
 
 <style scoped lang="scss">
   .hazard-page {
-    gap: 12px;
     min-width: 0;
   }
 

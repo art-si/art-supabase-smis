@@ -385,7 +385,6 @@
 
 <style scoped lang="scss">
   .risk-summary-page {
-    gap: 12px;
     min-width: 0;
 
     &__coverage {

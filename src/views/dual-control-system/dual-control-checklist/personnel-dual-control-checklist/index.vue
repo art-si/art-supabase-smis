@@ -331,7 +331,6 @@
 
 <style scoped lang="scss">
   .personnel-checklist {
-    gap: 12px;
     min-width: 0;
 
     &__table {

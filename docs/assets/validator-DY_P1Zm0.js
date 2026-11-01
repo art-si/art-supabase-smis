@@ -1,1 +1,0 @@
-import{un as e}from"./use-global-config-ChxC26no.js";var t=t=>[``,...e].includes(t);export{t};

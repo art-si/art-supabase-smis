@@ -23,17 +23,6 @@
             v-model:selected-data="accidentSelection"
           />
         </template>
-        <template #declarantEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.declarantEmployeeId"
-            v-model:selected-data="employeeSelection"
-            :api-fn="fetchAccidentEmployeeCandidates"
-            title="选择申报人"
-            subtitle="默认当前登录账号关联员工，可从员工花名册修改"
-            placeholder="点击选择申报人"
-            :clearable="false"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -49,7 +38,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
   import { useUserStore } from '@/store/modules/user'
@@ -123,7 +111,24 @@
       type: 'input',
       props: { readonly: true, placeholder: '选择事故后自动带入' }
     },
-    { label: '姓名', key: 'declarantEmployeeId', type: 'text' },
+    {
+      label: '姓名',
+      key: 'declarantEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: employeeSelection.value,
+          'onUpdate:selectedData': ($event: typeof employeeSelection.value) => {
+            employeeSelection.value = $event
+          },
+          apiFn: fetchAccidentEmployeeCandidates,
+          title: '选择申报人',
+          subtitle: '默认当前登录账号关联员工，可从员工花名册修改',
+          placeholder: '点击选择申报人',
+          clearable: false
+        }
+      }
+    },
     {
       label: '所在部门',
       key: 'departmentName',

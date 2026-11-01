@@ -22,24 +22,6 @@
           :gutter="20"
           scroll-to-error
         >
-          <template #employeeId>
-            <ArtEmployeeSelect
-              v-model="form.employeeId"
-              v-model:selected-data="employeeSelection"
-              :api-fn="fetchCertificateEmployees"
-              title="选择持证人员"
-              :subtitle="employeeSelectorSubtitle"
-              @change="handleEmployeeChange"
-            />
-          </template>
-          <template #certificatePhotoUrl>
-            <ArtUploadImage
-              v-model="form.certificatePhotoUrl"
-              title="上传证件照片"
-              :limit="1"
-              :size="112"
-            />
-          </template>
         </ArtForm>
       </ArtSectionCard>
 
@@ -89,8 +71,6 @@
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
   import type { FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtTable from '@/components/core/tables/art-table/index.vue'
@@ -412,7 +392,24 @@
   const formItems = computed<FormItem[]>(() => {
     const showEmployeeProfile = Boolean(categoryMeta.value.showEmployeeProfile)
     const employeeItems: FormItem[] = [
-      { label: '姓名', key: 'employeeId', type: 'input', span: showEmployeeProfile ? 8 : 16 }
+      {
+        label: '姓名',
+        key: 'employeeId',
+        span: showEmployeeProfile ? 8 : 16,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: employeeSelection.value,
+            'onUpdate:selectedData': ($event: typeof employeeSelection.value) => {
+              employeeSelection.value = $event
+            },
+            apiFn: fetchCertificateEmployees,
+            title: '选择持证人员',
+            subtitle: employeeSelectorSubtitle.value,
+            onChange: handleEmployeeChange
+          }
+        }
+      }
     ]
     if (showEmployeeProfile) {
       employeeItems.push(
@@ -480,7 +477,15 @@
         props: { optionType: 'button' }
       },
       ...extraItems,
-      { label: '证件照片', key: 'certificatePhotoUrl', type: 'input', span: 8 },
+      {
+        label: '证件照片',
+        key: 'certificatePhotoUrl',
+        span: 8,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { title: '上传证件照片', limit: 1, size: 112 }
+        }
+      },
       {
         label: '备注',
         key: 'remark',

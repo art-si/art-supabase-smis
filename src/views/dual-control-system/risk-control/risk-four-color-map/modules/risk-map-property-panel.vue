@@ -44,63 +44,7 @@
         :gutter="12"
         label-position="top"
         root-class="px-0! pt-0!"
-      >
-        <template #riskPointId>
-          <ElSelect
-            v-model="model.riskPointId"
-            filterable
-            clearable
-            placeholder="选择关联风险点"
-            class="w-full"
-            @change="emit('risk-point-change', $event)"
-          >
-            <ElOption
-              v-for="point in riskPoints"
-              :key="point.id"
-              :label="`${point.pointName} · ${point.pointNo}`"
-              :value="point.id"
-            >
-              <div class="risk-map-property-panel__point-option">
-                <span :style="{ backgroundColor: point.riskLevelColor || '#94A3B8' }"></span>
-                <strong>{{ point.pointName }}</strong>
-                <small>{{ point.pointNo }} · {{ point.siteName }}</small>
-              </div>
-            </ElOption>
-          </ElSelect>
-        </template>
-        <template #fillColor>
-          <div class="risk-map-property-panel__color-control">
-            <ElColorPicker v-model="model.fillColor" :predefine="riskColors" />
-            <code>{{ model.fillColor }}</code>
-          </div>
-        </template>
-        <template #fillOpacity>
-          <ElSlider
-            v-model="model.fillOpacity"
-            :min="0"
-            :max="1"
-            :step="0.05"
-            show-input
-            :show-input-controls="false"
-          />
-        </template>
-        <template #borderColor>
-          <div class="risk-map-property-panel__color-control">
-            <ElColorPicker v-model="model.borderColor" :predefine="riskColors" />
-            <code>{{ model.borderColor }}</code>
-          </div>
-        </template>
-        <template #borderOpacity>
-          <ElSlider
-            v-model="model.borderOpacity"
-            :min="0"
-            :max="1"
-            :step="0.05"
-            show-input
-            :show-input-controls="false"
-          />
-        </template>
-      </ArtForm>
+      />
 
       <SceneSummary :scene="scene" @edit-scene="emit('edit-scene')" />
     </template>
@@ -167,7 +111,28 @@
       span: 24,
       props: { maxlength: 40, placeholder: '显示在图形中心' }
     },
-    { label: '关联风险点', key: 'riskPointId', type: 'text', span: 24 },
+    {
+      label: '关联风险点',
+      key: 'riskPointId',
+      span: 24,
+      type: 'select',
+      get options(): FormItem['options'] {
+        return props.riskPoints.map((point) => ({
+          label: `${point.pointName} · ${point.pointNo}`,
+          value: point.id
+        }))
+      },
+      get props(): FormItem['props'] {
+        return {
+          filterable: true,
+          clearable: true,
+          placeholder: '选择关联风险点',
+          onChange: ($event: string | undefined) => {
+            emit('risk-point-change', $event)
+          }
+        }
+      }
+    },
     {
       label: 'X 坐标',
       key: 'x',
@@ -192,10 +157,40 @@
       type: 'number',
       props: { min: 8, max: props.scene?.canvasHeight ?? 650, controlsPosition: 'right' }
     },
-    { label: '填充颜色', key: 'fillColor', type: 'text', span: 24 },
-    { label: '填充透明度', key: 'fillOpacity', type: 'text', span: 24 },
-    { label: '边框颜色', key: 'borderColor', type: 'text', span: 24 },
-    { label: '边框透明度', key: 'borderOpacity', type: 'text', span: 24 },
+    {
+      label: '填充颜色',
+      key: 'fillColor',
+      type: 'colorPicker',
+      span: 24,
+      description: model.value?.fillColor || '未设置颜色',
+      props: { predefine: props.riskColors }
+    },
+    {
+      label: '填充透明度',
+      key: 'fillOpacity',
+      span: 24,
+      type: 'slider',
+      get props(): FormItem['props'] {
+        return { min: 0, max: 1, step: 0.05, showInput: true, showInputControls: false }
+      }
+    },
+    {
+      label: '边框颜色',
+      key: 'borderColor',
+      type: 'colorPicker',
+      span: 24,
+      description: model.value?.borderColor || '未设置颜色',
+      props: { predefine: props.riskColors }
+    },
+    {
+      label: '边框透明度',
+      key: 'borderOpacity',
+      span: 24,
+      type: 'slider',
+      get props(): FormItem['props'] {
+        return { min: 0, max: 1, step: 0.05, showInput: true, showInputControls: false }
+      }
+    },
     {
       label: '边框宽度',
       key: 'borderWidth',

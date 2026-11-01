@@ -25,20 +25,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #drillPlanId
-          ><ElSelect
-            v-model="form.drillPlanId"
-            filterable
-            :disabled="Boolean(form.id)"
-            placeholder="选择计划编号或演练名称"
-            class="w-full"
-            @change="applyPlan"
-            ><ElOption
-              v-for="item in planOptions"
-              :key="item.id"
-              :label="`${item.planNo} · ${item.drillName}`"
-              :value="item.id" /></ElSelect
-        ></template>
         <template #planContext
           ><div v-if="selectedPlan" class="drill-record-dialog__plan"
             ><div
@@ -63,43 +49,22 @@
             size="compact"
             :visual-size="48"
         /></template>
-        <template #participantIds
-          ><ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.participantIds"
-            v-model:selected-data="participantSelection"
-            :tenant-id="recordTenantId"
-            title="批量选择参演人员"
-            placeholder="批量选择员工"
-        /></template>
-        <template #imageUrls
-          ><ArtUploadImage
-            v-model="form.imageUrls"
-            multiple
-            :limit="12"
-            :size="104"
-            title="上传演练照片"
-        /></template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.attachmentUrls"
-            multiple
-            :limit="8"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持文档、压缩包和图片，单个文件不超过 20 MB"
-          />
-        </template>
       </ArtForm>
     </div>
 
     <template #footer="{ api }">
       <div class="drill-record-dialog__footer"
         ><ElButton @click="api.handleClose()">关闭</ElButton
-        ><ElButton :loading="submitting" @click="handleSave(false)">保存草稿</ElButton
+        ><ElButton
+          :loading="submitting"
+          :disabled="!formRef?.readyToSubmit"
+          @click="handleSave(false)"
+          >保存草稿</ElButton
         ><ElButton
           v-auth="'SmisEmergencyDrillRecord:Submit'"
           type="primary"
           :loading="submitting"
+          :disabled="!formRef?.readyToSubmit"
           @click="handleSave(true)"
           >保存并提交</ElButton
         ></div
@@ -115,14 +80,11 @@
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import {
     saveEmergencyDrillRecord,
     type SmisEmergencyDrillPlanOption,
     type SmisEmergencyDrillRecord
   } from '@smis/api'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
 
   export interface DrillRecordDialogOpenData {
     row?: SmisEmergencyDrillRecord
@@ -148,6 +110,7 @@
     remark: string
   }
   interface FormExpose {
+    readyToSubmit: boolean
     validate: () => Promise<boolean>
     clearValidate: () => void
   }
@@ -191,7 +154,26 @@
   })
   const items = computed<FormItem[]>(() => [
     { label: '计划与执行', key: 'source', type: 'tab', span: 24 },
-    { label: '计划编号', key: 'drillPlanId', type: 'text', span: 24 },
+    {
+      label: '计划编号',
+      key: 'drillPlanId',
+      span: 24,
+      type: 'select',
+      get options(): FormItem['options'] {
+        return planOptions.value.map((item) => ({
+          label: `${item.planNo} · ${item.drillName}`,
+          value: item.id
+        }))
+      },
+      get props(): FormItem['props'] {
+        return {
+          filterable: true,
+          disabled: Boolean(form.value.id),
+          placeholder: '选择计划编号或演练名称',
+          onChange: applyPlan
+        }
+      }
+    },
     { label: '计划自动带入信息', key: 'planContext', type: 'text', span: 24 },
 
     {
@@ -252,9 +234,51 @@
       props: textArea('记录投入的装备、器材和应急物资', 3)
     },
     { label: '人员与资料', key: 'evidence', type: 'tab', span: 24 },
-    { label: '参演人员', key: 'participantIds', type: 'text', span: 24 },
-    { label: '演练照片', key: 'imageUrls', type: 'text', span: 24 },
-    { label: '记录附件', key: 'attachmentUrls', type: 'text', span: 24 },
+    {
+      label: '参演人员',
+      key: 'participantIds',
+      span: 24,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          modelValues: form.value.participantIds,
+          'onUpdate:modelValues': ($event: typeof form.value.participantIds) => {
+            form.value.participantIds = $event
+          },
+          selectedData: participantSelection.value,
+          'onUpdate:selectedData': ($event: typeof participantSelection.value) => {
+            participantSelection.value = $event
+          },
+          tenantId: recordTenantId.value,
+          title: '批量选择参演人员',
+          placeholder: '批量选择员工'
+        }
+      }
+    },
+    {
+      label: '演练照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { multiple: true, limit: 12, size: 104, title: '上传演练照片' }
+      }
+    },
+    {
+      label: '记录附件',
+      key: 'attachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持文档、压缩包和图片，单个文件不超过 20 MB'
+        }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

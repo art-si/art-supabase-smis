@@ -321,7 +321,6 @@
   .equipment-depreciation-page {
     display: flex;
     flex-direction: column;
-    gap: var(--art-space-4);
     min-height: 0;
 
     &__table {

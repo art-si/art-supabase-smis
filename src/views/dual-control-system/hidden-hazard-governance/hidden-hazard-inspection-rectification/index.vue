@@ -310,7 +310,6 @@
 
 <style scoped lang="scss">
   .inspection-rectification-page {
-    gap: var(--art-space-3);
     min-width: 0;
     overflow: hidden;
   }

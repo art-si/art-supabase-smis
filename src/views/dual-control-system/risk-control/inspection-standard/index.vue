@@ -594,7 +594,6 @@
 
 <style scoped lang="scss">
   .inspection-standard-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

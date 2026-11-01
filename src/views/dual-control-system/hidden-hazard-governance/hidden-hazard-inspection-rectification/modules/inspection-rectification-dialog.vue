@@ -28,15 +28,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            title="上传整改照片"
-            multiple
-            :limit="9"
-            :size="124"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -52,7 +43,6 @@
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import {
     createInspectionRectification,
     type SmisInspectionRectificationPayload,
@@ -137,7 +127,15 @@
         placeholder: '说明采取的措施、完成情况及现场复核结果'
       }
     },
-    { label: '整改照片', key: 'imageUrls', type: 'text', span: 24 }
+    {
+      label: '整改照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传整改照片', multiple: true, limit: 9, size: 124 }
+      }
+    }
   ])
   const handleSubmit = async (): Promise<boolean> => {
     if (loadError.value) return false

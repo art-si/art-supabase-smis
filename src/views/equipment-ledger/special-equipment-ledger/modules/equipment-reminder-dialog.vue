@@ -17,15 +17,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择提醒责任人"
-            subtitle="消息将直接发送给当前租户员工花名册中的责任人"
-            placeholder="从员工花名册选择责任人"
-          />
-        </template>
       </ArtForm>
       <div class="equipment-reminder-dialog__tokens">
         <strong>可用模板变量</strong>
@@ -60,7 +51,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
@@ -126,7 +116,20 @@
   }>({
     model: formModel,
     items: computed(() => [
-      { label: '提醒责任人', key: 'responsibleEmployeeId', type: 'text', span: 12 },
+      {
+        label: '提醒责任人',
+        key: 'responsibleEmployeeId',
+        span: 12,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            tenantId: getUserInfo.value.tenantId,
+            title: '选择提醒责任人',
+            subtitle: '消息将直接发送给当前租户员工花名册中的责任人',
+            placeholder: '从员工花名册选择责任人'
+          }
+        }
+      },
       {
         label: '启用提醒',
         key: 'enabled',

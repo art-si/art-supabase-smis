@@ -19,66 +19,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #organizerOrganizationId>
-          <ElTreeSelect
-            v-model="form.organizerOrganizationId"
-            :data="organizations"
-            :props="organizationProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            class="w-full"
-            placeholder="选择培训组织单位"
-          />
-        </template>
-        <template #targetOrganizationId>
-          <ElTreeSelect
-            v-model="form.targetOrganizationId"
-            :data="organizations"
-            :props="organizationProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            clearable
-            default-expand-all
-            class="w-full"
-            placeholder="选择主要覆盖组织（可选）"
-          />
-        </template>
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.responsibleEmployeeId"
-            v-model:selected-data="responsibleSelection"
-            :tenant-id="recordTenantId"
-            title="选择计划负责人"
-            subtitle="负责人来自当前租户员工花名册"
-          />
-        </template>
-        <template #participantIds>
-          <ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.participantIds"
-            v-model:selected-data="participantSelection"
-            :tenant-id="recordTenantId"
-            title="选择计划参训人员"
-            placeholder="批量选择参训员工"
-          />
-          <small class="training-plan-dialog__helper">
-            已选择 {{ form.participantIds.length }} 人；发布后作为培训记录的默认签到名单。
-          </small>
-        </template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.attachmentUrls"
-            multiple
-            :limit="8"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持计划文件、课件和图片，单个文件不超过 20 MB"
-          />
-        </template>
       </ArtForm>
     </div>
 
@@ -110,8 +50,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -224,9 +162,60 @@
       props: { options: dictOptions('smisSafetyTrainingType') }
     },
 
-    { label: '组织单位', key: 'organizerOrganizationId', span: 12 },
-    { label: '覆盖组织', key: 'targetOrganizationId', span: 12 },
-    { label: '计划负责人', key: 'responsibleEmployeeId', span: 12 },
+    {
+      label: '组织单位',
+      key: 'organizerOrganizationId',
+      span: 12,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: organizations.value,
+          props: organizationProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '选择培训组织单位'
+        }
+      }
+    },
+    {
+      label: '覆盖组织',
+      key: 'targetOrganizationId',
+      span: 12,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: organizations.value,
+          props: organizationProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          clearable: true,
+          defaultExpandAll: true,
+          placeholder: '选择主要覆盖组织（可选）'
+        }
+      }
+    },
+    {
+      label: '计划负责人',
+      key: 'responsibleEmployeeId',
+      span: 12,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: responsibleSelection.value,
+          'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+            responsibleSelection.value = $event
+          },
+          tenantId: recordTenantId.value,
+          title: '选择计划负责人',
+          subtitle: '负责人来自当前租户员工花名册'
+        }
+      }
+    },
     { label: '培训讲师', key: 'instructorName', type: 'input', props: { maxlength: 100 } },
     {
       label: '计划开始时间',
@@ -257,7 +246,7 @@
     {
       label: '培训学时',
       key: 'trainingHours',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 9999, precision: 1, class: '!w-full' }
     },
     {
@@ -281,8 +270,42 @@
       props: { rows: 3, maxlength: 2000, showWordLimit: true }
     },
     { label: '参训与资料', key: 'participantSection', type: 'tab', span: 24 },
-    { label: '参训人员', key: 'participantIds', span: 24 },
-    { label: '计划附件', key: 'attachmentUrls', span: 24 },
+    {
+      label: '参训人员',
+      key: 'participantIds',
+      span: 24,
+      type: 'employeeSelect',
+      description:
+        '已选择 ' + form.value.participantIds.length + ' 人；发布后作为培训记录的默认签到名单。',
+      props: {
+        multiple: true,
+        modelValues: form.value.participantIds,
+        'onUpdate:modelValues': (value: string[]) => {
+          form.value.participantIds = value
+        },
+        selectedData: participantSelection.value,
+        'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
+          participantSelection.value = value
+        },
+        tenantId: recordTenantId.value,
+        title: '选择计划参训人员',
+        placeholder: '批量选择参训员工'
+      }
+    },
+    {
+      label: '计划附件',
+      key: 'attachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持计划文件、课件和图片，单个文件不超过 20 MB'
+        }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

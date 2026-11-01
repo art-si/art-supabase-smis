@@ -536,7 +536,6 @@
 
 <style scoped lang="scss">
   .safety-risk-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

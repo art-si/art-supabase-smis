@@ -561,7 +561,6 @@
   @use '../inspection-type-navigator' as navigator;
 
   .hazard-governance-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

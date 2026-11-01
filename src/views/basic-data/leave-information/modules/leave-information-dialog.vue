@@ -16,48 +16,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #organizationId>
-          <ElTreeSelect
-            v-model="form.model.organizationId"
-            class="leave-dialog__full-control"
-            :data="organizationTree"
-            :props="organizationTreeProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            clearable
-            default-expand-all
-            placeholder="请选择组织部门"
-          />
-        </template>
-
-        <template #employeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.employeeId"
-            v-model:selected-data="applicantSelection"
-            :api-fn="fetchLeaveEmployeeOptions"
-            :tenant-id="getUserInfo.tenantId"
-            title="从员工花名册选择申请人"
-            subtitle="申请人来自当前租户员工花名册，可按姓名、工号、组织或岗位检索"
-            placeholder="点击选择申请人"
-            @change="handleApplicantChange"
-          />
-        </template>
-
-        <template #proxyEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.proxyEmployeeId"
-            v-model:selected-data="proxySelection"
-            :api-fn="fetchLeaveEmployeeOptions"
-            :tenant-id="getUserInfo.tenantId"
-            :disabled="!form.model.isProxy"
-            title="从员工花名册选择代理人"
-            subtitle="仅可选择当前租户在职或试用期员工，且不能与申请人相同"
-            :placeholder="form.model.isProxy ? '点击选择代理人' : '请先选择需要代理'"
-            @change="handleProxyChange"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -79,7 +37,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -153,8 +110,43 @@
     model: createInitialForm(),
     items: computed(() => [
       { label: '申请人信息', key: 'applicantSection', type: 'divider', span: 24 },
-      { label: '组织名称', key: 'organizationId', type: 'text' },
-      { label: '申请人', key: 'employeeId', type: 'text' },
+      {
+        label: '组织名称',
+        key: 'organizationId',
+        type: 'treeSelect',
+        get props(): FormItem['props'] {
+          return {
+            data: organizationTree.value,
+            props: organizationTreeProps,
+            nodeKey: 'id',
+            valueKey: 'id',
+            checkStrictly: true,
+            filterable: true,
+            clearable: true,
+            defaultExpandAll: true,
+            placeholder: '请选择组织部门'
+          }
+        }
+      },
+      {
+        label: '申请人',
+        key: 'employeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: applicantSelection.value,
+            'onUpdate:selectedData': ($event: typeof applicantSelection.value) => {
+              applicantSelection.value = $event
+            },
+            apiFn: fetchLeaveEmployeeOptions,
+            tenantId: getUserInfo.value.tenantId,
+            title: '从员工花名册选择申请人',
+            subtitle: '申请人来自当前租户员工花名册，可按姓名、工号、组织或岗位检索',
+            placeholder: '点击选择申请人',
+            onChange: handleApplicantChange
+          }
+        }
+      },
       {
         label: '申请人身份证号',
         key: 'applicantIdCardNo',
@@ -207,8 +199,23 @@
       {
         label: '代理人',
         key: 'proxyEmployeeId',
-        type: 'text',
-        span: 24
+        span: 24,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: proxySelection.value,
+            'onUpdate:selectedData': ($event: typeof proxySelection.value) => {
+              proxySelection.value = $event
+            },
+            apiFn: fetchLeaveEmployeeOptions,
+            tenantId: getUserInfo.value.tenantId,
+            disabled: !form.model.isProxy,
+            title: '从员工花名册选择代理人',
+            subtitle: '仅可选择当前租户在职或试用期员工，且不能与申请人相同',
+            placeholder: form.model.isProxy ? '点击选择代理人' : '请先选择需要代理',
+            onChange: handleProxyChange
+          }
+        }
       },
       {
         label: '请假事由',

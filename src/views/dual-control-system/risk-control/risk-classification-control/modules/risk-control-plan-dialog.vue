@@ -16,149 +16,14 @@
       </ArtEntitySummary>
 
       <ArtForm
-        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form"
-        :items="[]"
+        v-model:active-tab="activeFormTab"
+        :items="formItems"
         :rules="rules"
-        custom-layout
+        :span="12"
         root-class="p-0! md:p-0!"
-      >
-        <ElTabs v-model="activeFormTab"
-          ><ElTabPane name="section-0" label="管控对象" data-art-form-tab="section-0"
-            ><div class="min-w-0 space-y-4"
-              ><ArtSectionTitle title="管控对象" subtitle="可选择已维护有效危险源的风险点" />
-              <div class="risk-control-dialog__grid">
-                <ElFormItem label="风险点" prop="riskPointId">
-                  <ElSelect
-                    v-model="form.riskPointId"
-                    class="w-full"
-                    filterable
-                    placeholder="请选择风险点"
-                    no-data-text="暂无已维护有效危险源的风险点"
-                    :disabled="Boolean(row)"
-                  >
-                    <ElOption
-                      v-for="item in options.riskPoints"
-                      :key="item.id"
-                      :label="`${item.pointName} · ${item.pointNo}`"
-                      :value="item.id"
-                    />
-                  </ElSelect>
-                </ElFormItem>
-                <ElFormItem label="管控开始时间" prop="controlStartAt">
-                  <ElDatePicker
-                    v-model="form.controlStartAt"
-                    class="!w-full"
-                    type="datetime"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                  />
-                </ElFormItem>
-                <ElFormItem label="管控状态" prop="status">
-                  <ElSegmented v-model="form.status" :options="statusOptions" block />
-                </ElFormItem>
-                <ElFormItem class="risk-control-dialog__wide" label="管控说明">
-                  <ElInput
-                    v-model="form.controlDescription"
-                    type="textarea"
-                    :rows="3"
-                    maxlength="2000"
-                    show-word-limit
-                    placeholder="说明总体管控要求、责任协同与升级规则"
-                  />
-                </ElFormItem>
-              </div> </div
-          ></ElTabPane>
-          <ElTabPane name="section-1" label="层级与责任" data-art-form-tab="section-1"
-            ><div class="min-w-0 space-y-4"
-              ><ArtSectionTitle
-                title="管控层级"
-                subtitle="可多选；每个层级独立设置责任人、频率和管控要求" />
-              <ElFormItem prop="assignments" class="risk-control-dialog__levels-field">
-                <ElCheckboxGroup
-                  v-model="selectedLevels"
-                  class="risk-control-dialog__level-picker"
-                  @change="syncAssignments"
-                >
-                  <ElCheckboxButton
-                    v-for="item in controlLevelOptions"
-                    :key="item.value"
-                    :value="item.value"
-                  >
-                    {{ item.label }}
-                  </ElCheckboxButton>
-                </ElCheckboxGroup>
-              </ElFormItem>
-
-              <div v-if="form.assignments.length" class="risk-control-dialog__assignments">
-                <section
-                  v-for="(assignment, index) in form.assignments"
-                  :key="assignment.controlLevel"
-                  class="risk-control-dialog__assignment"
-                >
-                  <header>
-                    <span :data-level="assignment.controlLevel"
-                      ><ArtSvgIcon icon="ri:shield-user-line"
-                    /></span>
-                    <div
-                      ><strong>{{ controlLevelLabel.get(assignment.controlLevel) }}</strong
-                      ><small>责任人、巡查频率与层级要求</small></div
-                    >
-                  </header>
-                  <div class="risk-control-dialog__grid risk-control-dialog__grid--assignment">
-                    <ElFormItem
-                      label="管控责任人"
-                      :prop="`assignments.${index}.responsibleEmployeeId`"
-                      :rules="[{ required: true, message: '请选择管控责任人', trigger: 'change' }]"
-                      required
-                    >
-                      <ArtEmployeeSelect
-                        v-model="assignment.responsibleEmployeeId"
-                        v-model:selected-data="assignment.employeeSelection"
-                        title="选择管控责任人"
-                        :subtitle="`${controlLevelLabel.get(assignment.controlLevel)}责任人来自当前租户员工花名册`"
-                      />
-                    </ElFormItem>
-                    <ElFormItem
-                      label="管控频率"
-                      :prop="`assignments.${index}.duplicateConfigurationId`"
-                      :rules="[{ required: true, message: '请选择管控频率', trigger: 'change' }]"
-                      required
-                    >
-                      <ElSelect
-                        v-model="assignment.duplicateConfigurationId"
-                        class="w-full"
-                        filterable
-                        placeholder="选择重复配置"
-                      >
-                        <ElOption
-                          v-for="item in options.duplicateConfigurations"
-                          :key="item.id"
-                          :label="item.displayLabel"
-                          :value="item.id"
-                        />
-                      </ElSelect>
-                    </ElFormItem>
-                    <ElFormItem class="risk-control-dialog__wide" label="层级管控要求">
-                      <ElInput
-                        v-model="assignment.controlMeasure"
-                        type="textarea"
-                        :rows="2"
-                        maxlength="2000"
-                        show-word-limit
-                        placeholder="补充该层级的巡查重点、升级条件或协同要求"
-                      />
-                    </ElFormItem>
-                  </div>
-                </section>
-              </div>
-              <ArtEmptyState
-                v-else
-                title="请至少选择一个管控层级"
-                description="选择层级后可继续配置责任人与排查周期。"
-                :visual-size="96" /></div></ElTabPane
-        ></ElTabs>
-      </ArtForm>
+      />
     </div>
 
     <template #footer="{ api }">
@@ -166,7 +31,11 @@
         <span>保存后立即生成当前周期内到期的巡查任务</span>
         <div
           ><ElButton @click="api.handleClose()">取消</ElButton
-          ><ElButton type="primary" :loading="submitting" @click="handleSubmit"
+          ><ElButton
+            type="primary"
+            :loading="submitting"
+            :disabled="!formRef?.readyToSubmit"
+            @click="handleSubmit"
             >保存管控设置</ElButton
           ></div
         >
@@ -181,11 +50,8 @@
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
-  import ArtForm from '@/components/core/forms/art-form/index.vue'
-  import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
-  import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import {
     saveRiskControlPlan,
@@ -206,6 +72,7 @@
   }
   interface ControlForm extends Omit<SmisRiskControlPlanSavePayload, 'assignments'> {
     assignments: AssignmentForm[]
+    selectedLevels: SmisRiskControlLevel[]
   }
 
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
@@ -218,7 +85,6 @@
     duplicateConfigurations: []
   })
   const submitting = ref(false)
-  const selectedLevels = ref<SmisRiskControlLevel[]>([])
   const controlLevelOptions: Array<{ label: string; value: SmisRiskControlLevel }> = [
     { label: '公司级（厂级）', value: 'company' },
     { label: '车间（部门级）', value: 'department' },
@@ -236,13 +102,20 @@
     controlStartAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     status: 'active',
     controlDescription: '',
-    assignments: []
+    assignments: [],
+    selectedLevels: []
   })
   const form = ref<ControlForm>(initial())
+  const selectedLevels = computed({
+    get: () => form.value.selectedLevels,
+    set: (value: SmisRiskControlLevel[]) => {
+      form.value.selectedLevels = value
+    }
+  })
   const rules: FormRules<ControlForm> = {
     riskPointId: [{ required: true, message: '请选择风险点', trigger: 'change' }],
     controlStartAt: [{ required: true, message: '请选择管控开始时间', trigger: 'change' }],
-    assignments: [
+    selectedLevels: [
       {
         type: 'array',
         min: 1,
@@ -287,6 +160,114 @@
           }
         ]
       : []
+
+  const formItems = computed<FormItem[]>(() => [
+    { key: 'section-0', label: '管控对象', type: 'tab' },
+    {
+      key: 'objectSection',
+      label: '管控对象',
+      type: 'divider',
+      span: 24,
+      description: '可选择已维护有效危险源的风险点'
+    },
+    {
+      key: 'riskPointId',
+      label: '风险点',
+      type: 'select',
+      options: options.value.riskPoints.map((item) => ({
+        label: item.pointName + ' · ' + item.pointNo,
+        value: item.id
+      })),
+      props: {
+        filterable: true,
+        placeholder: '请选择风险点',
+        noDataText: '暂无已维护有效危险源的风险点',
+        disabled: Boolean(row.value)
+      }
+    },
+    {
+      key: 'controlStartAt',
+      label: '管控开始时间',
+      type: 'date',
+      props: { type: 'datetime', valueFormat: 'YYYY-MM-DD HH:mm:ss' }
+    },
+    {
+      key: 'status',
+      label: '管控状态',
+      type: 'segment',
+      options: statusOptions,
+      props: { block: true }
+    },
+    {
+      key: 'controlDescription',
+      label: '管控说明',
+      type: 'textarea',
+      props: { maxlength: 2000, placeholder: '说明总体管控要求、责任协同与升级规则' }
+    },
+    { key: 'section-1', label: '层级与责任', type: 'tab' },
+    {
+      key: 'levelSection',
+      label: '管控层级',
+      type: 'divider',
+      span: 24,
+      description: '可多选；每个层级独立设置责任人、频率和管控要求'
+    },
+    {
+      key: 'selectedLevels',
+      label: '管控层级',
+      type: 'checkboxGroup',
+      span: 24,
+      options: controlLevelOptions,
+      props: { optionType: 'button', onChange: syncAssignments }
+    },
+    ...form.value.assignments.flatMap((assignment, index): FormItem[] => [
+      {
+        key: 'assignmentSection' + assignment.controlLevel,
+        label: controlLevelLabel.get(assignment.controlLevel) || assignment.controlLevel,
+        type: 'divider',
+        span: 24,
+        description: '责任人、巡查频率与层级要求'
+      },
+      {
+        key: 'assignments.' + index + '.responsibleEmployeeId',
+        label: '管控责任人',
+        type: 'employeeSelect',
+        formItemProps: {
+          required: true,
+          rules: [{ required: true, message: '请选择管控责任人', trigger: 'change' }]
+        },
+        props: {
+          title: '选择管控责任人',
+          subtitle:
+            (controlLevelLabel.get(assignment.controlLevel) || '') + '责任人来自当前租户员工花名册',
+          selectedData: assignment.employeeSelection,
+          'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
+            assignment.employeeSelection = value
+          }
+        }
+      },
+      {
+        key: 'assignments.' + index + '.duplicateConfigurationId',
+        label: '管控频率',
+        type: 'select',
+        formItemProps: {
+          required: true,
+          rules: [{ required: true, message: '请选择管控频率', trigger: 'change' }]
+        },
+        options: options.value.duplicateConfigurations.map((item) => ({
+          label: item.displayLabel,
+          value: item.id
+        })),
+        props: { filterable: true, placeholder: '选择重复配置' }
+      },
+      {
+        key: 'assignments.' + index + '.controlMeasure',
+        label: '层级管控要求',
+        type: 'textarea',
+        props: { maxlength: 2000, placeholder: '补充该层级的巡查重点、升级条件或协同要求' }
+      }
+    ])
+  ])
 
   const handleSubmit = async (): Promise<void> => {
     if (submitting.value) return
@@ -358,92 +339,20 @@
 </script>
 
 <style scoped lang="scss">
-  .risk-control-dialog {
-    &__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0 24px;
-      margin: 12px 0 20px;
-    }
+  .risk-control-dialog__footer {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
 
-    &__grid--assignment {
-      margin: 14px 0 0;
-    }
-
-    &__wide {
-      grid-column: 1 / -1;
-    }
-
-    &__level-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 12px 0 18px;
-    }
-
-    &__assignments {
-      display: grid;
-      gap: 12px;
-    }
-
-    &__assignment {
-      padding: 16px 18px 0;
-      background: var(--default-box-color);
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__assignment header {
-      display: grid;
-      grid-template-columns: 38px minmax(0, 1fr);
-      gap: 10px;
-      align-items: center;
-    }
-
-    &__assignment header > span {
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      color: var(--theme-color);
-      background: color-mix(in srgb, var(--theme-color) 9%, var(--el-bg-color));
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__assignment header strong,
-    &__assignment header small {
-      display: block;
-    }
-
-    &__assignment header small {
-      margin-top: 2px;
-      font-size: 11px;
-      color: var(--el-text-color-secondary);
-    }
-
-    &__footer {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-    }
-
-    &__footer > span {
-      font-size: 12px;
-      color: var(--el-text-color-secondary);
-    }
+  .risk-control-dialog__footer > span {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
 
   @media (width <= 760px) {
-    .risk-control-dialog__grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .risk-control-dialog__wide {
-      grid-column: auto;
-    }
-
     .risk-control-dialog__footer {
       flex-direction: column;
       align-items: flex-end;

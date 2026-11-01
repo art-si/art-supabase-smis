@@ -318,7 +318,6 @@
 
 <style scoped lang="scss">
   .dual-control-report-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

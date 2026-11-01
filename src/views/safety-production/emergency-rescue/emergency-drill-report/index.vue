@@ -554,7 +554,6 @@
 
 <style scoped lang="scss">
   .drill-report-page {
-    gap: 12px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;

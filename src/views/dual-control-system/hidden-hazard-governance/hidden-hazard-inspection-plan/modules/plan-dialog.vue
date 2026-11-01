@@ -26,21 +26,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #inspectionTypeId>
-          <ElSelect
-            v-model="form.model.inspectionTypeId"
-            filterable
-            class="w-full"
-            placeholder="请选择排查类型"
-          >
-            <ElOption
-              v-for="item in options.inspectionTypes"
-              :key="item.id"
-              :label="`${item.typeName} · ${item.typeCode}`"
-              :value="item.id"
-            />
-          </ElSelect>
-        </template>
         <template #inspectionOrganizationId>
           <OrganizationTreeSelect
             v-model="form.model.inspectionOrganizationId"
@@ -57,66 +42,11 @@
             placeholder="点击选择被检查单位"
           />
         </template>
-        <template #executorEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.executorEmployeeId"
-            v-model:selected-data="executorSelection"
-            title="选择执行人"
-            subtitle="执行人来自当前租户员工花名册"
-          />
-        </template>
-        <template #taskDeadlineValue>
-          <ElInputNumber
-            v-model="form.model.taskDeadlineValue"
-            :min="1"
-            :max="9999"
-            controls-position="right"
-            class="w-full"
-          />
-        </template>
-        <template #taskDeadlineUnit>
-          <ElSelect v-model="form.model.taskDeadlineUnit" class="w-full">
-            <ElOption
-              v-for="item in deadlineOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </ElSelect>
-        </template>
-        <template #cycleType>
-          <ElSelect v-model="form.model.cycleType" class="w-full">
-            <ElOption
-              v-for="item in cycleOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </ElSelect>
-        </template>
-        <template #cycleInterval>
-          <ElInputNumber
-            v-model="form.model.cycleInterval"
-            :min="1"
-            :max="365"
-            controls-position="right"
-            class="w-full"
-            :disabled="form.model.cycleType === 'once'"
-          />
-        </template>
+
         <template #inspectionItemIds>
           <InspectionItemMultipleSelect
             v-model="form.model.inspectionItemIds"
             v-model:selected-data="itemSelection"
-          />
-        </template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.model.attachmentUrls"
-            multiple
-            :limit="8"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持计划文件、表单与图片，单个文件不超过 20 MB"
           />
         </template>
       </ArtForm>
@@ -135,9 +65,7 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import {
     fetchHiddenHazardInspectionPlanDetail,
     saveHiddenHazardInspectionPlan,
@@ -203,7 +131,20 @@
         type: 'input',
         props: { maxlength: 160, placeholder: '例如：生产区域月度隐患排查计划' }
       },
-      { label: '排查类型', key: 'inspectionTypeId', type: 'text' },
+      {
+        label: '排查类型',
+        key: 'inspectionTypeId',
+        type: 'select',
+        get options(): FormItem['options'] {
+          return options.inspectionTypes.map((item) => ({
+            label: `${item.typeName} · ${item.typeCode}`,
+            value: item.id
+          }))
+        },
+        get props(): FormItem['props'] {
+          return { filterable: true, placeholder: '请选择排查类型' }
+        }
+      },
       {
         label: '计划开始时间',
         key: 'plannedStartAt',
@@ -219,11 +160,59 @@
       { label: '检查单位', key: 'inspectionOrganizationId', type: 'text' },
       { label: '被检查单位', key: 'inspectedOrganizationId', type: 'text' },
       { label: '执行与周期', key: 'execution', type: 'tab', span: 24 },
-      { label: '执行人', key: 'executorEmployeeId', type: 'text', span: 24 },
-      { label: '任务时限', key: 'taskDeadlineValue', type: 'text' },
-      { label: '时限单位', key: 'taskDeadlineUnit', type: 'text' },
-      { label: '循环周期', key: 'cycleType', type: 'text' },
-      { label: '循环间隔', key: 'cycleInterval', type: 'text' },
+      {
+        label: '执行人',
+        key: 'executorEmployeeId',
+        span: 24,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: executorSelection.value,
+            'onUpdate:selectedData': ($event: typeof executorSelection.value) => {
+              executorSelection.value = $event
+            },
+            title: '选择执行人',
+            subtitle: '执行人来自当前租户员工花名册'
+          }
+        }
+      },
+      {
+        label: '任务时限',
+        key: 'taskDeadlineValue',
+        type: 'number',
+        get props(): FormItem['props'] {
+          return { min: 1, max: 9999, controlsPosition: 'right' }
+        }
+      },
+      {
+        label: '时限单位',
+        key: 'taskDeadlineUnit',
+        type: 'select',
+        get options(): FormItem['options'] {
+          return deadlineOptions.map((item) => ({ label: item.label, value: item.value }))
+        }
+      },
+      {
+        label: '循环周期',
+        key: 'cycleType',
+        type: 'select',
+        get options(): FormItem['options'] {
+          return cycleOptions.map((item) => ({ label: item.label, value: item.value }))
+        }
+      },
+      {
+        label: '循环间隔',
+        key: 'cycleInterval',
+        type: 'number',
+        get props(): FormItem['props'] {
+          return {
+            min: 1,
+            max: 365,
+            controlsPosition: 'right',
+            disabled: form.model.cycleType === 'once'
+          }
+        }
+      },
       {
         label: '计划状态',
         key: 'status',
@@ -241,7 +230,20 @@
       },
       { label: '排查明细', key: 'details', type: 'tab', span: 24 },
       { label: '排查标准', key: 'inspectionItemIds', type: 'text', span: 24 },
-      { label: '检查计划附件', key: 'attachmentUrls', type: 'text', span: 24 }
+      {
+        label: '检查计划附件',
+        key: 'attachmentUrls',
+        span: 24,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            limit: 8,
+            accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+            tip: '支持计划文件、表单与图片，单个文件不超过 20 MB'
+          }
+        }
+      }
     ],
     rules: {
       planName: [{ required: true, message: '请输入计划名称', trigger: 'blur' }],

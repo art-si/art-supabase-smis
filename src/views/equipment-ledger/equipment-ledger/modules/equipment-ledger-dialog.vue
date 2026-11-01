@@ -32,133 +32,13 @@
         :gutter="22"
         label-position="top"
       >
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择设备责任人"
-            subtitle="数据来自当前租户员工花名册"
-            placeholder="从员工花名册选择"
-          />
-        </template>
-        <template #supplierId>
-          <ArtTableSingleSelect
-            v-model="form.model.supplierId"
-            :selected-data="supplierSelection"
-            :api-fn="fetchSupplierOptions"
-            :columns="supplierColumns"
-            title="选择供应商"
-            subtitle="数据来自租户级供应商主数据"
-            label-key="supplierName"
-            description-key="supplierCode"
-            placeholder="选择设备供应商"
-            empty-text="暂无可选供应商"
-            empty-description="请先维护当前租户的供应商主数据。"
-            show-pagination
-          >
-            <template #empty>
-              <SmisDataSourceEmptyActions source="supplier" />
-            </template>
-          </ArtTableSingleSelect>
-        </template>
-        <template #pressureGaugeIds>
-          <ArtTableMultipleSelect
-            ref="pressureGaugeSelectRef"
-            v-model="form.model.pressureGaugeIds"
-            :selected-data="pressureGaugeSelection"
-            :api-fn="(params) => fetchAccessoryOptions('pressure_gauge', params)"
-            :columns="accessoryColumns"
-            title="选择压力表"
-            subtitle="仅展示当前租户档案模板为压力表的设备"
-            label-key="equipmentName"
-            description-key="equipmentCode"
-            placeholder="选择一台或多台压力表"
-            empty-text="暂无可选压力表"
-            empty-description="请先新增设备，并将设备分类选择为压力表对应分类。"
-          >
-            <template #empty>
-              <div class="equipment-ledger-dialog__accessory-empty">
-                <ElButton
-                  v-if="canAddEquipment"
-                  type="primary"
-                  @click="handleCreateAccessory('pressure_gauge')"
-                >
-                  <ArtSvgIcon icon="ri:add-line" />
-                  新增压力表设备
-                </ElButton>
-                <p v-else>当前账号暂无新增设备权限，请联系管理员维护压力表设备。</p>
-              </div>
-            </template>
-          </ArtTableMultipleSelect>
-        </template>
-        <template #safetyValveIds>
-          <ArtTableMultipleSelect
-            ref="safetyValveSelectRef"
-            v-model="form.model.safetyValveIds"
-            :selected-data="safetyValveSelection"
-            :api-fn="(params) => fetchAccessoryOptions('safety_valve', params)"
-            :columns="accessoryColumns"
-            title="选择安全阀"
-            subtitle="仅展示当前租户档案模板为安全阀的设备"
-            label-key="equipmentName"
-            description-key="equipmentCode"
-            placeholder="选择一台或多台安全阀"
-            empty-text="暂无可选安全阀"
-            empty-description="请先新增设备，并将设备分类选择为安全阀对应分类。"
-          >
-            <template #empty>
-              <div class="equipment-ledger-dialog__accessory-empty">
-                <ElButton
-                  v-if="canAddEquipment"
-                  type="primary"
-                  @click="handleCreateAccessory('safety_valve')"
-                >
-                  <ArtSvgIcon icon="ri:add-line" />
-                  新增安全阀设备
-                </ElButton>
-                <p v-else>当前账号暂无新增设备权限，请联系管理员维护安全阀设备。</p>
-              </div>
-            </template>
-          </ArtTableMultipleSelect>
-        </template>
-        <template #maintenanceQualificationUrl>
-          <ArtUploadFile
-            v-model="form.model.maintenanceQualificationUrl"
-            accept=".pdf,.doc,.docx,image/*"
-            title="上传维保单位资质证书"
-            tip="支持 PDF、Word 或图片，单个文件不超过 20 MB"
-          />
-        </template>
-        <template #useRegistrationCertificateUrl>
-          <ArtUploadFile
-            v-model="form.model.useRegistrationCertificateUrl"
-            accept=".pdf,image/*"
-            title="上传使用登记证"
-            tip="支持 PDF 或图片，单个文件不超过 20 MB"
-          />
-        </template>
-        <template #nameplateUrl>
-          <ArtUploadImage
-            v-model="form.model.nameplateUrl"
-            title="上传设备铭牌"
-            :size="112"
-            :limit="1"
-          />
-        </template>
-        <template #photoUrl>
-          <ArtUploadImage
-            v-model="form.model.photoUrl"
-            title="上传设备照片"
-            :size="112"
-            :limit="1"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { toDictionaryOption } from '@/utils/form/option'
 
@@ -181,12 +61,7 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtTableSingleSelect from '@/components/core/forms/art-data-select/table-single.vue'
-  import ArtTableMultipleSelect from '@/components/core/forms/art-data-select/table-multiple.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import SmisDataSourceEmptyActions from '@smis/views/components/smis-data-source-empty-actions.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
   import { useAuth } from '@/hooks/core/useAuth'
@@ -293,6 +168,12 @@
   const formRef = ref<FormExpose>()
   const pressureGaugeSelectRef = ref<ArtDataSelectExpose>()
   const safetyValveSelectRef = ref<ArtDataSelectExpose>()
+  const setPressureGaugeSelector = (value: ArtDataSelectExpose | null) => {
+    pressureGaugeSelectRef.value = value ?? undefined
+  }
+  const setSafetyValveSelector = (value: ArtDataSelectExpose | null) => {
+    safetyValveSelectRef.value = value ?? undefined
+  }
   const source = reactive<{
     categoryTree: SmisEquipmentCategory[]
     locationTree: SmisStorageLocation[]
@@ -573,8 +454,43 @@
           renderAfterExpand: false
         }
       },
-      { label: '设备责任人', key: 'responsibleEmployeeId', type: 'text' },
-      { label: '供应商', key: 'supplierId', type: 'text' },
+      {
+        label: '设备责任人',
+        key: 'responsibleEmployeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            tenantId: getUserInfo.value.tenantId,
+            title: '选择设备责任人',
+            subtitle: '数据来自当前租户员工花名册',
+            placeholder: '从员工花名册选择'
+          }
+        }
+      },
+      {
+        label: '供应商',
+        key: 'supplierId',
+        type: 'dataSelect',
+        get props(): FormItem['props'] {
+          return {
+            mode: 'table',
+            multiple: false,
+            showSelectedPanel: false,
+            selectedData: supplierSelection.value,
+            apiFn: fetchSupplierOptions,
+            columns: supplierColumns,
+            title: '选择供应商',
+            subtitle: '数据来自租户级供应商主数据',
+            labelKey: 'supplierName',
+            descriptionKey: 'supplierCode',
+            placeholder: '选择设备供应商',
+            emptyText: '暂无可选供应商',
+            emptyDescription: '请先维护当前租户的供应商主数据。',
+            showPagination: true
+          }
+        },
+        slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'supplier' }) }
+      },
       {
         label: '维保单位',
         key: 'maintenanceOrganization',
@@ -692,10 +608,50 @@
         description: '纳入特种设备检验与到期提醒范围'
       },
       { label: '档案资料', key: 'documentSection', type: 'tab', span: 24 },
-      { label: '维保单位资质证书', key: 'maintenanceQualificationUrl', type: 'text', span: 12 },
-      { label: '使用登记证', key: 'useRegistrationCertificateUrl', type: 'text', span: 12 },
-      { label: '设备铭牌', key: 'nameplateUrl', type: 'text', span: 12 },
-      { label: '设备照片', key: 'photoUrl', type: 'text', span: 12 },
+      {
+        label: '维保单位资质证书',
+        key: 'maintenanceQualificationUrl',
+        span: 12,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            accept: '.pdf,.doc,.docx,image/*',
+            title: '上传维保单位资质证书',
+            tip: '支持 PDF、Word 或图片，单个文件不超过 20 MB'
+          }
+        }
+      },
+      {
+        label: '使用登记证',
+        key: 'useRegistrationCertificateUrl',
+        span: 12,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            accept: '.pdf,image/*',
+            title: '上传使用登记证',
+            tip: '支持 PDF 或图片，单个文件不超过 20 MB'
+          }
+        }
+      },
+      {
+        label: '设备铭牌',
+        key: 'nameplateUrl',
+        span: 12,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { title: '上传设备铭牌', size: 112, limit: 1 }
+        }
+      },
+      {
+        label: '设备照片',
+        key: 'photoUrl',
+        span: 12,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { title: '上传设备照片', size: 112, limit: 1 }
+        }
+      },
       ...(profileDefinition.value.fields.length
         ? [
             {
@@ -711,14 +667,85 @@
       {
         label: '压力表',
         key: 'pressureGaugeIds',
-        type: 'text',
-        span: 12
+        span: 12,
+        type: 'dataSelect',
+        get props(): FormItem['props'] {
+          return {
+            mode: 'table',
+            multiple: true,
+            showPagination: true,
+            showSelectedPanel: true,
+            ref: setPressureGaugeSelector,
+            selectedData: pressureGaugeSelection.value,
+            apiFn: (params: DataSelectFetchParams) =>
+              fetchAccessoryOptions('pressure_gauge', params),
+            columns: accessoryColumns,
+            title: '选择压力表',
+            subtitle: '仅展示当前租户档案模板为压力表的设备',
+            labelKey: 'equipmentName',
+            descriptionKey: 'equipmentCode',
+            placeholder: '选择一台或多台压力表',
+            emptyText: '暂无可选压力表',
+            emptyDescription: '请先新增设备，并将设备分类选择为压力表对应分类。'
+          }
+        },
+        slots: {
+          empty: () =>
+            h(
+              'div',
+              { class: 'equipment-ledger-dialog__accessory-empty' },
+              canAddEquipment.value
+                ? [
+                    h(
+                      ElButton,
+                      { type: 'primary', onClick: () => handleCreateAccessory('pressure_gauge') },
+                      () => [h(ArtSvgIcon, { icon: 'ri:add-line' }), '新增压力表设备']
+                    )
+                  ]
+                : [h('p', {}, '当前账号暂无新增设备权限，请联系管理员维护压力表设备。')]
+            )
+        }
       },
       {
         label: '安全阀',
         key: 'safetyValveIds',
-        type: 'text',
-        span: 12
+        span: 12,
+        type: 'dataSelect',
+        get props(): FormItem['props'] {
+          return {
+            mode: 'table',
+            multiple: true,
+            showPagination: true,
+            showSelectedPanel: true,
+            ref: setSafetyValveSelector,
+            selectedData: safetyValveSelection.value,
+            apiFn: (params: DataSelectFetchParams) => fetchAccessoryOptions('safety_valve', params),
+            columns: accessoryColumns,
+            title: '选择安全阀',
+            subtitle: '仅展示当前租户档案模板为安全阀的设备',
+            labelKey: 'equipmentName',
+            descriptionKey: 'equipmentCode',
+            placeholder: '选择一台或多台安全阀',
+            emptyText: '暂无可选安全阀',
+            emptyDescription: '请先新增设备，并将设备分类选择为安全阀对应分类。'
+          }
+        },
+        slots: {
+          empty: () =>
+            h(
+              'div',
+              { class: 'equipment-ledger-dialog__accessory-empty' },
+              canAddEquipment.value
+                ? [
+                    h(
+                      ElButton,
+                      { type: 'primary', onClick: () => handleCreateAccessory('safety_valve') },
+                      () => [h(ArtSvgIcon, { icon: 'ri:add-line' }), '新增安全阀设备']
+                    )
+                  ]
+                : [h('p', {}, '当前账号暂无新增设备权限，请联系管理员维护安全阀设备。')]
+            )
+        }
       },
       {
         label: '备注',

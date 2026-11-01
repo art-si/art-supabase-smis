@@ -662,7 +662,6 @@
 
 <style scoped lang="scss">
   .risk-four-map-page {
-    gap: var(--art-space-3);
     min-width: 0;
 
     &__overview {

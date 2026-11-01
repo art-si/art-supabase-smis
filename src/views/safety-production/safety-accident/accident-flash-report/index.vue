@@ -456,7 +456,6 @@
 
 <style scoped lang="scss">
   .accident-page {
-    gap: 12px;
     min-width: 0;
 
     &__risk-strip {

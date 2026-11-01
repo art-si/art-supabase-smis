@@ -92,29 +92,6 @@
                     title="选择隐患所属部门"
                   />
                 </template>
-                <template #siteId>
-                  <ElTreeSelect
-                    v-model="form.model.siteId"
-                    class="quick-report-page__control"
-                    :data="siteTree"
-                    :props="{ label: 'siteName', children: 'children' }"
-                    node-key="id"
-                    value-key="id"
-                    check-strictly
-                    filterable
-                    default-expand-all
-                    placeholder="请选择场所"
-                  />
-                </template>
-                <template #imageUrls>
-                  <ArtUploadImage
-                    v-model="form.model.imageUrls"
-                    title="上传隐患照片"
-                    multiple
-                    :limit="9"
-                    :size="132"
-                  />
-                </template>
               </ArtForm>
               <HazardAiAnalysisPanel
                 ref="aiPanelRef"
@@ -163,7 +140,6 @@
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import BusinessWorkspaceHeader from '@/components/business/business-workspace-header/index.vue'
   import TreeUtils from '@/utils/tree'
   import { useUserStore } from '@/store/modules/user'
@@ -258,7 +234,24 @@
       props: { readonly: true, placeholder: '保存后自动生成' }
     },
     { label: '隐患所属部门', key: 'hazardOrganizationId', type: 'text', span: 8 },
-    { label: '场所', key: 'siteId', type: 'text', span: 8 },
+    {
+      label: '场所',
+      key: 'siteId',
+      span: 8,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: siteTree.value,
+          props: { label: 'siteName', children: 'children' },
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '请选择场所'
+        }
+      }
+    },
     {
       label: '隐患位置',
       key: 'location',
@@ -287,7 +280,15 @@
         placeholder: '描述现场现象、风险和可能后果'
       }
     },
-    { label: '隐患照片', key: 'imageUrls', type: 'text', span: 24 },
+    {
+      label: '隐患照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传隐患照片', multiple: true, limit: 9, size: 132 }
+      }
+    },
     {
       label: '整改建议',
       key: 'rectificationSuggestion',
@@ -384,7 +385,6 @@
 
 <style scoped lang="scss">
   .quick-report-page {
-    gap: var(--art-space-3);
     min-width: 0;
     overflow: hidden;
 

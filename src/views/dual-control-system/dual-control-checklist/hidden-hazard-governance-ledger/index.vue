@@ -401,7 +401,6 @@
 
 <style scoped lang="scss">
   .hazard-ledger-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

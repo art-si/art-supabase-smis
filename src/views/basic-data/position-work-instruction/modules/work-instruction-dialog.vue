@@ -9,41 +9,7 @@
       :gutter="16"
       label-position="top"
     >
-      <template #scopeKeys>
-        <div class="work-instruction-dialog__scope-picker">
-          <ArtTreeMultipleSelect
-            v-model="form.scopeKeys"
-            :selected-data="selectedScopeNodes"
-            :data="treeData"
-            row-key="key"
-            label-key="label"
-            description-key="description"
-            disabled-key="disabled"
-            children-key="children"
-            title="选择适用组织岗位"
-            subtitle="可跨组织多选岗位；组织节点用于分组，岗位叶子可勾选"
-            placeholder="请选择一个或多个适用岗位"
-            search-placeholder="搜索组织、岗位名称或编码"
-            :show-pagination="false"
-            :show-selected-panel="true"
-            :tree-check-strictly="true"
-            :max-tag-count="3"
-            empty-text="暂无可选岗位"
-            empty-description="请先在 HR 岗位管理中新增并启用岗位，再维护岗位作业指导书。"
-            @update:selected-data="handleSelectedDataUpdate"
-          >
-            <template #empty>
-              <SmisDataSourceEmptyActions source="position" />
-            </template>
-          </ArtTreeMultipleSelect>
-          <p>
-            <ArtSvgIcon icon="ri:information-line" />
-            已选择 {{ form.scopeKeys.length }} 个岗位，同一份指导书可同时适用于多个组织岗位。
-          </p>
-        </div>
-      </template>
-
-      <template #fileUrl>
+      <template #fileAttachment>
         <div class="work-instruction-dialog__attachment">
           <div class="work-instruction-dialog__attachment-icon" aria-hidden="true">
             <ArtSvgIcon :icon="form.fileUrl ? 'ri:file-text-line' : 'ri:file-add-line'" />
@@ -91,17 +57,6 @@
           <ArtSvgIcon icon="ri:link-m" />
           {{ showLinkInput ? '收起文件链接' : form.fileUrl ? '查看或修改链接' : '填写文件链接' }}
         </ElButton>
-        <div v-if="showLinkInput" class="work-instruction-dialog__link-field">
-          <label for="work-instruction-file-url">文件链接</label>
-          <ElInput
-            id="work-instruction-file-url"
-            v-model="form.fileUrl"
-            clearable
-            maxlength="2048"
-            placeholder="粘贴可访问的文件链接"
-            @input="handleFileUrlInput"
-          />
-        </div>
       </template>
     </ArtForm>
   </ArtDialog>
@@ -121,7 +76,7 @@
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import dayjs from 'dayjs'
-  import { computed, nextTick, ref, toRaw } from 'vue'
+  import { computed, h, nextTick, ref, toRaw } from 'vue'
   import { storeToRefs } from 'pinia'
   import type { FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -130,7 +85,6 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtTreeMultipleSelect from '@/components/core/forms/art-data-select/tree-multiple.vue'
   import ArtResourcePicker from '@/components/core/forms/art-resource-picker/index.vue'
   import type { Resource } from '@/components/core/forms/art-resource-picker/type'
   import ArtAttachmentLink from '@/components/core/media/art-file-viewer/attachment-link.vue'
@@ -242,7 +196,37 @@
       span: 8,
       props: { maxlength: 50, placeholder: '例如：V1.0' }
     },
-    { label: '适用组织岗位', key: 'scopeKeys', type: 'text', span: 24 },
+    {
+      label: '适用组织岗位',
+      key: 'scopeKeys',
+      type: 'dataSelect',
+      span: 24,
+      description:
+        '已选择 ' + form.value.scopeKeys.length + ' 个岗位，同一份指导书可同时适用于多个组织岗位。',
+      props: {
+        mode: 'tree',
+        multiple: true,
+        selectedData: selectedScopeNodes.value,
+        data: treeData.value,
+        rowKey: 'key',
+        labelKey: 'label',
+        descriptionKey: 'description',
+        disabledKey: 'disabled',
+        childrenKey: 'children',
+        title: '选择适用组织岗位',
+        subtitle: '可跨组织多选岗位；组织节点用于分组，岗位叶子可勾选',
+        placeholder: '请选择一个或多个适用岗位',
+        searchPlaceholder: '搜索组织、岗位名称或编码',
+        showPagination: false,
+        showSelectedPanel: true,
+        treeCheckStrictly: true,
+        maxTagCount: 3,
+        emptyText: '暂无可选岗位',
+        emptyDescription: '请先在 HR 岗位管理中新增并启用岗位，再维护岗位作业指导书。',
+        'onUpdate:selectedData': handleSelectedDataUpdate
+      },
+      slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'position' }) }
+    },
     { label: '文件与版本', key: 'fileSection', type: 'divider', span: 24 },
     {
       label: '文件编号',
@@ -275,7 +259,21 @@
         placeholder: '请选择上传日期'
       }
     },
-    { label: '关联文件', key: 'fileUrl', type: 'text', span: 24 }
+    { label: '关联文件', key: 'fileAttachment', type: 'text', span: 24 },
+    {
+      label: '文件链接',
+      key: 'fileUrl',
+      type: 'input',
+      span: 24,
+      hidden: !showLinkInput.value,
+      props: {
+        id: 'work-instruction-file-url',
+        clearable: true,
+        maxlength: 2048,
+        placeholder: '粘贴可访问的文件链接',
+        onInput: handleFileUrlInput
+      }
+    }
   ])
 
   const handleSelectedDataUpdate = (rows: Record<string, unknown>[]): void => {

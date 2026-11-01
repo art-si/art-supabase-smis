@@ -324,7 +324,6 @@
 
 <style scoped lang="scss">
   .rectification-notice-page {
-    gap: var(--art-space-3);
     min-width: 0;
     overflow: hidden;
   }

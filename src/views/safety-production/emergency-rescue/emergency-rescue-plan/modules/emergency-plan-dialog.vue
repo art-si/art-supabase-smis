@@ -24,60 +24,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #applicableOrganizationId>
-          <div class="plan-dialog__field-stack">
-            <ElTreeSelect
-              v-model="form.applicableOrganizationId"
-              class="plan-dialog__control"
-              :data="organizations"
-              :props="{ label: 'organizationName', children: 'children' }"
-              node-key="id"
-              value-key="id"
-              check-strictly
-              filterable
-              default-expand-all
-              placeholder="请选择适用单位"
-            />
-            <small v-if="isPublicScope">公共单位预案对本公司所有人员可见、可选</small>
-          </div>
-        </template>
-        <template #applicablePositionIds>
-          <ElSelect
-            v-model="form.applicablePositionIds"
-            class="plan-dialog__control"
-            filterable
-            clearable
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="请选择适用岗位；不选表示全部岗位"
-          >
-            <ElOption
-              v-for="position in positionOptions"
-              :key="position.id"
-              :label="`${position.positionName} · ${position.positionCode}`"
-              :value="position.id"
-            />
-          </ElSelect>
-        </template>
-        <template #planAttachmentUrls>
-          <ArtUploadFile
-            v-model="form.planAttachmentUrls"
-            multiple
-            :limit="10"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持文档、压缩包和图片，最多 10 个，单个文件不超过 20 MB"
-          />
-        </template>
-        <template #filingAttachmentUrls>
-          <ArtUploadFile
-            v-model="form.filingAttachmentUrls"
-            multiple
-            :limit="10"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持备案表文档、压缩包和图片，最多 10 个，单个文件不超过 20 MB"
-          />
-        </template>
         <template #planLevel>
           <div class="plan-dialog__derived">
             <ArtDictDisplay
@@ -121,7 +67,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
@@ -255,9 +200,47 @@
       props: { clearable: false }
     },
 
-    { label: '适用单位', key: 'applicableOrganizationId', type: 'text' },
+    {
+      label: '适用单位',
+      key: 'applicableOrganizationId',
+      type: 'treeSelect',
+      description: isPublicScope.value ? '公共单位预案对本公司所有人员可见、可选' : undefined,
+      props: {
+        data: organizations.value,
+        props: { label: 'organizationName', children: 'children' },
+        nodeKey: 'id',
+        valueKey: 'id',
+        checkStrictly: true,
+        clearable: false,
+        filterable: true,
+        defaultExpandAll: true,
+        placeholder: '请选择适用单位',
+        class: 'w-full!'
+      }
+    },
     { label: '预案级别', key: 'planLevel', type: 'text' },
-    { label: '适用岗位', key: 'applicablePositionIds', type: 'text', span: 24 },
+    {
+      label: '适用岗位',
+      key: 'applicablePositionIds',
+      span: 24,
+      type: 'select',
+      get options(): FormItem['options'] {
+        return positionOptions.value.map((position) => ({
+          label: `${position.positionName} · ${position.positionCode}`,
+          value: position.id
+        }))
+      },
+      get props(): FormItem['props'] {
+        return {
+          filterable: true,
+          clearable: true,
+          multiple: true,
+          collapseTags: true,
+          collapseTagsTooltip: true,
+          placeholder: '请选择适用岗位；不选表示全部岗位'
+        }
+      }
+    },
     {
       label: '是否特种设备演练',
       key: 'isSpecialEquipmentDrill',
@@ -281,8 +264,34 @@
       type: 'input',
       props: { maxlength: 500, placeholder: '请输入评审专家姓名，多人可用顿号分隔' }
     },
-    { label: '预案附件', key: 'planAttachmentUrls', type: 'text', span: 24 },
-    { label: '备案表附件', key: 'filingAttachmentUrls', type: 'text', span: 24 },
+    {
+      label: '预案附件',
+      key: 'planAttachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 10,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持文档、压缩包和图片，最多 10 个，单个文件不超过 20 MB'
+        }
+      }
+    },
+    {
+      label: '备案表附件',
+      key: 'filingAttachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 10,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持备案表文档、压缩包和图片，最多 10 个，单个文件不超过 20 MB'
+        }
+      }
+    },
 
     { label: '是否有效', key: 'isValid', type: 'text' },
     {

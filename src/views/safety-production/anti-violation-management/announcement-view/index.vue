@@ -458,7 +458,6 @@
 
 <style scoped lang="scss">
   .announcement-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

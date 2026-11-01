@@ -38,12 +38,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #textColor>
-          <div class="hazard-factor-category-dialog__color-field">
-            <ElColorPicker v-model="form.model.textColor" :predefine="presetColors" />
-            <span>{{ form.model.textColor?.toUpperCase() || '未设置颜色' }}</span>
-          </div>
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -191,7 +185,15 @@
         type: 'segment',
         options: statusOptions.value
       },
-      { label: '文字颜色', key: 'textColor' },
+      {
+        label: '文字颜色',
+        key: 'textColor',
+        type: 'colorPicker',
+        get description(): string {
+          return form.model.textColor?.toUpperCase() || '未设置颜色'
+        },
+        props: { predefine: presetColors }
+      },
       {
         label: '标签样式',
         key: 'tagStyle',

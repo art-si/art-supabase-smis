@@ -410,7 +410,6 @@
 
 <style scoped lang="scss">
   .drill-plan-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

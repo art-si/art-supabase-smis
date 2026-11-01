@@ -726,7 +726,6 @@
 
 <style scoped lang="scss">
   .document-register-workspace {
-    gap: 12px;
     min-width: 0;
 
     &__content {

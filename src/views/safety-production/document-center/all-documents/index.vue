@@ -1000,7 +1000,6 @@
 
 <style scoped lang="scss">
   .document-center-page {
-    gap: 12px;
     min-width: 0;
 
     &__workspace {

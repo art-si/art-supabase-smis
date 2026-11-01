@@ -329,7 +329,6 @@
 
 <style scoped lang="scss">
   .position-risk-checklist {
-    gap: 12px;
     min-width: 0;
 
     &__table {

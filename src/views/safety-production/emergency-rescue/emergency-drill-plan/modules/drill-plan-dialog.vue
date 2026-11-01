@@ -24,59 +24,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #sourcePlanId>
-          <ElSelect
-            v-model="form.sourcePlanId"
-            filterable
-            placeholder="选择已提交且有效的应急预案"
-            class="w-full"
-            @change="handleSourceChange"
-          >
-            <ElOption
-              v-for="item in rescuePlans"
-              :key="item.id"
-              :label="`${item.planName} · ${item.planNo}`"
-              :value="item.id"
-            />
-            <template #empty>
-              <ArtPickerEmpty title="暂无可选应急预案" description="请先提交有效的应急预案。" />
-            </template>
-          </ElSelect>
-        </template>
-        <template #compilationOrganizationId
-          ><ElTreeSelect
-            v-model="form.compilationOrganizationId"
-            :data="organizations"
-            :props="orgProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="选择编制单位"
-            class="w-full"
-        /></template>
-        <template #applicableOrganizationId
-          ><ElTreeSelect
-            v-model="form.applicableOrganizationId"
-            :data="organizations"
-            :props="orgProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="选择演练单位"
-            class="w-full"
-        /></template>
-        <template #responsibleEmployeeId
-          ><ArtEmployeeSelect
-            v-model="form.responsibleEmployeeId"
-            v-model:selected-data="responsibleSelection"
-            :tenant-id="recordTenantId"
-            title="选择演练负责人"
-            subtitle="数据来自当前租户员工花名册"
-        /></template>
         <template #planLevel
           ><div class="drill-plan-dialog__derived"
             ><ArtDictDisplay
@@ -95,24 +42,6 @@
             /><small>由计划期限与演练记录自动计算</small></div
           ></template
         >
-        <template #traineeIds
-          ><ArtEmployeeSelect
-            multiple
-            v-model:model-values="form.traineeIds"
-            v-model:selected-data="traineeSelection"
-            :tenant-id="recordTenantId"
-            title="批量选择参训人员"
-            placeholder="批量选择员工"
-        /></template>
-        <template #attachmentUrls>
-          <ArtUploadFile
-            v-model="form.attachmentUrls"
-            multiple
-            :limit="8"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持文档、压缩包和图片，单个文件不超过 20 MB"
-          />
-        </template>
       </ArtForm>
     </div>
 
@@ -133,14 +62,13 @@
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
   import { toDictionaryOption } from '@/utils/form/option'
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtPickerEmpty from '@/components/core/feedback/art-picker-empty/index.vue'
@@ -276,11 +204,80 @@
       type: 'input',
       props: { maxlength: 160, placeholder: '请输入演练计划名称' }
     },
-    { label: '应急救援预案', key: 'sourcePlanId', type: 'text', span: 24 },
+    {
+      label: '应急救援预案',
+      key: 'sourcePlanId',
+      span: 24,
+      type: 'select',
+      get options(): FormItem['options'] {
+        return rescuePlans.value.map((item) => ({
+          label: `${item.planName} · ${item.planNo}`,
+          value: item.id
+        }))
+      },
+      get props(): FormItem['props'] {
+        return {
+          filterable: true,
+          placeholder: '选择已提交且有效的应急预案',
+          onChange: handleSourceChange
+        }
+      },
+      slots: {
+        empty: () =>
+          h(ArtPickerEmpty, { title: '暂无可选应急预案', description: '请先提交有效的应急预案。' })
+      }
+    },
 
-    { label: '编制单位', key: 'compilationOrganizationId', type: 'text' },
-    { label: '演练单位', key: 'applicableOrganizationId', type: 'text' },
-    { label: '演练负责人', key: 'responsibleEmployeeId', type: 'text' },
+    {
+      label: '编制单位',
+      key: 'compilationOrganizationId',
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: organizations.value,
+          props: orgProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '选择编制单位'
+        }
+      }
+    },
+    {
+      label: '演练单位',
+      key: 'applicableOrganizationId',
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: organizations.value,
+          props: orgProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '选择演练单位'
+        }
+      }
+    },
+    {
+      label: '演练负责人',
+      key: 'responsibleEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: responsibleSelection.value,
+          'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+            responsibleSelection.value = $event
+          },
+          tenantId: recordTenantId.value,
+          title: '选择演练负责人',
+          subtitle: '数据来自当前租户员工花名册'
+        }
+      }
+    },
     { label: '演练级别', key: 'planLevel', type: 'text' },
     { label: '预警状态', key: 'warningStatus', type: 'text' },
     { label: '计划安排', key: 'schedule', type: 'tab', span: 24 },
@@ -337,8 +334,42 @@
       props: { rows: 3, maxlength: 1000, showWordLimit: true, resize: 'none' }
     },
     { label: '参训与资料', key: 'people', type: 'tab', span: 24 },
-    { label: '参训人员', key: 'traineeIds', type: 'text', span: 24 },
-    { label: '计划附件', key: 'attachmentUrls', type: 'text', span: 24 },
+    {
+      label: '参训人员',
+      key: 'traineeIds',
+      span: 24,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          modelValues: form.value.traineeIds,
+          'onUpdate:modelValues': ($event: typeof form.value.traineeIds) => {
+            form.value.traineeIds = $event
+          },
+          selectedData: traineeSelection.value,
+          'onUpdate:selectedData': ($event: typeof traineeSelection.value) => {
+            traineeSelection.value = $event
+          },
+          tenantId: recordTenantId.value,
+          title: '批量选择参训人员',
+          placeholder: '批量选择员工'
+        }
+      }
+    },
+    {
+      label: '计划附件',
+      key: 'attachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '支持文档、压缩包和图片，单个文件不超过 20 MB'
+        }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

@@ -242,7 +242,6 @@
 <style scoped lang="scss">
   .special-analysis {
     display: grid;
-    gap: 14px;
     min-width: 0;
 
     &__filters {

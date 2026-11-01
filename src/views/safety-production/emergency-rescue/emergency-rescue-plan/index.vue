@@ -523,7 +523,6 @@
 
 <style scoped lang="scss">
   .emergency-plan-page {
-    gap: 12px;
     min-width: 0;
   }
 

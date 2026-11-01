@@ -19,55 +19,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #organizationId>
-          <ElTreeSelect
-            v-model="form.model.organizationId"
-            class="site-dialog__full-control"
-            :data="organizationTree"
-            :props="organizationTreeProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            :multiple="!isEditing"
-            :show-checkbox="!isEditing"
-            collapse-tags
-            collapse-tags-tooltip
-            :max-collapse-tags="3"
-            filterable
-            clearable
-            default-expand-all
-            :placeholder="isEditing ? '请选择所属部门' : '请选择一个或多个所属部门'"
-          />
-        </template>
-
-        <template #parentId>
-          <ElTreeSelect
-            v-model="form.model.parentId"
-            class="site-dialog__full-control"
-            :data="siteTree"
-            :props="siteTreeProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            clearable
-            default-expand-all
-            placeholder="无上级场所（一级节点）"
-          />
-        </template>
-
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            v-model:selected-data="responsibleSelection"
-            :api-fn="fetchSiteEmployeeOptions"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择场所责任人"
-            subtitle="数据来自当前租户员工花名册，可按姓名、工号、组织或职务检索"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
-
         <template #addressPicker>
           <ArtAddressPicker
             v-model:address-detail="form.model.addressDetail"
@@ -80,16 +31,6 @@
             detail-label="场所地址"
             detail-placeholder="输入地址后地图检索，或直接打开地图选点"
             label-width="86px"
-          />
-        </template>
-
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            title="上传场所图片"
-            multiple
-            :limit="5"
-            :size="112"
           />
         </template>
       </ArtForm>
@@ -110,9 +51,7 @@
     type FormItem,
     type FormItemOption
   } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtAddressPicker from '@/components/core/forms/art-address-picker/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
     fetchSiteEmployeeOptions,
@@ -186,9 +125,44 @@
       {
         label: isEditing.value ? '所属部门' : '所属部门（可多选）',
         key: 'organizationId',
-        type: 'text'
+        type: 'treeSelect',
+        get props(): FormItem['props'] {
+          return {
+            data: organizationTree.value,
+            props: organizationTreeProps,
+            nodeKey: 'id',
+            valueKey: 'id',
+            checkStrictly: true,
+            multiple: !isEditing.value,
+            showCheckbox: !isEditing.value,
+            collapseTags: true,
+            collapseTagsTooltip: true,
+            maxCollapseTags: 3,
+            filterable: true,
+            clearable: true,
+            defaultExpandAll: true,
+            placeholder: isEditing.value ? '请选择所属部门' : '请选择一个或多个所属部门'
+          }
+        }
       },
-      { label: '上级场所', key: 'parentId', type: 'text' },
+      {
+        label: '上级场所',
+        key: 'parentId',
+        type: 'treeSelect',
+        get props(): FormItem['props'] {
+          return {
+            data: siteTree.value,
+            props: siteTreeProps,
+            nodeKey: 'id',
+            valueKey: 'id',
+            checkStrictly: true,
+            filterable: true,
+            clearable: true,
+            defaultExpandAll: true,
+            placeholder: '无上级场所（一级节点）'
+          }
+        }
+      },
       {
         label: '场所名称',
         key: 'siteName',
@@ -208,10 +182,35 @@
         type: 'number',
         props: { min: 0, max: 999999, step: 1, controlsPosition: 'right', class: '!w-full' }
       },
-      { label: '责任人', key: 'responsibleEmployeeId', type: 'text' },
+      {
+        label: '责任人',
+        key: 'responsibleEmployeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: responsibleSelection.value,
+            'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+              responsibleSelection.value = $event
+            },
+            apiFn: fetchSiteEmployeeOptions,
+            tenantId: getUserInfo.value.tenantId,
+            title: '选择场所责任人',
+            subtitle: '数据来自当前租户员工花名册，可按姓名、工号、组织或职务检索',
+            placeholder: '点击从员工花名册选择'
+          }
+        }
+      },
       { label: '位置与图片', key: 'locationSection', type: 'tab', span: 24 },
       { label: '', key: 'addressPicker', type: 'input', span: 24, labelWidth: 0 },
-      { label: '所属图片', key: 'imageUrls', type: 'text', span: 24 },
+      {
+        label: '所属图片',
+        key: 'imageUrls',
+        span: 24,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { title: '上传场所图片', multiple: true, limit: 5, size: 112 }
+        }
+      },
       {
         label: '备注',
         key: 'remark',

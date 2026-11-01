@@ -16,24 +16,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #keeperEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.keeperEmployeeId"
-            v-model:selected-data="selection.keeper"
-            title="选择库管员"
-            subtitle="按姓名、工号、组织或岗位检索当前租户员工花名册"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            v-model:selected-data="selection.responsible"
-            title="选择仓库负责人"
-            subtitle="负责人承担危废仓库业务与合规责任"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
         <template #presentation>
           <DisplayStyleField
             v-model:text-color="form.model.textColor"
@@ -70,7 +52,6 @@
   import ArtAddressPicker from '@/components/core/forms/art-address-picker/index.vue'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtForm, {
     type FormItem,
     type FormItemOption
@@ -155,8 +136,38 @@
         type: 'input',
         props: { maxlength: 100, clearable: true, placeholder: '如 危废暂存库' }
       },
-      { label: '库管员', key: 'keeperEmployeeId', type: 'input' },
-      { label: '负责人', key: 'responsibleEmployeeId', type: 'input' },
+      {
+        label: '库管员',
+        key: 'keeperEmployeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: selection.keeper,
+            'onUpdate:selectedData': ($event: typeof selection.keeper) => {
+              selection.keeper = $event
+            },
+            title: '选择库管员',
+            subtitle: '按姓名、工号、组织或岗位检索当前租户员工花名册',
+            placeholder: '点击从员工花名册选择'
+          }
+        }
+      },
+      {
+        label: '负责人',
+        key: 'responsibleEmployeeId',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: selection.responsible,
+            'onUpdate:selectedData': ($event: typeof selection.responsible) => {
+              selection.responsible = $event
+            },
+            title: '选择仓库负责人',
+            subtitle: '负责人承担危废仓库业务与合规责任',
+            placeholder: '点击从员工花名册选择'
+          }
+        }
+      },
       {
         label: '显示顺序',
         key: 'sort',

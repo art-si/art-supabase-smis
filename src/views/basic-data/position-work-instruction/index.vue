@@ -456,7 +456,6 @@
 
 <style scoped lang="scss">
   .work-instruction-page {
-    gap: 12px;
     min-width: 0;
 
     &__overview {

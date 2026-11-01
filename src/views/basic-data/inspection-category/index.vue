@@ -366,7 +366,6 @@
 
 <style scoped lang="scss">
   .inspection-category-page {
-    gap: 12px;
     min-width: 0;
 
     :deep(.inspection-category-page__actions) {

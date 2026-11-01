@@ -15,30 +15,6 @@
         :gutter="20"
         label-position="top"
       >
-        <template #parentId>
-          <ElTreeSelect
-            v-model="form.model.parentId"
-            :data="sceneTree"
-            :props="treeProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            clearable
-            default-expand-all
-            placeholder="未选择时作为根场景"
-            class="w-full"
-          />
-        </template>
-        <template #backgroundUrl>
-          <ArtUploadImage
-            v-model="form.model.backgroundUrl"
-            :limit="1"
-            :size="132"
-            title="上传场景底图"
-            file-type="image/*"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -52,7 +28,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { saveRiskMapScene, type SmisRiskMapScene, type SmisRiskMapScenePayload } from '@smis/api'
 
@@ -94,7 +69,25 @@
         span: 24,
         props: { maxlength: 80, placeholder: '如 全厂风险图、生产一楼' }
       },
-      { label: '上级场景', key: 'parentId', type: 'text', span: 24 },
+      {
+        label: '上级场景',
+        key: 'parentId',
+        span: 24,
+        type: 'treeSelect',
+        get props(): FormItem['props'] {
+          return {
+            data: sceneTree.value,
+            props: treeProps,
+            nodeKey: 'id',
+            valueKey: 'id',
+            checkStrictly: true,
+            filterable: true,
+            clearable: true,
+            defaultExpandAll: true,
+            placeholder: '未选择时作为根场景'
+          }
+        }
+      },
       {
         label: '画布宽度',
         key: 'canvasWidth',
@@ -113,7 +106,15 @@
         type: 'number',
         props: { min: 0, max: 9999, controlsPosition: 'right' }
       },
-      { label: '场景底图', key: 'backgroundUrl', type: 'text', span: 24 }
+      {
+        label: '场景底图',
+        key: 'backgroundUrl',
+        span: 24,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { limit: 1, size: 132, title: '上传场景底图', fileType: 'image/*' }
+        }
+      }
     ],
     rules: {
       sceneName: [{ required: true, message: '请输入场景名称', trigger: 'blur' }],

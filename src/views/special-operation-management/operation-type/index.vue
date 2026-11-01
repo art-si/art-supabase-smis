@@ -521,7 +521,6 @@
 
 <style scoped lang="scss">
   .operation-type-page {
-    gap: 12px;
     min-width: 0;
 
     :deep(.operation-type-page__plain-preview),

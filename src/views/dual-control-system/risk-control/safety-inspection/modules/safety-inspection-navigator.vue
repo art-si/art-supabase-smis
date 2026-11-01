@@ -9,7 +9,7 @@
     :empty="!loading && !error && !inspectionTypes.length && !organizations.length"
     empty-title="暂无导航数据"
     empty-description="请先维护排查类型与系统组织。"
-    :min-height="320"
+    :min-height="0"
     @retry="emit('refresh')"
   >
     <template #actions>
@@ -28,9 +28,10 @@
       />
     </template>
 
+    <!-- 页签各自保留滚动位置；内距放在滚动内容中，让轨道始终靠近卡片边缘。 -->
     <ElTabs v-model="activeTab" stretch>
       <ElTabPane label="排查类型" name="type">
-        <ElScrollbar class="safety-inspection-navigator__scrollbar">
+        <ElScrollbar class="safety-inspection-navigator__scrollbar art-scroll-viewport-inset">
           <div class="safety-inspection-navigator__list">
             <button
               type="button"
@@ -64,7 +65,7 @@
         </ElScrollbar>
       </ElTabPane>
       <ElTabPane label="组织部门" name="organization">
-        <ElScrollbar class="safety-inspection-navigator__scrollbar">
+        <ElScrollbar class="safety-inspection-navigator__scrollbar art-scroll-viewport-inset">
           <ElTree
             ref="treeRef"
             :data="organizations"
@@ -143,15 +144,30 @@
     min-width: 0;
     overflow: hidden;
 
+    &.art-section-card {
+      padding: 0;
+    }
+
+    :deep(> .art-section-card__header) {
+      padding: var(--art-section-padding) var(--art-section-padding) 0;
+    }
+
     &__scrollbar {
+      --art-scroll-viewport-inset: var(--art-section-padding);
+
       height: 100%;
-      min-height: 120px;
+      min-height: 0;
+
+      :deep(> .el-scrollbar__wrap > .el-scrollbar__view) {
+        box-sizing: border-box;
+        min-height: 100%;
+        padding: 0 var(--art-section-padding) var(--art-section-padding);
+      }
     }
 
     &__list {
       display: grid;
       gap: var(--art-space-2);
-      padding: var(--art-space-1);
     }
 
     &__item {
@@ -253,6 +269,11 @@
     :deep(.el-tabs__content) {
       flex: 1 1 auto;
       overflow: hidden;
+    }
+
+    :deep(.el-tabs__header) {
+      flex: none;
+      padding-inline: var(--art-section-padding);
     }
 
     :deep(.el-tab-pane) {

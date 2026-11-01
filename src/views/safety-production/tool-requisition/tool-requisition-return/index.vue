@@ -419,7 +419,6 @@
 
 <style scoped lang="scss">
   .tool-return-page {
-    gap: 12px;
     min-width: 0;
 
     &__notice {

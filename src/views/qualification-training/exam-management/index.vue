@@ -286,33 +286,13 @@
               </div>
             </div>
           </template>
-          <template #employeeIds>
-            <div class="exam-page__assignment">
-              <header>
-                <div><strong>考试人员</strong><small>保存后将为所选员工创建考试任务</small></div>
-                <ElTag :type="paperForm.employeeIds.length ? 'success' : 'info'" effect="light">
-                  已选 {{ paperForm.employeeIds.length }} 人
-                </ElTag>
-              </header>
-              <ArtEmployeeSelect
-                multiple
-                v-if="hasAuth('SmisExamManagement:Assign')"
-                v-model:model-values="paperForm.employeeIds"
-                v-model:selected-data="employeeSelection"
-                title="选择考试人员"
-                placeholder="批量选择考试人员"
-              />
-              <ElAlert
-                v-else
-                title="当前账号可维护试卷内容，但没有分配考试人员的权限。"
-                type="info"
-                :closable="false"
-                show-icon
-              />
-              <small class="exam-page__helper">
-                暂不分配人员也可保存草稿，发布前再补充考试范围。
-              </small>
-            </div>
+          <template #assignmentNotice>
+            <ElAlert
+              title="当前账号可维护试卷内容，但没有分配考试人员的权限。"
+              type="info"
+              :closable="false"
+              show-icon
+            />
           </template>
         </ArtForm>
         <template #footer="{ api }">
@@ -490,7 +470,6 @@
     type BusinessWorkspaceMetric
   } from '@/components/business/business-workspace-header/index.vue'
   import BusinessTableWorkspaceActions from '@/components/business/business-table-workspace-actions/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import {
     calculateExamTotalScore,
     createExamPaperPayload,
@@ -816,7 +795,7 @@
     {
       label: '及格分数',
       key: 'passingScore',
-      type: 'inputNumber',
+      type: 'number',
       span: 6,
       props: { min: 0.01, max: 99999, precision: 2, class: '!w-full' }
     },
@@ -824,7 +803,7 @@
     {
       label: '考试时长（分钟）',
       key: 'timeLimitMinutes',
-      type: 'inputNumber',
+      type: 'number',
       span: 6,
       props: { min: 1, max: 1440, class: '!w-full' }
     },
@@ -856,7 +835,7 @@
     {
       label: '最多考试次数（含首次）',
       key: 'maxAttempts',
-      type: 'inputNumber',
+      type: 'number',
       span: 6,
       props: {
         min: paperForm.value.allowRetake ? 2 : 1,
@@ -867,7 +846,33 @@
     },
     { label: '组卷与人员', key: 'assemblySection', type: 'tab', span: 24 },
     { label: '组卷配置', key: 'questions', span: 24 },
-    { label: '考试人员', key: 'employeeIds', span: 24 },
+    {
+      label: '考试人员',
+      key: 'employeeIds',
+      type: 'employeeSelect',
+      span: 24,
+      hidden: !hasAuth('SmisExamManagement:Assign'),
+      description:
+        '已选 ' +
+        paperForm.value.employeeIds.length +
+        ' 人。保存后将创建考试任务；暂不分配人员也可保存草稿，发布前再补充考试范围。',
+      props: {
+        multiple: true,
+        selectedData: employeeSelection.value,
+        'onUpdate:selectedData': (rows: EmployeeIntegrationItem[]) => {
+          employeeSelection.value = rows
+        },
+        title: '选择考试人员',
+        placeholder: '批量选择考试人员'
+      }
+    },
+    {
+      label: '人员分配',
+      key: 'assignmentNotice',
+      type: 'text',
+      span: 24,
+      hidden: hasAuth('SmisExamManagement:Assign')
+    },
     {
       label: '备注',
       key: 'remark',

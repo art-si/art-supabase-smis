@@ -24,49 +24,6 @@
             v-model:selected-data="accidentSelection"
           />
         </template>
-        <template #hostEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.hostEmployeeId"
-            v-model:selected-data="hostSelection"
-            :api-fn="fetchAccidentEmployeeCandidates"
-            title="选择主持人"
-            subtitle="从当前租户员工花名册选择事故分析主持人"
-            placeholder="点击选择主持人"
-          />
-        </template>
-        <template #participantEmployeeIds>
-          <ArtEmployeeSelect
-            v-model:model-values="form.participantEmployeeIds"
-            v-model:selected-data="participantSelection"
-            multiple
-            allow-all-tenant-read
-            :api-fn="fetchAccidentEmployeeCandidates"
-            :display-fields="['organization', 'jobTitle', 'gender', 'age', 'phone']"
-            title="选择参加人员"
-            subtitle="支持从员工花名册多选，已选人员可再次打开弹窗调整"
-            placeholder="点击选择参加人员"
-          />
-        </template>
-        <template #recorderEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.recorderEmployeeId"
-            v-model:selected-data="recorderSelection"
-            :api-fn="fetchAccidentEmployeeCandidates"
-            title="选择记录人"
-            subtitle="从当前租户员工花名册选择事故分析记录人"
-            placeholder="点击选择记录人"
-          />
-        </template>
-        <template #rectificationResponsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.rectificationResponsibleEmployeeId"
-            v-model:selected-data="responsibleSelection"
-            :api-fn="fetchAccidentEmployeeCandidates"
-            title="选择整改责任人"
-            subtitle="从当前租户员工花名册选择整改事项负责人"
-            placeholder="点击选择整改责任人"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -81,7 +38,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -148,20 +104,85 @@
       span: 8,
       props: { readonly: true, placeholder: '选择事故后自动带入' }
     },
-    { label: '主持人', key: 'hostEmployeeId', type: 'text', span: 12 },
-    { label: '记录人', key: 'recorderEmployeeId', type: 'text', span: 12 },
+    {
+      label: '主持人',
+      key: 'hostEmployeeId',
+      span: 12,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: hostSelection.value,
+          'onUpdate:selectedData': ($event: typeof hostSelection.value) => {
+            hostSelection.value = $event
+          },
+          apiFn: fetchAccidentEmployeeCandidates,
+          title: '选择主持人',
+          subtitle: '从当前租户员工花名册选择事故分析主持人',
+          placeholder: '点击选择主持人'
+        }
+      }
+    },
+    {
+      label: '记录人',
+      key: 'recorderEmployeeId',
+      span: 12,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: recorderSelection.value,
+          'onUpdate:selectedData': ($event: typeof recorderSelection.value) => {
+            recorderSelection.value = $event
+          },
+          apiFn: fetchAccidentEmployeeCandidates,
+          title: '选择记录人',
+          subtitle: '从当前租户员工花名册选择事故分析记录人',
+          placeholder: '点击选择记录人'
+        }
+      }
+    },
     {
       label: '参加人员',
       key: 'participantEmployeeIds',
-      type: 'text',
       span: 24,
-      description: '支持多选，可按姓名、工号、组织或岗位检索'
+      description: '支持多选，可按姓名、工号、组织或岗位检索',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          modelValues: form.value.participantEmployeeIds,
+          'onUpdate:modelValues': ($event: typeof form.value.participantEmployeeIds) => {
+            form.value.participantEmployeeIds = $event
+          },
+          selectedData: participantSelection.value,
+          'onUpdate:selectedData': ($event: typeof participantSelection.value) => {
+            participantSelection.value = $event
+          },
+          multiple: true,
+          allowAllTenantRead: true,
+          apiFn: fetchAccidentEmployeeCandidates,
+          displayFields: ['organization', 'jobTitle', 'gender', 'age', 'phone'],
+          title: '选择参加人员',
+          subtitle: '支持从员工花名册多选，已选人员可再次打开弹窗调整',
+          placeholder: '点击选择参加人员'
+        }
+      }
     },
     {
       label: '整改责任人',
       key: 'rectificationResponsibleEmployeeId',
-      type: 'text',
-      span: 12
+      span: 12,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: responsibleSelection.value,
+          'onUpdate:selectedData': ($event: typeof responsibleSelection.value) => {
+            responsibleSelection.value = $event
+          },
+          apiFn: fetchAccidentEmployeeCandidates,
+          title: '选择整改责任人',
+          subtitle: '从当前租户员工花名册选择整改事项负责人',
+          placeholder: '点击选择整改责任人'
+        }
+      }
     },
     {
       label: '事故级别',

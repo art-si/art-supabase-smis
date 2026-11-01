@@ -596,7 +596,6 @@
   @use '../inspection-type-navigator' as navigator;
 
   .hidden-hazard-plan-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

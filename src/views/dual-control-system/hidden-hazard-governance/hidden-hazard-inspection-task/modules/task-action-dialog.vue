@@ -15,14 +15,6 @@
         :rules="form.rules"
         label-position="top"
       >
-        <template #employeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.employeeId"
-            v-model:selected-data="employeeSelection"
-            title="选择任务接收人"
-            subtitle="仅显示当前租户在职或试用期员工"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -36,7 +28,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtEntitySummary from '@/components/core/surfaces/art-entity-summary/index.vue'
   import {
     cancelHiddenHazardInspectionTask,
@@ -69,9 +60,19 @@
       {
         label: '转交接收人',
         key: 'employeeId',
-        type: 'text',
         span: 24,
-        hidden: () => mode.value !== 'transfer'
+        hidden: () => mode.value !== 'transfer',
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            selectedData: employeeSelection.value,
+            'onUpdate:selectedData': ($event: typeof employeeSelection.value) => {
+              employeeSelection.value = $event
+            },
+            title: '选择任务接收人',
+            subtitle: '仅显示当前租户在职或试用期员工'
+          }
+        }
       },
       {
         label: () => (mode.value === 'transfer' ? '转交原因' : '取消原因'),

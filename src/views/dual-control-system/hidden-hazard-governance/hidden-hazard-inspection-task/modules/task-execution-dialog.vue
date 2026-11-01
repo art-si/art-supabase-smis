@@ -13,68 +13,29 @@
           >{{ completedCount }} / {{ detail.items.length }}</span
         >
       </div>
-      <ArtForm ref="formRef" v-model="form.model" :items="form.items" label-position="top">
-        <template #attachmentUrls>
-          <ArtUploadImage
-            v-model="form.model.attachmentUrls"
-            multiple
-            :limit="8"
-            :size="uploadImageSize"
-            title="上传现场照片"
-          />
-        </template>
-        <template #inspectionItems>
-          <div class="hidden-hazard-task-execution__items">
-            <article
-              v-for="(item, index) in form.model.items"
-              :key="item.id"
-              :data-result="item.result"
-            >
-              <header>
-                <span>{{ String(index + 1).padStart(2, '0') }}</span>
-                <div
-                  ><strong>{{ detail.items[index]?.standardName }}</strong
-                  ><small>{{ detail.items[index]?.itemCode }}</small></div
-                >
-                <ElRadioGroup v-model="item.result" size="small"
-                  ><ElRadioButton
-                    v-for="option in itemResultOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    >{{ option.label }}</ElRadioButton
-                  ></ElRadioGroup
-                >
-              </header>
-              <p>{{ detail.items[index]?.inspectionContent }}</p>
-              <div class="hidden-hazard-task-execution__item-fields">
-                <ElInput
-                  v-model="item.remark"
-                  type="textarea"
-                  :rows="2"
-                  maxlength="1000"
-                  show-word-limit
-                  placeholder="填写检查说明；异常项请描述位置、现象与处置建议"
-                />
-                <ArtUploadImage
-                  v-model="item.attachmentUrls"
-                  multiple
-                  :limit="4"
-                  :size="uploadImageSize"
-                  title="项目照片"
-                />
-              </div>
-            </article>
-          </div>
-        </template>
-      </ArtForm>
+      <ArtForm
+        ref="formRef"
+        v-model="form.model"
+        :items="form.items"
+        :span="24"
+        label-position="top"
+      />
     </div>
     <template #footer="{ api }">
       <div class="hidden-hazard-task-execution__footer">
         <span>保存进度允许保留未排查项目；异常项会立即生成隐患编号。</span>
         <div
           ><ElButton @click="api.handleClose()">关闭</ElButton
-          ><ElButton :loading="submitting" @click="handleSubmit(false)">保存进度</ElButton
-          ><ElButton type="primary" :loading="submitting" @click="handleSubmit(true)"
+          ><ElButton
+            :loading="submitting"
+            :disabled="!formRef?.readyToSubmit"
+            @click="handleSubmit(false)"
+            >保存进度</ElButton
+          ><ElButton
+            type="primary"
+            :loading="submitting"
+            :disabled="!formRef?.readyToSubmit"
+            @click="handleSubmit(true)"
             >提交并完成</ElButton
           ></div
         >
@@ -92,7 +53,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import {
     fetchHiddenHazardInspectionTaskDetail,
@@ -126,13 +86,15 @@
 
   const emit = defineEmits<{ success: [] }>()
   const dialogRef = ref<ArtDialogExpose<HiddenHazardTaskExecutionOpenData>>()
+  const formRef = ref<InstanceType<typeof ArtForm>>()
   const detail = shallowRef<SmisHiddenHazardInspectionTaskDetail | null>(null)
   const loading = ref(false)
   const submitting = ref(false)
   const uploadImageSize = 88
-  const form = reactive<{ model: ExecutionForm; items: FormItem[] }>({
-    model: { executionSummary: '', attachmentUrls: [], items: [] },
-    items: [
+  const formModel = reactive<ExecutionForm>({ executionSummary: '', attachmentUrls: [], items: [] })
+  const form = reactive<{ model: ExecutionForm; items: ComputedRef<FormItem[]> }>({
+    model: formModel,
+    items: computed<FormItem[]>(() => [
       { label: '执行信息', key: 'execution', type: 'divider', span: 24 },
       {
         label: '执行总结',
@@ -147,10 +109,61 @@
           placeholder: '说明总体情况、发现问题和后续建议'
         }
       },
-      { label: '任务附件', key: 'attachmentUrls', type: 'text', span: 8 },
+      {
+        label: '任务附件',
+        key: 'attachmentUrls',
+        span: 8,
+        type: 'uploadImage',
+        get props(): FormItem['props'] {
+          return { multiple: true, limit: 8, size: uploadImageSize, title: '上传现场照片' }
+        }
+      },
       { label: '排查明细', key: 'details', type: 'divider', span: 24 },
-      { label: '', key: 'inspectionItems', type: 'text', span: 24 }
-    ]
+      ...formModel.items.flatMap((item, index): FormItem[] => [
+        {
+          key: 'item-' + item.id,
+          label:
+            String(index + 1).padStart(2, '0') +
+            ' · ' +
+            (detail.value?.items[index]?.standardName || '排查项目'),
+          type: 'divider',
+          span: 24
+        },
+        {
+          key: 'items.' + index + '.result',
+          label: '排查结果',
+          type: 'radioGroup',
+          span: 24,
+          description: [
+            detail.value?.items[index]?.itemCode,
+            detail.value?.items[index]?.inspectionContent
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          options: itemResultOptions.value,
+          props: { size: 'small', optionType: 'button' }
+        },
+        {
+          key: 'items.' + index + '.remark',
+          label: '检查说明',
+          type: 'textarea',
+          span: 16,
+          props: {
+            rows: 2,
+            maxlength: 1000,
+            showWordLimit: true,
+            placeholder: '填写检查说明；异常项请描述位置、现象与处置建议'
+          }
+        },
+        {
+          key: 'items.' + index + '.attachmentUrls',
+          label: '项目照片',
+          type: 'uploadImage',
+          span: 8,
+          props: { multiple: true, limit: 4, size: uploadImageSize, title: '项目照片' }
+        }
+      ])
+    ])
   })
   const completedCount = computed(
     () => form.model.items.filter((item) => item.result !== 'pending').length

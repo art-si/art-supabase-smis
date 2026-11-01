@@ -412,7 +412,6 @@
 
 <style scoped lang="scss">
   .supplier-page {
-    gap: 12px;
     min-width: 0;
 
     :deep(.supplier-page__stack) {

@@ -341,7 +341,6 @@
   .issuance-page {
     display: flex;
     flex-direction: column;
-    gap: 14px;
     min-height: 0;
   }
 

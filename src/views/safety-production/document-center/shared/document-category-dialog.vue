@@ -16,21 +16,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #parentId>
-          <ElTreeSelect
-            v-model="form.parentId"
-            :data="categories"
-            :props="categoryProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            default-expand-all
-            filterable
-            clearable
-            class="w-full"
-            placeholder="留空表示一级分类"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -84,7 +69,25 @@
       span: 12,
       props: { maxlength: 100, showWordLimit: true, placeholder: '请输入分类名称' }
     },
-    { label: '上级分类', key: 'parentId', type: 'text', span: 12 },
+    {
+      label: '上级分类',
+      key: 'parentId',
+      span: 12,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: categories.value,
+          props: categoryProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          defaultExpandAll: true,
+          filterable: true,
+          clearable: true,
+          placeholder: '留空表示一级分类'
+        }
+      }
+    },
     {
       label: '排序权重',
       key: 'sort',

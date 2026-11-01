@@ -407,7 +407,6 @@
 
 <style scoped lang="scss">
   .injury-page {
-    gap: 12px;
     min-width: 0;
 
     &__filters {

@@ -7,30 +7,6 @@
       :gutter="16"
       label-position="top"
     >
-      <template #organizationId>
-        <ArtTreeSingleSelect
-          v-model="filter.model.organizationId"
-          :data="filter.organizations"
-          row-key="id"
-          label-key="name"
-          children-key="children"
-          title="选择公司或部门"
-          placeholder="全部组织"
-          empty-text="暂无可选组织"
-          empty-description="请先在系统组织管理中维护当前租户的公司或部门。"
-          clearable
-        >
-          <template #empty><SmisDataSourceEmptyActions source="organization" /></template>
-        </ArtTreeSingleSelect>
-      </template>
-      <template #employeeId>
-        <ArtEmployeeSelect
-          v-model="filter.model.employeeId"
-          :selected-data="filter.employee"
-          placeholder="全部领用人"
-          @update:selected-data="filter.employee = $event"
-        />
-      </template>
     </ArtForm>
     <div class="issuance-statistics__filter-action">
       <ElButton @click="resetFilter">重置</ElButton>
@@ -64,12 +40,11 @@
 </template>
 
 <script setup lang="ts">
+  import { h } from 'vue'
   import dayjs from 'dayjs'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import type { FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { ColumnOption } from '@/types'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtTreeSingleSelect from '@/components/core/forms/art-data-select/tree-single.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import SmisDataSourceEmptyActions from '@smis/views/components/smis-data-source-empty-actions.vue'
   import { useUserStore } from '@/store/modules/user'
@@ -118,8 +93,43 @@
         class: '!w-full'
       }
     },
-    { label: '组织名称', key: 'organizationId', type: 'input' },
-    { label: '领用人', key: 'employeeId', type: 'input' }
+    {
+      label: '组织名称',
+      key: 'organizationId',
+      type: 'dataSelect',
+      get props(): FormItem['props'] {
+        return {
+          mode: 'tree',
+          multiple: false,
+          showSelectedPanel: false,
+          showPagination: false,
+          data: filter.organizations,
+          rowKey: 'id',
+          labelKey: 'name',
+          childrenKey: 'children',
+          title: '选择公司或部门',
+          placeholder: '全部组织',
+          emptyText: '暂无可选组织',
+          emptyDescription: '请先在系统组织管理中维护当前租户的公司或部门。',
+          clearable: true
+        }
+      },
+      slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'organization' }) }
+    },
+    {
+      label: '领用人',
+      key: 'employeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: filter.employee,
+          placeholder: '全部领用人',
+          'onUpdate:selectedData': ($event: typeof filter.employee) => {
+            filter.employee = $event
+          }
+        }
+      }
+    }
   ]
   const statisticsColumns: ColumnOption<SmisToolIssuanceStatisticsRow>[] = [
     { type: 'globalIndex', label: '序号', width: 64, align: 'center' },

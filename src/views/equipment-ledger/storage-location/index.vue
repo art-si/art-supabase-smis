@@ -562,7 +562,6 @@
 
 <style scoped lang="scss">
   .storage-location-page {
-    gap: 12px;
     min-width: 0;
 
     &__workspace {

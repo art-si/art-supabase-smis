@@ -18,21 +18,6 @@
         label-position="top"
         tenant-scope-mode="manual"
       >
-        <template #inspectionTypeId>
-          <ElSelect
-            v-model="form.model.inspectionTypeId"
-            filterable
-            placeholder="请选择排查类型"
-            class="w-full"
-          >
-            <ElOption
-              v-for="item in inspectionTypes"
-              :key="item.id"
-              :label="`${item.typeName} · ${item.typeCode}`"
-              :value="item.id"
-            />
-          </ElSelect>
-        </template>
         <template #inspectionOrganizationId>
           <OrganizationTreeSelect
             v-model="form.model.inspectionOrganizationId"
@@ -47,27 +32,6 @@
             :organizations="organizations"
             title="选择被检查单位"
             placeholder="点击选择被检查单位"
-          />
-        </template>
-        <template #inspectorIds>
-          <ArtEmployeeSelect
-            v-model:model-values="form.model.inspectorIds"
-            v-model:selected-data="inspectorSelection"
-            multiple
-            :tenant-id="form.model.tenantId"
-            title="选择检查人"
-            subtitle="数据来自记录所属租户的员工花名册，可多选"
-            placeholder="选择一名或多名检查人"
-          />
-        </template>
-        <template #planAttachmentUrls>
-          <ArtUploadFile
-            v-model="form.model.planAttachmentUrls"
-            multiple
-            :limit="8"
-            :resource-tenant-id="form.model.tenantId"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-            tip="支持检查计划、表单、图片与压缩包，单个文件不超过 20 MB"
           />
         </template>
       </ArtForm>
@@ -85,7 +49,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
@@ -105,7 +68,6 @@
     type SmisSafetyInspectionTypeOption
   } from '@smis/api'
   import OrganizationTreeSelect from '@smis/views/dual-control-system/shared/organization-tree-select.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
 
   export interface SafetyInspectionDialogOpenData {
     row?: SmisSafetyInspectionRecord
@@ -187,7 +149,20 @@
           ]
         : []),
       { label: '检查名称', key: 'inspectionName', type: 'input', props: { maxlength: 160 } },
-      { label: '检查类别', key: 'inspectionTypeId', type: 'text' },
+      {
+        label: '检查类别',
+        key: 'inspectionTypeId',
+        type: 'select',
+        get options(): FormItem['options'] {
+          return inspectionTypes.value.map((item) => ({
+            label: `${item.typeName} · ${item.typeCode}`,
+            value: item.id
+          }))
+        },
+        get props(): FormItem['props'] {
+          return { filterable: true, placeholder: '请选择排查类型' }
+        }
+      },
       {
         label: '检查时间',
         key: 'inspectionTime',
@@ -202,9 +177,45 @@
       { label: '检查人员', key: 'people', type: 'divider', span: 24 },
       { label: '检查单位', key: 'inspectionOrganizationId', type: 'text' },
       { label: '被检查单位', key: 'inspectedOrganizationId', type: 'text' },
-      { label: '检查人', key: 'inspectorIds', type: 'text', span: 24 },
+      {
+        label: '检查人',
+        key: 'inspectorIds',
+        span: 24,
+        type: 'employeeSelect',
+        get props(): FormItem['props'] {
+          return {
+            modelValues: form.model.inspectorIds,
+            'onUpdate:modelValues': ($event: typeof form.model.inspectorIds) => {
+              form.model.inspectorIds = $event
+            },
+            selectedData: inspectorSelection.value,
+            'onUpdate:selectedData': ($event: typeof inspectorSelection.value) => {
+              inspectorSelection.value = $event
+            },
+            multiple: true,
+            tenantId: form.model.tenantId,
+            title: '选择检查人',
+            subtitle: '数据来自记录所属租户的员工花名册，可多选',
+            placeholder: '选择一名或多名检查人'
+          }
+        }
+      },
       { label: '证据材料', key: 'evidence', type: 'divider', span: 24 },
-      { label: '检查计划附件', key: 'planAttachmentUrls', type: 'text', span: 24 },
+      {
+        label: '检查计划附件',
+        key: 'planAttachmentUrls',
+        span: 24,
+        type: 'uploadFile',
+        get props(): FormItem['props'] {
+          return {
+            multiple: true,
+            limit: 8,
+            resourceTenantId: form.model.tenantId,
+            accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+            tip: '支持检查计划、表单、图片与压缩包，单个文件不超过 20 MB'
+          }
+        }
+      },
       {
         label: '检查说明',
         key: 'remark',

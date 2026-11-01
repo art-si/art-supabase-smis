@@ -355,7 +355,6 @@
 
 <style scoped lang="scss">
   .risk-information-page {
-    gap: 12px;
     min-width: 0;
     overflow: hidden;
 

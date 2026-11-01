@@ -17,39 +17,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #siteId>
-          <ElTreeSelect
-            v-model="form.model.siteId"
-            class="hazard-registration-dialog__control"
-            :data="options.sites"
-            :props="{ label: 'siteName', children: 'children' }"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="请选择隐患所在场所"
-          />
-        </template>
-        <template #reporterEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.reporterEmployeeId"
-            v-model:selected-data="form.reporterSelection"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择上报人"
-            subtitle="数据来自当前租户员工花名册"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            title="上传隐患照片"
-            multiple
-            :limit="9"
-            :size="104"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -67,8 +34,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -133,7 +98,24 @@
       description: '保存后按 YH + 年月 + 四位流水自动生成',
       props: { readonly: true, placeholder: '保存后自动生成' }
     },
-    { label: '隐患位置', key: 'siteId', type: 'text', span: 8 },
+    {
+      label: '隐患位置',
+      key: 'siteId',
+      span: 8,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: options.sites,
+          props: { label: 'siteName', children: 'children' },
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '请选择隐患所在场所'
+        }
+      }
+    },
     {
       label: '隐患级别',
       key: 'hazardLevel',
@@ -156,7 +138,24 @@
       }
     },
     { label: '上报信息', key: 'report', type: 'divider', span: 24 },
-    { label: '上报人', key: 'reporterEmployeeId', type: 'text', span: 12 },
+    {
+      label: '上报人',
+      key: 'reporterEmployeeId',
+      span: 12,
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: form.reporterSelection,
+          'onUpdate:selectedData': ($event: typeof form.reporterSelection) => {
+            form.reporterSelection = $event
+          },
+          tenantId: getUserInfo.value.tenantId,
+          title: '选择上报人',
+          subtitle: '数据来自当前租户员工花名册',
+          placeholder: '点击从员工花名册选择'
+        }
+      }
+    },
     {
       label: '上报时间',
       key: 'reportedAt',
@@ -170,7 +169,15 @@
         placeholder: '请选择上报时间'
       }
     },
-    { label: '现场证据', key: 'imageUrls', type: 'text', span: 24 },
+    {
+      label: '现场证据',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传隐患照片', multiple: true, limit: 9, size: 104 }
+      }
+    },
     {
       label: '整改建议',
       key: 'rectificationSuggestion',

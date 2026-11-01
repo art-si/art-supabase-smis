@@ -9,45 +9,19 @@
     <ArtForm
       ref="formRef"
       v-model="form"
-      :items="[]"
+      :items="formItems"
       :rules="rules"
       :validate-on-rule-change="false"
-      custom-layout
+      :span="24"
       scroll-to-error
       root-class="workflow-form p-0! md:p-0!"
-    >
-      <ElFormItem v-if="action === 'start'" label="审批结果" prop="result" required>
-        <ElRadioGroup v-model="form.result"
-          ><ElRadio value="approved">审批通过并开始作业</ElRadio
-          ><ElRadio value="rejected">拒绝申请</ElRadio></ElRadioGroup
-        >
-      </ElFormItem>
-      <ElFormItem v-if="action === 'accept'" label="验收结果" prop="result" required>
-        <ElRadioGroup v-model="form.result"
-          ><ElRadio value="passed">验收通过</ElRadio
-          ><ElRadio value="returned">退回整改</ElRadio></ElRadioGroup
-        >
-      </ElFormItem>
-      <ElFormItem
-        :label="action === 'void' ? '作废原因' : '处理说明'"
-        prop="description"
-        :required="action === 'void'"
-      >
-        <ElInput
-          v-model="form.description"
-          type="textarea"
-          :rows="4"
-          maxlength="500"
-          show-word-limit
-          :placeholder="descriptionPlaceholder"
-        />
-      </ElFormItem>
-    </ArtForm>
+    />
     <template #footer="{ api }">
       <ElButton :disabled="submitting" @click="api.handleClose()">取消</ElButton>
       <ElButton
         :type="action === 'void' ? 'danger' : 'primary'"
         :loading="submitting"
+        :disabled="!formRef?.readyToSubmit"
         @click="submit"
         >{{ confirmLabel }}</ElButton
       >
@@ -59,7 +33,7 @@
   import { computed, nextTick, ref, shallowRef } from 'vue'
   import type { FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
-  import ArtForm from '@/components/core/forms/art-form/index.vue'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import {
     transitionSpecialOperationPermit,
@@ -115,6 +89,33 @@
   const descriptionPlaceholder = computed(() =>
     action.value === 'void' ? '请填写具体作废原因' : '可填写审批、验收或整改说明'
   )
+
+  const formItems = computed<FormItem[]>(() => [
+    {
+      key: 'result',
+      label: action.value === 'accept' ? '验收结果' : '审批结果',
+      type: 'radioGroup',
+      hidden: !['start', 'accept'].includes(action.value),
+      formItemProps: { required: true },
+      options:
+        action.value === 'accept'
+          ? [
+              { label: '验收通过', value: 'passed' },
+              { label: '退回整改', value: 'returned' }
+            ]
+          : [
+              { label: '审批通过并开始作业', value: 'approved' },
+              { label: '拒绝申请', value: 'rejected' }
+            ]
+    },
+    {
+      key: 'description',
+      label: action.value === 'void' ? '作废原因' : '处理说明',
+      type: 'textarea',
+      formItemProps: { required: action.value === 'void' },
+      props: { maxlength: 500, placeholder: descriptionPlaceholder.value }
+    }
+  ])
 
   const submit = async (): Promise<void> => {
     if (!current.value) return

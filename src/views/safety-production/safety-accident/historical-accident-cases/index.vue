@@ -417,7 +417,6 @@
 
 <style scoped lang="scss">
   .historical-case-page {
-    gap: 12px;
     min-width: 0;
 
     &__knowledge-strip {

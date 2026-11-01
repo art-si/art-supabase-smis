@@ -16,39 +16,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #categoryId>
-          <ElTreeSelect
-            v-model="form.categoryId"
-            :data="categories"
-            :props="categoryProps"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            default-expand-all
-            filterable
-            class="w-full"
-            placeholder="选择文档分类"
-            @change="handleCategoryChange"
-          />
-        </template>
-
-        <template #fileUrl>
-          <div class="document-dialog__upload">
-            <ArtUploadFile
-              v-model="form.fileUrl"
-              :disabled="!form.categoryId"
-              :show-file-list="true"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-              title="选择要上传的文件"
-              tip="请先选择分类；支持常见文档、表格、演示稿、压缩包与图片，单个文件不超过 20 MB"
-              @resource-change="handleUploadSuccess"
-            />
-            <p v-if="!form.categoryId" class="document-dialog__upload-hint">
-              <ArtSvgIcon icon="ri:information-line" /> 选择文档分类后即可上传并执行同名查重
-            </p>
-          </div>
-        </template>
-
         <template v-if="duplicate" #duplicateResolution>
           <section class="document-dialog__duplicate" aria-label="同名文件处理">
             <div class="document-dialog__duplicate-heading">
@@ -61,16 +28,6 @@
                 </p>
               </div>
             </div>
-            <ElRadioGroup v-model="form.duplicateAction" class="document-dialog__duplicate-options">
-              <ElRadio value="replace" border>
-                <span>作为新版本替换</span>
-                <small>保留旧版审计记录，并在本次实施日期自动切换</small>
-              </ElRadio>
-              <ElRadio value="keep_both" border>
-                <span>保留为独立文档</span>
-                <small>同名文件并存，创建一条新的文档记录</small>
-              </ElRadio>
-            </ElRadioGroup>
           </section>
         </template>
       </ArtForm>
@@ -89,7 +46,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -197,7 +153,25 @@
       span: 12,
       props: { maxlength: 200, showWordLimit: true, placeholder: '请输入便于检索的文档标题' }
     },
-    { label: '文档分类', key: 'categoryId', type: 'text', span: 12 },
+    {
+      label: '文档分类',
+      key: 'categoryId',
+      span: 12,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: categories.value,
+          props: categoryProps,
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          defaultExpandAll: true,
+          filterable: true,
+          placeholder: '选择文档分类',
+          onChange: handleCategoryChange
+        }
+      }
+    },
     {
       label: '状态',
       key: 'status',
@@ -222,7 +196,23 @@
     ...(isUploadMode.value
       ? [
           { label: '版本与实施', key: 'version', type: 'divider' as const, span: 24 },
-          { label: '文档文件', key: 'fileUrl', type: 'text' as const, span: 24 },
+          {
+            label: '文档文件',
+            key: 'fileUrl',
+            type: 'uploadFile' as const,
+            span: 24,
+            description: !form.value.categoryId
+              ? '选择文档分类后即可上传并执行同名查重'
+              : undefined,
+            props: {
+              disabled: !form.value.categoryId,
+              showFileList: true,
+              accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+              title: '选择要上传的文件',
+              tip: '请先选择分类；支持常见文档、表格、演示稿、压缩包与图片，单个文件不超过 20 MB',
+              onResourceChange: handleUploadSuccess
+            }
+          },
           {
             label: '实施日期',
             key: 'effectiveDate',
@@ -251,6 +241,19 @@
                   key: 'duplicateResolution',
                   type: 'text' as const,
                   span: 24
+                },
+                {
+                  label: '本次更新方式',
+                  key: 'duplicateAction',
+                  type: 'radioGroup' as const,
+                  span: 24,
+                  options: [
+                    { label: '作为新版本替换', value: 'replace' },
+                    { label: '保留为独立文档', value: 'keep_both' }
+                  ],
+                  description:
+                    '新版本替换会保留旧版审计记录，并在本次实施日期自动切换；保留独立文档会创建一条同名记录。',
+                  props: { optionType: 'button' }
                 }
               ]
             : [])

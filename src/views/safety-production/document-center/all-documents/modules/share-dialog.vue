@@ -14,16 +14,6 @@
         :span="24"
         label-position="top"
       >
-        <template #userIds>
-          <ArtUserSelect
-            v-model="form.userIds"
-            :options="userOptions"
-            multiple
-            :loading="loadingUsers"
-            placeholder="选择要分享的用户"
-            no-data-text="当前租户暂无其他启用用户"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -38,7 +28,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUserSelect from '@/components/core/forms/art-user-select/index.vue'
   import type { ArtUserSelectOption } from '@/components/core/forms/art-user-select/types'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
@@ -68,7 +57,21 @@
   const loadingUsers = ref(false)
   const form = ref<ShareForm>({ userIds: [], message: '' })
   const items: FormItem[] = [
-    { label: '分享给', key: 'userIds', type: 'text', span: 24 },
+    {
+      label: '分享给',
+      key: 'userIds',
+      span: 24,
+      type: 'userSelect',
+      get props(): FormItem['props'] {
+        return {
+          options: userOptions.value,
+          multiple: true,
+          loading: loadingUsers.value,
+          placeholder: '选择要分享的用户',
+          noDataText: '当前租户暂无其他启用用户'
+        }
+      }
+    },
     {
       label: '分享留言',
       key: 'message',

@@ -490,7 +490,6 @@
 
 <style scoped lang="scss">
   .violation-record-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

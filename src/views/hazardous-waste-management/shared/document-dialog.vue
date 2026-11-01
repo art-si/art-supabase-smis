@@ -17,32 +17,6 @@
       :gutter="16"
       label-position="top"
     >
-      <template #warehouseId
-        ><ArtTableSingleSelect
-          v-model="form.model.warehouseId"
-          :selected-data="selection.warehouse"
-          :api-fn="fetchWarehouseOptions"
-          :show-pagination="true"
-          :columns="warehouseColumns"
-          row-key="id"
-          label-key="warehouseName"
-          description-key="warehouseCode"
-          title="选择入出库仓库"
-          subtitle="仅显示已启用的危废仓库"
-          placeholder="请选择仓库"
-          search-placeholder="搜索仓库名称或编号"
-          empty-text="暂无可用危废仓库"
-          @update:selected-data="selection.warehouse = $event as SmisHazardousWasteWarehouse[]"
-      /></template>
-      <template #handlerEmployeeId
-        ><ArtEmployeeSelect
-          v-model="form.model.handlerEmployeeId"
-          :selected-data="selection.handler"
-          title="选择经办人"
-          subtitle="数据来源为当前租户员工花名册"
-          placeholder="请选择经办人"
-          @update:selected-data="selection.handler = $event"
-      /></template>
     </ArtForm>
     <ArtSectionCard title="危废明细" subtitle="数量必须大于 0，生产日期为必填项。">
       <template #actions
@@ -82,14 +56,12 @@
   import dayjs from 'dayjs'
   import { ElButton, ElDatePicker, ElInput, ElInputNumber, type FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtTable from '@/components/core/tables/art-table/index.vue'
   import type { ArtTableExpose } from '@/components/core/tables/art-table/index.vue'
   import ArtTableMultipleSelect from '@/components/core/forms/art-data-select/table-multiple.vue'
-  import ArtTableSingleSelect from '@/components/core/forms/art-data-select/table-single.vue'
   import type {
     DataSelectColumn,
     DataSelectFetchParams,
@@ -171,8 +143,49 @@
       type: 'date',
       props: { valueFormat: 'YYYY-MM-DD', class: '!w-full' }
     },
-    { label: '入出库仓库', key: 'warehouseId', type: 'input' },
-    { label: '经办人', key: 'handlerEmployeeId', type: 'input' },
+    {
+      label: '入出库仓库',
+      key: 'warehouseId',
+      type: 'dataSelect',
+      get props(): FormItem['props'] {
+        return {
+          mode: 'table',
+          multiple: false,
+          showSelectedPanel: false,
+          selectedData: selection.warehouse,
+          apiFn: fetchWarehouseOptions,
+          showPagination: true,
+          columns: warehouseColumns,
+          rowKey: 'id',
+          labelKey: 'warehouseName',
+          descriptionKey: 'warehouseCode',
+          title: '选择入出库仓库',
+          subtitle: '仅显示已启用的危废仓库',
+          placeholder: '请选择仓库',
+          searchPlaceholder: '搜索仓库名称或编号',
+          emptyText: '暂无可用危废仓库',
+          'onUpdate:selectedData': ($event: unknown) => {
+            selection.warehouse = $event as SmisHazardousWasteWarehouse[]
+          }
+        }
+      }
+    },
+    {
+      label: '经办人',
+      key: 'handlerEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: selection.handler,
+          title: '选择经办人',
+          subtitle: '数据来源为当前租户员工花名册',
+          placeholder: '请选择经办人',
+          'onUpdate:selectedData': ($event: typeof selection.handler) => {
+            selection.handler = $event
+          }
+        }
+      }
+    },
     ...(direction.value === 'outbound'
       ? ([
           {

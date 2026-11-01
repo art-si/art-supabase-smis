@@ -379,7 +379,6 @@
 </script>
 <style scoped lang="scss">
   .risk-evaluation-page {
-    gap: 12px;
     min-width: 0;
 
     &__overview {

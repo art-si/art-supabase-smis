@@ -25,54 +25,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #siteId>
-          <ElTreeSelect
-            v-model="form.siteId"
-            class="hazard-dialog__control"
-            :data="sites"
-            :props="{ label: 'siteName', children: 'children' }"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="请选择场所"
-          />
-        </template>
-        <template #controlOrganizationId>
-          <ElTreeSelect
-            v-model="form.controlOrganizationId"
-            class="hazard-dialog__control"
-            :data="organizations"
-            :props="{ label: 'organizationName', children: 'children' }"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="请选择管控部门"
-          />
-        </template>
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.responsibleEmployeeId"
-            v-model:selected-data="employeeSelection"
-            :api-fn="fetchHazardSourceEmployees"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择危险源责任人"
-            subtitle="数据来自当前租户员工花名册"
-            placeholder="点击从员工花名册选择"
-          />
-        </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.imageUrls"
-            title="上传危险源照片"
-            multiple
-            :limit="9"
-            :size="112"
-          />
-        </template>
       </ArtForm>
     </div>
 
@@ -100,8 +52,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -190,7 +140,23 @@
       type: 'input',
       props: { maxlength: 160, placeholder: '请输入危险源名称' }
     },
-    { label: '所在场所', key: 'siteId', type: 'text' },
+    {
+      label: '所在场所',
+      key: 'siteId',
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: sites.value,
+          props: { label: 'siteName', children: 'children' },
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '请选择场所'
+        }
+      }
+    },
     {
       label: '数量',
       key: 'quantity',
@@ -225,8 +191,41 @@
       options: dictOptions('smisHazardSourceRiskLevel'),
       props: { clearable: false }
     },
-    { label: '管控部门', key: 'controlOrganizationId', type: 'text' },
-    { label: '责任人', key: 'responsibleEmployeeId', type: 'text' },
+    {
+      label: '管控部门',
+      key: 'controlOrganizationId',
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: organizations.value,
+          props: { label: 'organizationName', children: 'children' },
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '请选择管控部门'
+        }
+      }
+    },
+    {
+      label: '责任人',
+      key: 'responsibleEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: employeeSelection.value,
+          'onUpdate:selectedData': ($event: typeof employeeSelection.value) => {
+            employeeSelection.value = $event
+          },
+          apiFn: fetchHazardSourceEmployees,
+          tenantId: getUserInfo.value.tenantId,
+          title: '选择危险源责任人',
+          subtitle: '数据来自当前租户员工花名册',
+          placeholder: '点击从员工花名册选择'
+        }
+      }
+    },
     { label: '评价与资料', key: 'archive', type: 'tab', span: 24 },
     {
       label: '评价时间',
@@ -270,7 +269,15 @@
       props: { maxlength: 100, placeholder: '请输入备案号' }
     },
 
-    { label: '危险源照片', key: 'imageUrls', type: 'text', span: 24 },
+    {
+      label: '危险源照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传危险源照片', multiple: true, limit: 9, size: 112 }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

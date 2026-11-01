@@ -18,42 +18,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #approvalResult>
-          <ElRadioGroup v-model="form.model.approvalResult" class="hazard-workflow-dialog__choice">
-            <ElRadioButton v-for="item in approvalOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </ElRadioButton>
-          </ElRadioGroup>
-        </template>
-        <template #acceptanceResult>
-          <ElRadioGroup
-            v-model="form.model.acceptanceResult"
-            class="hazard-workflow-dialog__choice"
-          >
-            <ElRadioButton v-for="item in acceptanceOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </ElRadioButton>
-          </ElRadioGroup>
-        </template>
-        <template #responsibleEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.model.responsibleEmployeeId"
-            v-model:selected-data="form.responsibleSelection"
-            :tenant-id="getUserInfo.tenantId"
-            title="选择整改责任人"
-            subtitle="数据来自当前租户员工花名册"
-            placeholder="点击选择整改责任人"
-          />
-        </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            :title="mode === 'accept' ? '上传验收照片' : '上传整改照片'"
-            multiple
-            :limit="9"
-            :size="104"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -71,8 +35,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -163,11 +125,35 @@
   const formItems = computed<FormItem[]>(() => {
     if (mode.value === 'approve') {
       const items: FormItem[] = [
-        { label: '核准结论', key: 'approvalResult', type: 'text', span: 24 }
+        {
+          label: '核准结论',
+          key: 'approvalResult',
+          span: 24,
+          type: 'radioGroup',
+          options: approvalOptions.value,
+          props: { optionType: 'button' }
+        }
       ]
       if (form.model.approvalResult === 'rectify') {
         items.push(
-          { label: '整改责任人', key: 'responsibleEmployeeId', type: 'text', span: 12 },
+          {
+            label: '整改责任人',
+            key: 'responsibleEmployeeId',
+            span: 12,
+            type: 'employeeSelect',
+            get props(): FormItem['props'] {
+              return {
+                selectedData: form.responsibleSelection,
+                'onUpdate:selectedData': ($event: typeof form.responsibleSelection) => {
+                  form.responsibleSelection = $event
+                },
+                tenantId: getUserInfo.value.tenantId,
+                title: '选择整改责任人',
+                subtitle: '数据来自当前租户员工花名册',
+                placeholder: '点击选择整改责任人'
+              }
+            }
+          },
           {
             label: '整改时限',
             key: 'rectificationDeadline',
@@ -241,11 +227,29 @@
             placeholder: '说明已采取的措施、整改结果和现场状态'
           }
         },
-        { label: '整改照片', key: 'imageUrls', type: 'text', span: 24 }
+        {
+          label: '整改照片',
+          key: 'imageUrls',
+          span: 24,
+          type: 'uploadImage',
+          props: {
+            title: '上传整改照片',
+            multiple: true,
+            limit: 9,
+            size: 104
+          }
+        }
       ]
     }
     return [
-      { label: '验收结论', key: 'acceptanceResult', type: 'text', span: 24 },
+      {
+        label: '验收结论',
+        key: 'acceptanceResult',
+        span: 24,
+        type: 'radioGroup',
+        options: acceptanceOptions.value,
+        props: { optionType: 'button' }
+      },
       {
         label: '验收说明',
         key: 'description',
@@ -265,9 +269,14 @@
       {
         label: '验收照片',
         key: 'imageUrls',
-        type: 'text',
         span: 24,
-        description: '支持上传整改后现场、检测结果或验收记录照片'
+        type: 'uploadImage',
+        props: {
+          title: '上传验收照片',
+          multiple: true,
+          limit: 9,
+          size: 104
+        }
       }
     ]
   })

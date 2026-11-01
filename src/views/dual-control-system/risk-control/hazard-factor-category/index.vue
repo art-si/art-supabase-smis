@@ -466,7 +466,6 @@
 
 <style scoped lang="scss">
   .hazard-factor-category-page {
-    gap: 12px;
     min-width: 0;
 
     :deep(.hazard-factor-category-page__code) {

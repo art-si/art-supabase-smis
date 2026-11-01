@@ -178,23 +178,6 @@
           :gutter="24"
           label-position="top"
         >
-          <template #trainingPlanId>
-            <ElSelect
-              v-model="form.trainingPlanId"
-              class="w-full"
-              filterable
-              :disabled="Boolean(form.id)"
-              placeholder="按计划编号或培训主题选择已发布计划"
-              @change="applyPlan"
-            >
-              <ElOption
-                v-for="plan in planOptions"
-                :key="plan.id"
-                :label="`${plan.planNo} · ${plan.subject}`"
-                :value="plan.id"
-              />
-            </ElSelect>
-          </template>
           <template #planContext>
             <div v-if="selectedPlan" class="training-record-dialog__plan-context">
               <div
@@ -252,24 +235,6 @@
               />
             </section>
           </template>
-          <template #attachmentUrls>
-            <ArtUploadFile
-              v-model="form.attachmentUrls"
-              multiple
-              :limit="8"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-              tip="培训课件、考卷、成绩单等归档材料"
-            />
-          </template>
-          <template #signInAttachmentUrls>
-            <ArtUploadFile
-              v-model="form.signInAttachmentUrls"
-              multiple
-              :limit="8"
-              accept=".pdf,.xls,.xlsx,image/*"
-              tip="纸质签到表扫描件、现场签到照片等佐证材料"
-            />
-          </template>
         </ArtForm>
       </template>
     </div>
@@ -318,7 +283,6 @@
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadFile from '@/components/core/forms/art-upload-file/index.vue'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtTable, { type ArtTableExpose } from '@/components/core/tables/art-table/index.vue'
@@ -668,7 +632,26 @@
   })
   const items = computed<FormItem[]>(() => [
     { label: '计划与执行', key: 'sourceSection', type: 'tab', span: 24 },
-    { label: '关联培训计划', key: 'trainingPlanId', span: 24 },
+    {
+      label: '关联培训计划',
+      key: 'trainingPlanId',
+      span: 24,
+      type: 'select',
+      get options(): FormItem['options'] {
+        return planOptions.value.map((plan) => ({
+          label: `${plan.planNo} · ${plan.subject}`,
+          value: plan.id
+        }))
+      },
+      get props(): FormItem['props'] {
+        return {
+          filterable: true,
+          disabled: Boolean(form.value.id),
+          placeholder: '按计划编号或培训主题选择已发布计划',
+          onChange: applyPlan
+        }
+      }
+    },
     { label: '计划自动带入信息', key: 'planContext', span: 24 },
 
     {
@@ -689,7 +672,7 @@
     {
       label: '实际学时',
       key: 'trainingHours',
-      type: 'inputNumber',
+      type: 'number',
       props: { min: 0, max: 9999, precision: 1, class: '!w-full' }
     },
     {
@@ -709,8 +692,34 @@
     { label: '签到与考核', key: 'attendanceSection', type: 'tab', span: 24 },
     { label: '签到明细', key: 'participants', span: 24 },
     { label: '归档材料', key: 'evidenceSection', type: 'tab', span: 24 },
-    { label: '培训附件', key: 'attachmentUrls', span: 24 },
-    { label: '签到附件', key: 'signInAttachmentUrls', span: 24 },
+    {
+      label: '培训附件',
+      key: 'attachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*',
+          tip: '培训课件、考卷、成绩单等归档材料'
+        }
+      }
+    },
+    {
+      label: '签到附件',
+      key: 'signInAttachmentUrls',
+      span: 24,
+      type: 'uploadFile',
+      get props(): FormItem['props'] {
+        return {
+          multiple: true,
+          limit: 8,
+          accept: '.pdf,.xls,.xlsx,image/*',
+          tip: '纸质签到表扫描件、现场签到照片等佐证材料'
+        }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

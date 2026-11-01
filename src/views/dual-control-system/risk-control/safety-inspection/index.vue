@@ -551,7 +551,6 @@
 
 <style scoped lang="scss">
   .safety-inspection-page {
-    gap: var(--art-space-3);
     min-width: 0;
 
     &__overview,

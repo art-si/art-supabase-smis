@@ -573,7 +573,6 @@
 
 <style scoped lang="scss">
   .risk-control-page {
-    gap: 12px;
     min-width: 0;
 
     &__table {

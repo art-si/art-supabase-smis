@@ -22,7 +22,7 @@
   import { toDictionaryOption } from '@/utils/form/option'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
-  import { ElColorPicker, type FormRules } from 'element-plus'
+  import { type FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
@@ -111,12 +111,11 @@
     {
       label: '文字颜色',
       key: 'textColor',
-      render: () =>
-        h(ElColorPicker, {
-          modelValue: model.value.textColor,
-          predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#334155'],
-          'onUpdate:modelValue': (v: string | null) => (model.value.textColor = v || '')
-        })
+      type: 'colorPicker',
+      props: {
+        predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#334155'],
+        onChange: (v: string | null) => (model.value.textColor = v || '')
+      }
     },
     {
       label: '标签样式',

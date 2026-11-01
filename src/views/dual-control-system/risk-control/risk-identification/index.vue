@@ -627,7 +627,6 @@
 
 <style scoped lang="scss">
   .risk-identification-page {
-    gap: 12px;
     min-width: 0;
 
     &__overview {

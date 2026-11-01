@@ -21,113 +21,12 @@
       <ArtForm
         ref="formRef"
         v-model="form"
-        :items="[]"
+        :items="formItems"
         :rules="rules"
-        custom-layout
+        :span="12"
         scroll-to-error
         root-class="p-0! md:p-0!"
-      >
-        <ArtSectionTitle title="执行信息" subtitle="选择实际执行人并记录现场巡查总结" />
-        <div class="task-execution-dialog__grid">
-          <ElFormItem label="实际执行人" prop="actualExecutorEmployeeId">
-            <ArtEmployeeSelect
-              v-model="form.actualExecutorEmployeeId"
-              v-model:selected-data="executorSelection"
-              title="选择实际执行人"
-              subtitle="执行人来自当前租户员工花名册"
-            />
-          </ElFormItem>
-          <ElFormItem label="任务附件">
-            <ArtUploadImage
-              v-model="form.attachmentUrls"
-              :resource-tenant-id="detail.tenantId"
-              multiple
-              :limit="8"
-              :size="112"
-              title="上传现场照片"
-            />
-          </ElFormItem>
-          <ElFormItem class="task-execution-dialog__wide" label="执行总结">
-            <ElInput
-              v-model="form.executionSummary"
-              type="textarea"
-              :rows="5"
-              maxlength="2000"
-              show-word-limit
-              placeholder="说明本次巡查总体情况、发现问题和后续建议"
-            />
-          </ElFormItem>
-        </div>
-
-        <ArtSectionTitle
-          title="巡查项目"
-          :subtitle="`逐项判断正常或异常；提交完成前必须填写全部 ${detail.items.length} 项`"
-        />
-        <div class="task-execution-dialog__items">
-          <article
-            v-for="(item, index) in form.items"
-            :key="item.id"
-            class="task-execution-dialog__item"
-            :data-result="item.result"
-          >
-            <header
-              ><span>{{ String(index + 1).padStart(2, '0') }}</span
-              ><div
-                ><strong>{{ detail.items[index]?.hazardSource || '风险控制措施' }}</strong
-                ><small>{{ detail.items[index]?.hazardNo || '历史任务快照' }}</small></div
-              ><ElFormItem
-                :prop="`items.${index}.result`"
-                :rules="completeMode ? [{ validator: validateItemResult, trigger: 'change' }] : []"
-                class="task-execution-dialog__result-field"
-                ><ElRadioGroup v-model="item.result" size="small"
-                  ><ElRadioButton
-                    v-for="option in itemResultOptions"
-                    :key="option.value"
-                    :value="option.value"
-                    >{{ option.label }}</ElRadioButton
-                  ></ElRadioGroup
-                ></ElFormItem
-              ></header
-            >
-            <p>{{ detail.items[index]?.inspectionContent }}</p>
-            <div class="task-execution-dialog__item-fields">
-              <ElFormItem
-                :prop="`items.${index}.remark`"
-                :rules="
-                  completeMode && item.result === 'abnormal'
-                    ? [
-                        {
-                          required: true,
-                          whitespace: true,
-                          message: '异常项目必须填写问题说明',
-                          trigger: 'blur'
-                        }
-                      ]
-                    : []
-                "
-                class="task-execution-dialog__remark-field"
-              >
-                <ElInput
-                  v-model="item.remark"
-                  type="textarea"
-                  :rows="4"
-                  maxlength="1000"
-                  show-word-limit
-                  placeholder="填写检查说明；异常项请描述问题位置、现象与处置建议"
-                />
-              </ElFormItem>
-              <ArtUploadImage
-                v-model="item.attachmentUrls"
-                :resource-tenant-id="detail.tenantId"
-                multiple
-                :limit="4"
-                :size="104"
-                title="项目照片"
-              />
-            </div>
-          </article>
-        </div>
-      </ArtForm>
+      />
     </div>
 
     <template #footer="{ api }">
@@ -136,13 +35,13 @@
         <div
           ><ElButton @click="api.handleClose()">关闭</ElButton
           ><ElButton
-            :disabled="!detail || loading"
+            :disabled="!detail || loading || !formRef?.readyToSubmit"
             :loading="submitting"
             @click="handleSubmit(false)"
             >保存进度</ElButton
           ><ElButton
             type="primary"
-            :disabled="!detail || loading"
+            :disabled="!detail || loading || !formRef?.readyToSubmit"
             :loading="submitting"
             @click="handleSubmit(true)"
             >提交并完成</ElButton
@@ -162,11 +61,8 @@
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
-  import ArtForm from '@/components/core/forms/art-form/index.vue'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
-  import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtAsyncState from '@/components/core/feedback/art-async-state/index.vue'
   import { useDetailRecord } from '@/hooks/core/useDetailRecord'
@@ -228,6 +124,118 @@
   ) => {
     callback(value === 'pending' || !value ? new Error('请选择巡查结果') : undefined)
   }
+  const formItems = computed<FormItem[]>(() => [
+    {
+      key: 'executionSection',
+      label: '执行信息',
+      type: 'divider',
+      span: 24,
+      description: '选择实际执行人并记录现场巡查总结'
+    },
+    {
+      key: 'actualExecutorEmployeeId',
+      label: '实际执行人',
+      type: 'employeeSelect',
+      props: {
+        title: '选择实际执行人',
+        subtitle: '执行人来自当前租户员工花名册',
+        selectedData: executorSelection.value,
+        'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
+          executorSelection.value = value
+        }
+      }
+    },
+    {
+      key: 'attachmentUrls',
+      label: '任务附件',
+      type: 'uploadImage',
+      props: {
+        resourceTenantId: detail.value?.tenantId,
+        multiple: true,
+        limit: 8,
+        size: 112,
+        title: '上传现场照片'
+      }
+    },
+    {
+      key: 'executionSummary',
+      label: '执行总结',
+      type: 'textarea',
+      props: { rows: 5, maxlength: 2000, placeholder: '说明本次巡查总体情况、发现问题和后续建议' }
+    },
+    {
+      key: 'inspectionSection',
+      label: '巡查项目',
+      type: 'divider',
+      span: 24,
+      description: '逐项判断正常或异常；提交完成前必须填写全部 ' + form.value.items.length + ' 项'
+    },
+    ...form.value.items.flatMap((item, index): FormItem[] => [
+      {
+        key: 'inspectionItemSection' + item.id,
+        label:
+          String(index + 1).padStart(2, '0') +
+          ' · ' +
+          (detail.value?.items[index]?.hazardSource || '风险控制措施'),
+        type: 'divider',
+        span: 24,
+        description: [
+          detail.value?.items[index]?.hazardNo,
+          detail.value?.items[index]?.inspectionContent
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      },
+      {
+        key: 'items.' + index + '.result',
+        label: '巡查结果',
+        type: 'radioGroup',
+        description: detail.value?.items[index]?.inspectionContent,
+        span: 24,
+        options: itemResultOptions.value,
+        props: { optionType: 'button', size: 'small' },
+        formItemProps: {
+          rules: completeMode.value ? [{ validator: validateItemResult, trigger: 'change' }] : []
+        }
+      },
+      {
+        key: 'items.' + index + '.remark',
+        label: '检查说明',
+        type: 'textarea',
+        props: {
+          maxlength: 1000,
+          placeholder: '填写检查说明；异常项请描述问题位置、现象与处置建议'
+        },
+        formItemProps: {
+          rules:
+            completeMode.value && item.result === 'abnormal'
+              ? [
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: '异常项目必须填写问题说明',
+                    trigger: 'blur'
+                  }
+                ]
+              : []
+        }
+      },
+      {
+        key: 'items.' + index + '.attachmentUrls',
+        label: '项目照片',
+        type: 'uploadImage',
+        span: 24,
+        props: {
+          resourceTenantId: detail.value?.tenantId,
+          multiple: true,
+          limit: 4,
+          size: 104,
+          title: '项目照片'
+        }
+      }
+    ])
+  ])
+
   const completedCount = computed(
     () => form.value.items.filter((item) => item.result !== 'pending').length
   )
@@ -353,91 +361,6 @@
     border-radius: 999px;
   }
 
-  .task-execution-dialog__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 24px;
-    margin: 12px 0 20px;
-  }
-
-  .task-execution-dialog__wide {
-    grid-column: 1 / -1;
-  }
-
-  .task-execution-dialog__items {
-    display: grid;
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .task-execution-dialog__item {
-    padding: 16px;
-    background: var(--default-box-color);
-    border: 1px solid var(--el-border-color-lighter);
-    border-left: 3px solid var(--el-border-color);
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .task-execution-dialog__item[data-result='normal'] {
-    border-left-color: var(--el-color-success);
-  }
-
-  .task-execution-dialog__item[data-result='abnormal'] {
-    border-left-color: var(--el-color-danger);
-  }
-
-  .task-execution-dialog__item header {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .task-execution-dialog__result-field,
-  .task-execution-dialog__remark-field {
-    min-width: 0;
-    margin-bottom: 0;
-  }
-
-  .task-execution-dialog__result-field :deep(.el-form-item__error),
-  .task-execution-dialog__remark-field :deep(.el-form-item__error) {
-    position: static;
-    margin-top: 4px;
-  }
-
-  .task-execution-dialog__item header > span {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    color: var(--theme-color);
-    background: color-mix(in srgb, var(--theme-color) 8%, var(--el-bg-color));
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .task-execution-dialog__item header strong,
-  .task-execution-dialog__item header small {
-    display: block;
-  }
-
-  .task-execution-dialog__item header small {
-    margin-top: 2px;
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-  }
-
-  .task-execution-dialog__item > p {
-    margin: 12px 0;
-    line-height: 1.6;
-  }
-
-  .task-execution-dialog__item-fields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 16px;
-    align-items: start;
-  }
-
   .task-execution-dialog__footer {
     display: flex;
     gap: 16px;
@@ -452,23 +375,6 @@
   }
 
   @media (width <= 760px) {
-    .task-execution-dialog__grid,
-    .task-execution-dialog__item-fields {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .task-execution-dialog__wide {
-      grid-column: auto;
-    }
-
-    .task-execution-dialog__item header {
-      grid-template-columns: 34px minmax(0, 1fr);
-    }
-
-    .task-execution-dialog__item header .task-execution-dialog__result-field {
-      grid-column: 1 / -1;
-    }
-
     .task-execution-dialog__footer {
       flex-direction: column;
       align-items: flex-end;

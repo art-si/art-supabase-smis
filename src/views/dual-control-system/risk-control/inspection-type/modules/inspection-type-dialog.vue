@@ -24,7 +24,7 @@
 
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
-  import { ElColorPicker, type FormRules } from 'element-plus'
+  import { type FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, {
@@ -102,13 +102,12 @@
       {
         label: '文字颜色',
         key: 'textColor',
-        render: () =>
-          h(ElColorPicker, {
-            modelValue: form.model.textColor,
-            showAlpha: false,
-            predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#475569'],
-            'onUpdate:modelValue': (value: string | null) => (form.model.textColor = value || '')
-          })
+        type: 'colorPicker',
+        props: {
+          showAlpha: false,
+          predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#475569'],
+          onChange: (value: string | null) => (form.model.textColor = value || '')
+        }
       },
       {
         label: '标签样式',

@@ -16,43 +16,6 @@
       :gutter="16"
       label-position="top"
     >
-      <template #employeeId>
-        <ArtEmployeeSelect
-          v-model="form.model.employeeId"
-          :selected-data="selection.employee"
-          @update:selected-data="selection.employee = $event"
-        />
-      </template>
-      <template #warehouseId>
-        <ArtTableSingleSelect
-          v-model="form.model.warehouseId"
-          :selected-data="selection.warehouse"
-          :api-fn="fetchWarehouseOptions"
-          :columns="warehouseColumns"
-          row-key="id"
-          label-key="locationName"
-          description-key="locationCode"
-          title="选择发放仓库"
-          subtitle="仅显示当前租户已启用的仓库或存放位置"
-          placeholder="请选择发放仓库"
-          search-placeholder="搜索仓库名称或编码"
-          empty-text="暂无可用仓库"
-          empty-description="当前租户没有启用的仓库或存放位置，请先维护仓储位置。"
-          @update:selected-data="selection.warehouse = $event"
-        >
-          <template #empty><SmisDataSourceEmptyActions source="storage-location" /></template>
-        </ArtTableSingleSelect>
-      </template>
-      <template #issuerEmployeeId>
-        <ArtEmployeeSelect
-          v-model="form.model.issuerEmployeeId"
-          :selected-data="selection.issuer"
-          title="选择发放人"
-          subtitle="默认当前登录账号关联员工，可从员工花名册修改"
-          placeholder="请选择发放人"
-          @update:selected-data="selection.issuer = $event"
-        />
-      </template>
     </ArtForm>
 
     <ArtSectionCard title="工器具明细" subtitle="发放数量必须大于 0；物料信息来自工器具主数据。">
@@ -93,6 +56,7 @@
 </template>
 
 <script setup lang="tsx">
+  import { h } from 'vue'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import ArtEntitySummary from '@/components/core/surfaces/art-entity-summary/index.vue'
   import BusinessTableIdentityCell from '@/components/business/business-table-identity-cell/index.vue'
@@ -106,10 +70,8 @@
     type IssuanceRecordFormModel,
     type IssuanceRecordSelectionState
   } from '../../../issuance-record-model'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtTableMultipleSelect from '@/components/core/forms/art-data-select/table-multiple.vue'
-  import ArtTableSingleSelect from '@/components/core/forms/art-data-select/table-single.vue'
   import type { ArtTableExpose } from '@/components/core/tables/art-table/index.vue'
   import type {
     DataSelectColumn,
@@ -178,15 +140,70 @@
       type: 'input',
       props: { disabled: true, placeholder: '保存时自动生成' }
     },
-    { label: '领用人', key: 'employeeId', type: 'input' },
+    {
+      label: '领用人',
+      key: 'employeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: selection.employee,
+          'onUpdate:selectedData': ($event: typeof selection.employee) => {
+            selection.employee = $event
+          }
+        }
+      }
+    },
     {
       label: '发放日期',
       key: 'issueDate',
       type: 'date',
       props: { valueFormat: 'YYYY-MM-DD', placeholder: '请选择发放日期', class: '!w-full' }
     },
-    { label: '发放仓库', key: 'warehouseId', type: 'input' },
-    { label: '发放人', key: 'issuerEmployeeId', type: 'input' },
+    {
+      label: '发放仓库',
+      key: 'warehouseId',
+      type: 'dataSelect',
+      get props(): FormItem['props'] {
+        return {
+          mode: 'table',
+          multiple: false,
+          showSelectedPanel: false,
+          showPagination: Boolean(fetchWarehouseOptions),
+          selectedData: selection.warehouse,
+          apiFn: fetchWarehouseOptions,
+          columns: warehouseColumns,
+          rowKey: 'id',
+          labelKey: 'locationName',
+          descriptionKey: 'locationCode',
+          title: '选择发放仓库',
+          subtitle: '仅显示当前租户已启用的仓库或存放位置',
+          placeholder: '请选择发放仓库',
+          searchPlaceholder: '搜索仓库名称或编码',
+          emptyText: '暂无可用仓库',
+          emptyDescription: '当前租户没有启用的仓库或存放位置，请先维护仓储位置。',
+          'onUpdate:selectedData': ($event: typeof selection.warehouse) => {
+            selection.warehouse = $event
+          }
+        }
+      },
+      slots: { empty: () => h(SmisDataSourceEmptyActions, { source: 'storage-location' }) }
+    },
+    {
+      label: '发放人',
+      key: 'issuerEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: selection.issuer,
+          title: '选择发放人',
+          subtitle: '默认当前登录账号关联员工，可从员工花名册修改',
+          placeholder: '请选择发放人',
+          'onUpdate:selectedData': ($event: typeof selection.issuer) => {
+            selection.issuer = $event
+          }
+        }
+      }
+    },
     {
       label: '备注',
       key: 'remark',

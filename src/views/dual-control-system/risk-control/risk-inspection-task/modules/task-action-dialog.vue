@@ -8,32 +8,14 @@
         :title="row?.taskNo || '未选择风险巡查任务'"
         :description="`${row?.riskPointName || '风险点待确认'} · ${row?.riskPointNo || '编号待确认'}`"
       />
-      <ArtForm ref="formRef" v-model="form" :rules="rules" label-position="top" custom-layout>
-        <ElFormItem v-if="mode === 'transfer'" label="转交接收人" prop="employeeId">
-          <ArtEmployeeSelect
-            v-model="form.employeeId"
-            v-model:selected-data="employeeSelection"
-            title="选择任务接收人"
-            subtitle="仅显示当前租户在职或试用期员工"
-          />
-        </ElFormItem>
-        <ElFormItem :label="mode === 'transfer' ? '转交原因' : '取消原因'" prop="reason">
-          <ElInput
-            v-model="form.reason"
-            type="textarea"
-            :rows="4"
-            maxlength="500"
-            show-word-limit
-            :placeholder="mode === 'transfer' ? '说明转交原因和交接事项' : '说明取消任务的业务原因'"
-          />
-        </ElFormItem>
-      </ArtForm>
+      <ArtForm ref="formRef" v-model="form" :items="formItems" :rules="rules" :span="24" />
     </div>
     <template #footer="{ api }">
       <ElButton @click="api.handleClose()">取消</ElButton>
       <ElButton
         :type="mode === 'cancel' ? 'danger' : 'primary'"
         :loading="submitting"
+        :disabled="!formRef?.readyToSubmit"
         @click="handleSubmit"
       >
         {{ mode === 'transfer' ? '确认转交' : '确认取消任务' }}
@@ -43,13 +25,12 @@
 </template>
 
 <script setup lang="ts">
-  import { nextTick, ref, shallowRef } from 'vue'
+  import { computed, nextTick, ref, shallowRef } from 'vue'
   import type { FormRules } from 'element-plus'
-  import ArtForm from '@/components/core/forms/art-form/index.vue'
+  import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtEntitySummary from '@/components/core/surfaces/art-entity-summary/index.vue'
   import {
     cancelRiskInspectionTask,
@@ -85,6 +66,32 @@
     ],
     reason: [{ required: true, message: '请输入业务原因', trigger: 'blur' }]
   }
+  const formItems = computed<FormItem[]>(() => [
+    {
+      key: 'employeeId',
+      label: '转交接收人',
+      type: 'employeeSelect',
+      hidden: mode.value !== 'transfer',
+      props: {
+        title: '选择任务接收人',
+        subtitle: '仅显示当前租户在职或试用期员工',
+        selectedData: employeeSelection.value,
+        'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
+          employeeSelection.value = value
+        }
+      }
+    },
+    {
+      key: 'reason',
+      label: mode.value === 'transfer' ? '转交原因' : '取消原因',
+      type: 'textarea',
+      props: {
+        maxlength: 500,
+        placeholder: mode.value === 'transfer' ? '说明转交原因和交接事项' : '说明取消任务的业务原因'
+      }
+    }
+  ])
+
   const handleSubmit = async (): Promise<void> => {
     if (!row.value || submitting.value) return
     try {

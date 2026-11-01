@@ -849,7 +849,6 @@
 
 <style scoped lang="scss">
   .position-safety-page {
-    gap: 12px;
     min-width: 0;
 
     &__workspace {

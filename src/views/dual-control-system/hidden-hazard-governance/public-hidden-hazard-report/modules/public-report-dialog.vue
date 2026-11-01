@@ -31,29 +31,6 @@
             title="选择隐患所属部门"
           />
         </template>
-        <template #siteId>
-          <ElTreeSelect
-            v-model="form.model.siteId"
-            class="public-report-dialog__control"
-            :data="siteTree"
-            :props="{ label: 'siteName', children: 'children' }"
-            node-key="id"
-            value-key="id"
-            check-strictly
-            filterable
-            default-expand-all
-            placeholder="请选择隐患场所"
-          />
-        </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.model.imageUrls"
-            title="上传隐患照片"
-            multiple
-            :limit="9"
-            :size="120"
-          />
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -70,7 +47,6 @@
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
   import TreeUtils from '@/utils/tree'
   import { useUserStore } from '@/store/modules/user'
   import {
@@ -174,7 +150,24 @@
     { label: '登记操作人', key: 'handlerName', type: 'input', span: 12, props: { readonly: true } },
     { label: '隐患与证据', key: 'hazard', type: 'tab', span: 24 },
     { label: '隐患所属部门', key: 'hazardOrganizationId', type: 'text', span: 8 },
-    { label: '场所', key: 'siteId', type: 'text', span: 8 },
+    {
+      label: '场所',
+      key: 'siteId',
+      span: 8,
+      type: 'treeSelect',
+      get props(): FormItem['props'] {
+        return {
+          data: siteTree.value,
+          props: { label: 'siteName', children: 'children' },
+          nodeKey: 'id',
+          valueKey: 'id',
+          checkStrictly: true,
+          filterable: true,
+          defaultExpandAll: true,
+          placeholder: '请选择隐患场所'
+        }
+      }
+    },
     {
       label: '隐患级别',
       key: 'hazardLevel',
@@ -203,7 +196,15 @@
         placeholder: '完整记录公众反映的问题'
       }
     },
-    { label: '隐患照片', key: 'imageUrls', type: 'text', span: 24 },
+    {
+      label: '隐患照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传隐患照片', multiple: true, limit: 9, size: 120 }
+      }
+    },
     {
       label: '处理建议',
       key: 'rectificationSuggestion',

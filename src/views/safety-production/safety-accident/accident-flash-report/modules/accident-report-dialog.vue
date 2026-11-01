@@ -27,32 +27,13 @@
         :gutter="24"
         label-position="top"
       >
-        <template #reporterEmployeeId>
-          <ArtEmployeeSelect
-            v-model="form.reporterEmployeeId"
-            v-model:selected-data="reporterSelection"
-            :api-fn="fetchAccidentEmployeeCandidates"
-            title="选择事故上报人"
-            subtitle="默认当前登录账号关联员工，可从员工花名册修改"
-            placeholder="点击选择上报人"
-            :clearable="false"
-          />
-        </template>
         <template #operationAreaOrganizationId>
           <AccidentOrganizationSelect
             v-model="form.operationAreaOrganizationId"
             :organizations="organizations"
           />
         </template>
-        <template #imageUrls>
-          <ArtUploadImage
-            v-model="form.imageUrls"
-            title="上传事故照片"
-            multiple
-            :limit="9"
-            :size="112"
-          />
-        </template>
+
         <template #measures>
           <AccidentMeasuresEditor ref="measuresEditorRef" v-model="form.measures" />
         </template>
@@ -78,8 +59,6 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
-  import ArtUploadImage from '@/components/core/forms/art-upload-image/index.vue'
-  import ArtEmployeeSelect from '@/components/business/art-employee-select/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
   import { useUserStore } from '@/store/modules/user'
@@ -179,7 +158,24 @@
       type: 'input',
       props: { maxlength: 160, placeholder: '简明描述事故事件' }
     },
-    { label: '上报人', key: 'reporterEmployeeId', type: 'text' },
+    {
+      label: '上报人',
+      key: 'reporterEmployeeId',
+      type: 'employeeSelect',
+      get props(): FormItem['props'] {
+        return {
+          selectedData: reporterSelection.value,
+          'onUpdate:selectedData': ($event: typeof reporterSelection.value) => {
+            reporterSelection.value = $event
+          },
+          apiFn: fetchAccidentEmployeeCandidates,
+          title: '选择事故上报人',
+          subtitle: '默认当前登录账号关联员工，可从员工花名册修改',
+          placeholder: '点击选择上报人',
+          clearable: false
+        }
+      }
+    },
     {
       label: '事故时间',
       key: 'accidentTime',
@@ -317,7 +313,15 @@
         placeholder: '记录事故性质、责任或初步判定'
       }
     },
-    { label: '事故照片', key: 'imageUrls', type: 'text', span: 24 },
+    {
+      label: '事故照片',
+      key: 'imageUrls',
+      span: 24,
+      type: 'uploadImage',
+      get props(): FormItem['props'] {
+        return { title: '上传事故照片', multiple: true, limit: 9, size: 112 }
+      }
+    },
     { label: '防范措施', key: 'prevention', type: 'tab', span: 24 },
     { label: '', key: 'measures', type: 'text', span: 24 },
     { label: '人员信息', key: 'personnel', type: 'tab', span: 24 },

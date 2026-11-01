@@ -28,12 +28,6 @@
         :gutter="24"
         label-position="top"
       >
-        <template #textColor>
-          <div class="special-operation-catalog-dialog__color-field">
-            <ElColorPicker v-model="form.model.textColor" :predefine="presetColors" />
-            <span>{{ form.model.textColor?.toUpperCase() || '未设置颜色' }}</span>
-          </div>
-        </template>
       </ArtForm>
     </div>
   </ArtDialog>
@@ -224,7 +218,18 @@
         span: 8,
         props: { min: 0, max: 9999, precision: 0, controlsPosition: 'right', class: '!w-full' }
       },
-      { label: '文字颜色', key: 'textColor', type: 'input', span: 8 },
+      {
+        label: '文字颜色',
+        key: 'textColor',
+        span: 8,
+        type: 'colorPicker',
+        get description(): string {
+          return form.model.textColor?.toUpperCase() || '未设置颜色'
+        },
+        get props(): FormItem['props'] {
+          return { predefine: presetColors }
+        }
+      },
       {
         label: '标签样式',
         key: 'tagStyle',
