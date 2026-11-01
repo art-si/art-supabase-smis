@@ -61,10 +61,14 @@
     </div>
 
     <SiteDialog ref="dialogRef" @success="handleSaveSuccess" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
   import { ElImage, ElMessage } from 'element-plus'
@@ -77,7 +81,7 @@
     ArtTableQueryTableProps
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import { fetchOrganizationOptionsTree } from '@/api/system-manage'
@@ -104,6 +108,7 @@
   } from '@smis/api'
   import DepartmentNavigator from './modules/department-navigator.vue'
   import SiteDialog, { type SiteDialogOpenData } from './modules/site-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('mdm_site', '场所')
 
   defineOptions({ name: 'SmisSite' })
   type Organization = Api.SystemManage.OrganizationListItem
@@ -125,7 +130,7 @@
   }
 
   const ALL_ORGANIZATIONS_KEY = 'all'
-  const { confirmAction } = useArtFeedback()
+
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const { effectiveTenantId } = storeToRefs(useTenantScopeStore())
@@ -600,14 +605,26 @@
     {
       permission: 'SmisSite:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个场所吗？存在下级场所时系统会阻止删除。`,
       onClick: async ({ selectedRows, api }) => {
         const ids = selectedRows
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
-        await deleteSites(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.siteName ?? '场所')
+          })),
+          permission: 'SmisSite:Delete',
+          remove: async () => {
+            await deleteSites(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -655,22 +672,23 @@
   }
   const handleDelete = async (row: SmisSite): Promise<void> => {
     if (!row.id) return
-    try {
-      await confirmAction(
-        `确定删除场所“${row.siteName}”吗？存在下级场所时系统会阻止删除。`,
-        '删除场所',
+
+    await deleteRecords({
+      resources: [
         {
-          type: 'warning',
-          confirmButtonText: '确认删除',
-          cancelButtonText: '取消',
-          confirmButtonType: 'danger'
+          id: String(row.id ?? ''),
+          label: String(row.siteName ?? '场所')
         }
-      )
-      await deleteSites([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或存在引用 */
-    }
+      ],
+      permission: 'SmisSite:Delete',
+      confirmMessage: `确定删除场所“${row.siteName}”吗？存在下级场所时系统会阻止删除。`,
+      remove: async () => {
+        await deleteSites([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   onMounted(async () => {
     await Promise.all([userStore.ensureDictLoaded('smisSiteCategory'), loadOrganizations()])

@@ -93,7 +93,13 @@ export async function saveToolIssuanceStandard(params: SmisToolIssuanceStandardS
 export async function deleteToolIssuanceStandards(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_tool_issuance_standards_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '发放标准已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '发放标准已删除'
+    }
   )
 }
 

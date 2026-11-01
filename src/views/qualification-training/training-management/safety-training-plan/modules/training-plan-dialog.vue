@@ -1,17 +1,23 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'basicSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="training-plan-dialog">
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #organizerOrganizationId>
           <ElTreeSelect
@@ -97,8 +103,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { normalizeNullableText } from '@/utils/form/normalize'
   import dayjs from 'dayjs'
   import { ElMessage, type FormRules } from 'element-plus'
@@ -151,6 +155,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<TrainingPlanDialogOpenData>>()
   const recordTenantId = ref<string>()
   const formRef = ref<InstanceType<typeof ArtForm>>()
@@ -186,10 +191,10 @@
     remark: '',
     participantIds: []
   })
-  const form = reactive<FormModel>(createInitialForm())
+  const form = ref<FormModel>(createInitialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
-    { label: '计划信息', key: 'basicSection', type: 'divider', span: 24 },
+    { label: '计划与组织', key: 'basicSection', type: 'tab', span: 24 },
     {
       label: '培训主题',
       key: 'subject',
@@ -218,7 +223,7 @@
       type: 'select',
       props: { options: dictOptions('smisSafetyTrainingType') }
     },
-    { label: '组织与范围', key: 'organizationSection', type: 'divider', span: 24 },
+
     { label: '组织单位', key: 'organizerOrganizationId', span: 12 },
     { label: '覆盖组织', key: 'targetOrganizationId', span: 12 },
     { label: '计划负责人', key: 'responsibleEmployeeId', span: 12 },
@@ -242,7 +247,7 @@
       type: 'select',
       props: { options: dictOptions('smisSafetyTrainingLevel') }
     },
-    { label: '内容与考核', key: 'contentSection', type: 'divider', span: 24 },
+    { label: '内容与考核', key: 'contentSection', type: 'tab', span: 24 },
     {
       label: '培训形式',
       key: 'trainingForm',
@@ -275,7 +280,7 @@
       span: 24,
       props: { rows: 3, maxlength: 2000, showWordLimit: true }
     },
-    { label: '参训与附件', key: 'participantSection', type: 'divider', span: 24 },
+    { label: '参训与资料', key: 'participantSection', type: 'tab', span: 24 },
     { label: '参训人员', key: 'participantIds', span: 24 },
     { label: '计划附件', key: 'attachmentUrls', span: 24 },
     {
@@ -322,13 +327,13 @@
 
   const initialize = (data: TrainingPlanDialogOpenData): void => {
     recordTenantId.value = data.row?.tenantId
-    Object.assign(form, createInitialForm())
+    Object.assign(form.value, createInitialForm())
     organizations.value = data.organizations
     responsibleSelection.value = []
     participantSelection.value = []
     if (!data.row) return
     const row = data.row
-    Object.assign(form, {
+    Object.assign(form.value, {
       id: data.copy ? undefined : row.id,
       planNo: data.copy ? '' : row.planNo,
       subject: data.copy ? `${row.subject}（复制）` : row.subject,
@@ -369,39 +374,40 @@
   }
 
   const buildPayload = (): SmisSafetyTrainingPlanSavePayload => ({
-    id: form.id,
-    subject: form.subject.trim(),
-    trainingCategory: form.trainingCategory,
-    trainingType: form.trainingType,
-    trainingForm: form.trainingForm,
-    trainingLevel: form.trainingLevel,
-    organizerOrganizationId: form.organizerOrganizationId,
-    targetOrganizationId: form.targetOrganizationId || null,
-    responsibleEmployeeId: form.responsibleEmployeeId || null,
-    instructorName: normalizeNullableText(form.instructorName),
-    plannedStartAt: dayjs(form.plannedStartAt).toISOString(),
-    plannedEndAt: dayjs(form.plannedEndAt).toISOString(),
-    location: normalizeNullableText(form.location),
-    content: form.content.trim(),
-    requirements: normalizeNullableText(form.requirements),
-    trainingHours: Number(form.trainingHours || 0),
-    assessmentMethod: form.assessmentMethod,
-    warningStatus: form.warningStatus,
-    attachmentUrls: [...form.attachmentUrls],
-    remark: normalizeNullableText(form.remark),
-    participantIds: [...form.participantIds]
+    id: form.value.id,
+    subject: form.value.subject.trim(),
+    trainingCategory: form.value.trainingCategory,
+    trainingType: form.value.trainingType,
+    trainingForm: form.value.trainingForm,
+    trainingLevel: form.value.trainingLevel,
+    organizerOrganizationId: form.value.organizerOrganizationId,
+    targetOrganizationId: form.value.targetOrganizationId || null,
+    responsibleEmployeeId: form.value.responsibleEmployeeId || null,
+    instructorName: normalizeNullableText(form.value.instructorName),
+    plannedStartAt: dayjs(form.value.plannedStartAt).toISOString(),
+    plannedEndAt: dayjs(form.value.plannedEndAt).toISOString(),
+    location: normalizeNullableText(form.value.location),
+    content: form.value.content.trim(),
+    requirements: normalizeNullableText(form.value.requirements),
+    trainingHours: Number(form.value.trainingHours || 0),
+    assessmentMethod: form.value.assessmentMethod,
+    warningStatus: form.value.warningStatus,
+    attachmentUrls: [...form.value.attachmentUrls],
+    remark: normalizeNullableText(form.value.remark),
+    participantIds: [...form.value.participantIds]
   })
 
   const handleSave = async (publish: boolean): Promise<void> => {
     if (submitting.value) return
     try {
       await formRef.value?.validate()
-      if (dayjs(form.plannedEndAt).isBefore(dayjs(form.plannedStartAt))) {
+      if (dayjs(form.value.plannedEndAt).isBefore(dayjs(form.value.plannedStartAt))) {
+        await formRef.value?.focusField('plannedEndAt')
         ElMessage.warning('计划结束时间不能早于开始时间')
         return
       }
       submitting.value = true
-      const type = form.id ? 'edit' : 'add'
+      const type = form.value.id ? 'edit' : 'add'
       await saveSafetyTrainingPlan(buildPayload(), publish)
       emit('success', type)
       await dialogRef.value?.handleClose(true)

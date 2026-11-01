@@ -53,10 +53,14 @@
       />
       <WorkInjuryDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -72,7 +76,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { useUserStore } from '@/store/modules/user'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -90,6 +94,10 @@
     type SmisWorkInjuryType
   } from '@smis/api'
   import WorkInjuryDialog, { type WorkInjuryDialogOpenData } from './modules/work-injury-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_work_injury_declaration',
+    '工伤申报'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -108,7 +116,6 @@
 
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const searchQuery = ref<InjurySearchModel>({})
@@ -214,13 +221,22 @@
     void dialogRef.value?.handleOpen({ row, currentEmployee: currentEmployee.value })
   }
   const handleDelete = async (row: SmisWorkInjuryDeclaration): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除工伤申报“${row.declarationNo}”吗？`)
-      await deleteWorkInjuryDeclarations([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或服务端校验失败 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.declarationNo ?? '工伤申报')
+        }
+      ],
+      permission: 'SmisWorkInjuryDeclaration:Delete',
+      confirmMessage: `确定删除工伤申报“${row.declarationNo}”吗？`,
+      remove: async () => {
+        await deleteWorkInjuryDeclarations([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const columnsFactory = (): ColumnOption<SmisWorkInjuryDeclaration>[] => [
     { type: 'selection', width: 48 },
@@ -355,11 +371,23 @@
     {
       permission: 'SmisWorkInjuryDeclaration:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条工伤申报吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteWorkInjuryDeclarations(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.declarationNo ?? '工伤申报')
+          })),
+          permission: 'SmisWorkInjuryDeclaration:Delete',
+          remove: async () => {
+            await deleteWorkInjuryDeclarations(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])

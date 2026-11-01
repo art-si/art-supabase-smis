@@ -82,7 +82,13 @@ export async function saveDocumentCategory(params: SmisDocumentCategorySavePaylo
 export async function deleteDocumentCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_document_categories_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '文档分类已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '文档分类已删除'
+    }
   )
 }
 
@@ -159,7 +165,13 @@ export async function saveDocument(params: SmisDocumentSavePayload) {
 export async function deleteDocuments(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_documents_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '草稿文档已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '草稿文档已删除'
+    }
   )
 }
 
@@ -270,7 +282,13 @@ export async function deleteDocumentRegisters(params: {
         p_kind: params.kind,
         p_ids: params.ids
       }),
-    { showMessage: true, breakReturn: true, message: '文档已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '文档已删除'
+    }
   )
 }
 
@@ -323,6 +341,12 @@ export async function deleteLegalComplianceEvaluations(params: {
         p_document_id: params.documentId,
         p_ids: params.ids
       }),
-    { showMessage: true, breakReturn: true, message: '合规性评价已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '合规性评价已删除'
+    }
   )
 }

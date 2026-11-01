@@ -74,6 +74,12 @@ export async function deleteHazardFactorCategories(ids: string[], tenantId?: str
         p_ids: ids,
         p_tenant_id: tenantId || null
       }),
-    { showMessage: true, breakReturn: true, message: '危害因素类别已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '危害因素类别已删除'
+    }
   )
 }

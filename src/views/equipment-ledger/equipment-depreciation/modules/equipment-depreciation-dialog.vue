@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'basicSection'
+      }
+    "
+    ref="dialogRef"
+    size="lg"
+  >
     <div class="equipment-depreciation-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:percent-line" /></template>
@@ -8,6 +16,7 @@
       </ArtEntitySummary>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -15,26 +24,23 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
-      />
-
-      <ArtSectionCard
-        class="equipment-depreciation-dialog__rates"
-        title="年折旧率"
-        subtitle="按折旧年度维护折旧率；调整折旧年限时，系统会保留仍在期限内的已填数据。"
-      >
-        <ArtTable
-          ref="rateTableRef"
-          :data="form.model.annualRates"
-          :columns="rateColumns"
-          :pagination="false"
-          row-key="depreciationYear"
-          table-layout="fixed"
-          empty-text="请先填写折旧年限"
-          empty-description="填写后将自动生成对应年度的折旧率明细。"
-        />
-      </ArtSectionCard>
+        ><template #detailItems
+          ><ArtSectionCard
+            class="equipment-depreciation-dialog__rates"
+            title="年折旧率"
+            subtitle="按折旧年度维护折旧率；调整折旧年限时，系统会保留仍在期限内的已填数据。"
+          >
+            <ArtTable
+              ref="rateTableRef"
+              :data="form.model.annualRates"
+              :columns="rateColumns"
+              :pagination="false"
+              row-key="depreciationYear"
+              table-layout="fixed"
+              empty-text="请先填写折旧年限"
+              empty-description="填写后将自动生成对应年度的折旧率明细。"
+            /> </ArtSectionCard></template
+      ></ArtForm>
     </div>
   </ArtDialog>
 </template>
@@ -44,7 +50,7 @@
 
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
-  import { ElInputNumber, type FormRules } from 'element-plus'
+  import { ElInputNumber, ElMessage, type FormRules } from 'element-plus'
   import type { ColumnOption } from '@/types'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
@@ -89,6 +95,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<EquipmentDepreciationDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const rateTableRef = ref<ArtTableExpose>()
@@ -119,7 +126,7 @@
   }>({
     model: formModel,
     items: computed(() => [
-      { label: '基本信息', key: 'basicSection', type: 'divider', span: 24 },
+      { label: '基本信息', key: 'basicSection', type: 'tab', span: 24 },
       {
         label: '折旧编码',
         key: 'depreciationNo',
@@ -178,7 +185,9 @@
           resize: 'none',
           placeholder: '补充适用资产范围、财务口径或使用说明（选填）'
         }
-      }
+      },
+      { key: 'detailSection', label: '年折旧率', type: 'tab' },
+      { key: 'detailItems', label: '', type: 'slot', span: 24 }
     ]),
     rules: {
       depreciationNo: [
@@ -272,8 +281,14 @@
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      const tableValidation = await rateTableRef.value?.validate()
+      const tableValidation = await rateTableRef.value?.validate({ focus: false })
       if (tableValidation && !tableValidation.valid) {
+        activeFormTab.value = 'detailSection'
+        await nextTick()
+        if (tableValidation.firstError) {
+          await rateTableRef.value?.validateField(tableValidation.firstError.prop)
+          ElMessage.warning(tableValidation.firstError.message)
+        }
         return false
       }
       await saveEquipmentDepreciation(buildPayload())

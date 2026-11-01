@@ -66,10 +66,14 @@
 
       <AntiViolationStandardDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter, formatNumberValue } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -84,7 +88,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -109,6 +113,10 @@
     type AntiViolationStandardDialogOpenData
   } from './modules/anti-violation-standard-dialog.vue'
   import { prepareAntiViolationStandardImport } from './anti-violation-standard-import'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_anti_violation_standard',
+    '反违章标准'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -135,8 +143,6 @@
     loading: boolean
     error: string | null
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
@@ -225,11 +231,23 @@
     {
       permission: 'SmisAntiViolationStandardLibrary:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条反违章标准吗？已被教育记录引用的标准无法删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteAntiViolationStandards(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.standardName ?? '反违章标准')
+          })),
+          permission: 'SmisAntiViolationStandardLibrary:Delete',
+          remove: async () => {
+            await deleteAntiViolationStandards(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -371,13 +389,22 @@
   const handleTreeRefresh = (): void => void tableQueryRef.value?.getData()
   const handleSaveSuccess = (): void => void tableQueryRef.value?.getData()
   const handleDelete = async (row: SmisAntiViolationStandard): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除反违章标准“${row.standardCode}”吗？`)
-      await deleteAntiViolationStandards([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.standardName ?? '反违章标准')
+        }
+      ],
+      permission: 'SmisAntiViolationStandardLibrary:Delete',
+      confirmMessage: `确定删除反违章标准“${row.standardCode}”吗？`,
+      remove: async () => {
+        await deleteAntiViolationStandards([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(() => void userStore.ensureDictLoaded('commonEnabledStatus'))

@@ -1,0 +1,1 @@
+import{n as e}from"./omit-CuPyyc5j.js";function t(t,n){return t==null||e(t,n)}export{t};

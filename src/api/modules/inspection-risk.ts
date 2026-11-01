@@ -109,7 +109,13 @@ export async function saveInspectionStandard(payload: SmisInspectionStandardPayl
 export async function deleteInspectionStandards(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_inspection_standard').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '排查标准已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '排查标准已删除'
+    }
   )
 }
 
@@ -166,7 +172,13 @@ export async function saveInspectionItem(payload: SmisInspectionItemPayload) {
 export async function deleteInspectionItems(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_inspection_item').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '排查项已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '排查项已删除'
+    }
   )
 }
 
@@ -218,7 +230,13 @@ export async function saveInspectionType(payload: SmisInspectionTypePayload) {
 export async function deleteInspectionTypes(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_inspection_type').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '排查类型已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '排查类型已删除'
+    }
   )
 }
 
@@ -280,7 +298,13 @@ export async function saveDuplicateConfiguration(payload: SmisDuplicateConfigura
 export async function deleteDuplicateConfigurations(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_duplicate_configuration').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '重复配置已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '重复配置已删除'
+    }
   )
 }
 
@@ -337,7 +361,13 @@ export async function saveRiskAssessmentCriterion(payload: SmisRiskAssessmentCri
 export async function deleteRiskAssessmentCriteria(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_risk_assessment_criterion').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '判定标准已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '判定标准已删除'
+    }
   )
 }
 
@@ -419,7 +449,13 @@ export async function saveRiskItem(payload: SmisRiskItemPayload) {
 export async function deleteRiskItems(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_risk_item').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '危险有害因素已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '危险有害因素已删除'
+    }
   )
 }
 
@@ -501,7 +537,13 @@ export async function saveRiskControlMeasure(payload: SmisRiskControlMeasurePayl
 export async function deleteRiskControlMeasures(ids: string[]) {
   return await responseHandle(
     () => supabase.from('smis_risk_control_measure').delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, breakReturn: true, message: '控制措施已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '控制措施已删除'
+    }
   )
 }
 

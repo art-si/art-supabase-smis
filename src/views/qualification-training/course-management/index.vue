@@ -72,18 +72,24 @@
         />
       </div>
 
-      <ArtDialog ref="courseDialogRef" size="xl">
+      <ArtDialog
+        @open="
+          () => {
+            activeFormTab = 'basicSection'
+          }
+        "
+        ref="courseDialogRef"
+        size="xl"
+      >
         <ArtForm
+          v-model:active-tab="activeFormTab"
           ref="courseFormRef"
-          :model-value="courseForm"
-          @update:model-value="replaceReactiveModel(courseForm, $event)"
+          v-model="courseForm"
           :items="courseItems"
           :rules="courseRules"
           :span="12"
           :gutter="24"
           label-position="top"
-          :show-reset="false"
-          :show-submit="false"
         >
           <template #coverUrl
             ><ArtUploadImage
@@ -162,13 +168,16 @@
         >
       </ArtDialog>
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { FormRules } from 'element-plus'
   import { ElProgress } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
@@ -181,7 +190,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useAuth } from '@/hooks/core/useAuth'
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -218,6 +227,7 @@
     type SmisExamPaperSearchParams,
     type SmisLearningCourse
   } from '@smis/api'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_learning_course', '课程')
 
   defineOptions({ name: 'SmisCourseManagement' })
   type CourseParams = SmisCourseSearchParams & Pick<Api.Common.PaginationParams, 'current' | 'size'>
@@ -226,10 +236,10 @@
   const userStore = useUserStore()
   const { hasAuth } = useAuth()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const activeTab = ref<'course' | 'record'>('course')
   const courseTableRef = ref<ArtTableQueryExpose>()
   const recordTableRef = ref<ArtTableQueryExpose>()
+  const activeFormTab = ref('basicSection')
   const courseDialogRef = ref<ArtDialogExpose>()
   const learningDialogRef = ref<ArtDialogExpose>()
   const courseFormRef = ref<InstanceType<typeof ArtForm>>()
@@ -267,7 +277,7 @@
     examPaperId: null,
     employeeIds: []
   })
-  const courseForm = reactive<SmisCoursePayload>(createCourse())
+  const courseForm = ref<SmisCoursePayload>(createCourse())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const exportDictLabel = (code: string, value: unknown) =>
     dictOptions(code).find((item) => item.value === String(value))?.label ?? String(value ?? '')
@@ -377,7 +387,7 @@
     }
   ])
   const courseItems = computed<FormItem[]>(() => [
-    { label: '课程基础信息', key: 'basicSection', type: 'divider', span: 24 },
+    { label: '课程与考核', key: 'basicSection', type: 'tab', span: 24 },
     {
       label: '课程名称',
       key: 'courseName',
@@ -406,7 +416,7 @@
       props: { placeholder: '视频、PDF 或学习链接地址' }
     },
     { label: '课程封面', key: 'coverUrl', span: 24 },
-    { label: '学习与考核', key: 'learningSection', type: 'divider', span: 24 },
+
     {
       label: '最低学习时长（分钟）',
       key: 'minimumLearningMinutes',
@@ -436,7 +446,7 @@
         placeholder: '可选已创建试卷'
       }
     },
-    { label: '课程说明与学员', key: 'assignmentSection', type: 'divider', span: 24 },
+    { label: '说明与学员', key: 'assignmentSection', type: 'tab', span: 24 },
     {
       label: '课程简介',
       key: 'introduction',
@@ -454,7 +464,7 @@
   const openCourse = async (row?: SmisLearningCourse, copy = false) => {
     paperOptions.value = []
     Object.assign(
-      courseForm,
+      courseForm.value,
       createCourse(),
       row
         ? {
@@ -492,7 +502,7 @@
     try {
       await courseFormRef.value?.validate()
       submitting.value = true
-      await saveCourse({ ...courseForm })
+      await saveCourse({ ...courseForm.value })
       await courseDialogRef.value?.handleClose(true)
       await courseTableRef.value?.refreshUpdate()
     } catch {
@@ -502,13 +512,22 @@
     }
   }
   const removeCourse = async (row: SmisLearningCourse) => {
-    try {
-      await confirmDelete(`确定删除草稿课程“${row.courseName}”吗？`)
-      await deleteCourses([row.id])
-      await courseTableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.courseName ?? '课程')
+        }
+      ],
+      permission: 'SmisCourseManagement:Delete',
+      confirmMessage: `确定删除草稿课程“${row.courseName}”吗？`,
+      remove: async () => {
+        await deleteCourses([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await courseTableRef.value?.refreshRemove()
+      }
+    })
   }
   const openLearning = async (row: SmisLearningCourse) => {
     if (!row.assignmentId) return
@@ -742,11 +761,23 @@
     {
       permission: 'SmisCourseManagement:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 门草稿课程吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteCourses(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.courseName ?? '课程')
+          })),
+          permission: 'SmisCourseManagement:Delete',
+          remove: async () => {
+            await deleteCourses(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {

@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="equipment-dimension-navigator"
     title="台账结构"
     subtitle="按分类或位置切换视角"
@@ -19,60 +18,66 @@
       />
     </template>
 
-    <ElSegmented v-model="dimension" :options="dimensionOptions" block />
-    <ElInput v-model="keyword" clearable placeholder="搜索名称或编码" aria-label="搜索台账结构树">
-      <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-    </ElInput>
+    <template #toolbar>
+      <div class="equipment-dimension-navigator__toolbar">
+        <ElSegmented v-model="dimension" :options="dimensionOptions" block />
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索名称或编码"
+          aria-label="搜索台账结构树"
+        >
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
 
-    <button
-      type="button"
-      class="equipment-dimension-navigator__all"
-      :class="{ 'is-current': selectedKey === ALL_KEY }"
-      @click="emit('select', dimension, ALL_KEY)"
+        <button
+          type="button"
+          class="equipment-dimension-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', dimension, ALL_KEY)"
+        >
+          <span><ArtSvgIcon icon="ri:apps-2-line" /></span>
+          <span
+            ><strong>全部设备</strong><small>不限制{{ dimensionLabel }}</small></span
+          >
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" />
+        </button>
+
+        <div class="equipment-dimension-navigator__label">
+          <span>{{ dimensionLabel }}结构</span><small>{{ nodeCount }} 个节点</small>
+        </div>
+      </div>
+    </template>
+    <ElTree
+      ref="treeRef"
+      :data="activeTree"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="rootKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
     >
-      <span><ArtSvgIcon icon="ri:apps-2-line" /></span>
-      <span
-        ><strong>全部设备</strong><small>不限制{{ dimensionLabel }}</small></span
-      >
-      <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" />
-    </button>
-
-    <div class="equipment-dimension-navigator__label">
-      <span>{{ dimensionLabel }}结构</span><small>{{ nodeCount }} 个节点</small>
-    </div>
-
-    <ElScrollbar class="equipment-dimension-navigator__scrollbar">
-      <ElTree
-        ref="treeRef"
-        :data="activeTree"
-        :props="treeProps"
-        :filter-node-method="filterNode"
-        :default-expanded-keys="rootKeys"
-        node-key="id"
-        highlight-current
-        :expand-on-click-node="false"
-        @node-click="handleNodeClick"
-      >
-        <template #default="{ data: node }">
-          <div class="equipment-dimension-navigator__node">
-            <span><ArtSvgIcon :icon="node.childCount ? 'ri:folder-3-line' : nodeIcon" /></span>
-            <span>
-              <strong :title="nodeName(node)">{{ nodeName(node) }}</strong>
-              <small :title="nodeCode(node)">{{ nodeCode(node) }}</small>
-            </span>
-            <ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" />
-          </div>
-        </template>
-        <template #empty>
-          <ArtEmptyState
-            title="未找到匹配项"
-            description="请调整关键词或清空筛选条件。"
-            size="compact"
-            :visual-size="64"
-          />
-        </template>
-      </ElTree>
-    </ElScrollbar>
+      <template #default="{ data: node }">
+        <div class="equipment-dimension-navigator__node">
+          <span><ArtSvgIcon :icon="node.childCount ? 'ri:folder-3-line' : nodeIcon" /></span>
+          <span>
+            <strong :title="nodeName(node)">{{ nodeName(node) }}</strong>
+            <small :title="nodeCode(node)">{{ nodeCode(node) }}</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -154,12 +159,9 @@
   .equipment-dimension-navigator {
     height: 100%;
 
-    :deep(.art-section-card__body) {
-      display: flex;
-      flex-direction: column;
+    &__toolbar {
+      display: grid;
       gap: 12px;
-      height: 100%;
-      min-height: 0;
     }
 
     &__all {
@@ -233,11 +235,6 @@
     &__label span {
       font-weight: 600;
       color: var(--el-text-color-primary);
-    }
-
-    &__scrollbar {
-      flex: 1;
-      min-height: 230px;
     }
 
     :deep(.el-tree) {

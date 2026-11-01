@@ -2,21 +2,17 @@
   <ArtDialog ref="dialogRef" size="md">
     <ArtForm
       ref="formRef"
-      :model-value="form"
-      @update:model-value="replaceReactiveModel(form, $event)"
+      v-model="form"
       :items="items"
       :rules="rules"
       :span="12"
       :gutter="24"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
     />
   </ArtDialog>
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -76,7 +72,7 @@
     remark: '',
     copySourceId: undefined
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const items: FormItem[] = [
     {
       label: '相关条款',
@@ -157,15 +153,15 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       const payload: SmisLegalComplianceEvaluationSavePayload = {
-        id: form.id,
-        documentId: form.documentId,
-        relatedClause: form.relatedClause.trim(),
-        controlStatus: form.controlStatus.trim(),
-        evaluationConclusion: form.evaluationConclusion.trim(),
-        evaluationDate: form.evaluationDate,
-        evaluatorName: form.evaluatorName.trim(),
-        remark: normalizeNullableText(form.remark),
-        copySourceId: form.copySourceId || null
+        id: form.value.id,
+        documentId: form.value.documentId,
+        relatedClause: form.value.relatedClause.trim(),
+        controlStatus: form.value.controlStatus.trim(),
+        evaluationConclusion: form.value.evaluationConclusion.trim(),
+        evaluationDate: form.value.evaluationDate,
+        evaluatorName: form.value.evaluatorName.trim(),
+        remark: normalizeNullableText(form.value.remark),
+        copySourceId: form.value.copySourceId || null
       }
       await saveLegalComplianceEvaluation(payload)
       emit('success')
@@ -177,10 +173,10 @@
   }
 
   const handleOpen = async (data: LegalComplianceEvaluationDialogOpenData): Promise<void> => {
-    Object.assign(form, initial(), { documentId: data.documentId })
+    Object.assign(form.value, initial(), { documentId: data.documentId })
     mode.value = data.mode
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.mode === 'edit' ? data.row.id : undefined,
         relatedClause: data.row.relatedClause,
         controlStatus: data.row.controlStatus,

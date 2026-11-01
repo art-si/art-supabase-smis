@@ -131,7 +131,13 @@ export async function deleteQualificationCatalog(
         p_catalog_type: catalogType,
         p_ids: ids
       }),
-    { showMessage: true, breakReturn: true, message: '基础数据已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '基础数据已删除'
+    }
   )
 }
 
@@ -260,6 +266,12 @@ export async function savePersonnelCertificate(params: SmisPersonnelCertificateS
 export async function deletePersonnelCertificates(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_personnel_certificates_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '人员证件已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '人员证件已删除'
+    }
   )
 }

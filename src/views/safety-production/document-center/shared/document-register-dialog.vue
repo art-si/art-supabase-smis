@@ -9,15 +9,12 @@
 
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #categoryId>
           <ElTreeSelect
@@ -58,7 +55,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -144,7 +140,7 @@
     remark: '',
     copySourceId: undefined
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const isLegal = computed(() => kind.value === 'legal_regulation')
   const contextIcon = computed(() =>
     mode.value === 'copy'
@@ -293,33 +289,35 @@
   const handleUploadSuccess = (resources: Api.DataCenter.Resources.ResourceListItem[]): void => {
     const resource = resources[0]
     if (!resource) return
-    form.attachmentUrl = resource.url ?? ''
-    form.attachmentName = resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
-    form.attachmentType = resource.suffix || resource.mimeType || ''
-    form.attachmentSize = resource.sizeByte
-    if (!form.fileName) form.fileName = form.attachmentName.replace(/\.[^.]+$/, '')
+    form.value.attachmentUrl = resource.url ?? ''
+    form.value.attachmentName =
+      resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
+    form.value.attachmentType = resource.suffix || resource.mimeType || ''
+    form.value.attachmentSize = resource.sizeByte
+    if (!form.value.fileName)
+      form.value.fileName = form.value.attachmentName.replace(/\.[^.]+$/, '')
   }
 
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       const payload: SmisDocumentRegisterSavePayload = {
-        id: form.id,
+        id: form.value.id,
         kind: kind.value,
-        categoryId: form.categoryId,
-        fileName: form.fileName.trim(),
-        documentCode: form.documentCode.trim(),
-        effectiveDate: form.effectiveDate,
-        promulgationDate: form.promulgationDate || null,
-        obtainedDate: isLegal.value ? form.obtainedDate || null : null,
-        obtainedOrganizationId: isLegal.value ? form.obtainedOrganizationId || null : null,
-        isSpecialEquipment: isLegal.value && form.isSpecialEquipment,
-        attachmentName: form.attachmentName || null,
-        attachmentUrl: form.attachmentUrl || null,
-        attachmentType: form.attachmentType || null,
-        attachmentSize: form.attachmentSize ?? null,
-        remark: normalizeNullableText(form.remark),
-        copySourceId: form.copySourceId || null
+        categoryId: form.value.categoryId,
+        fileName: form.value.fileName.trim(),
+        documentCode: form.value.documentCode.trim(),
+        effectiveDate: form.value.effectiveDate,
+        promulgationDate: form.value.promulgationDate || null,
+        obtainedDate: isLegal.value ? form.value.obtainedDate || null : null,
+        obtainedOrganizationId: isLegal.value ? form.value.obtainedOrganizationId || null : null,
+        isSpecialEquipment: isLegal.value && form.value.isSpecialEquipment,
+        attachmentName: form.value.attachmentName || null,
+        attachmentUrl: form.value.attachmentUrl || null,
+        attachmentType: form.value.attachmentType || null,
+        attachmentSize: form.value.attachmentSize ?? null,
+        remark: normalizeNullableText(form.value.remark),
+        copySourceId: form.value.copySourceId || null
       }
       await saveDocumentRegister(payload)
       emit('success')
@@ -331,13 +329,13 @@
   }
 
   const handleOpen = async (data: DocumentRegisterDialogOpenData): Promise<void> => {
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     mode.value = data.mode
     kind.value = data.kind
     categories.value = data.categories
     existingAttachmentName.value = ''
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.mode === 'edit' ? data.row.id : undefined,
         categoryId: data.row.categoryId,
         fileName: data.mode === 'copy' ? `${data.row.fileName}（副本）` : data.row.fileName,

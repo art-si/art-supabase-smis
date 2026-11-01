@@ -17,8 +17,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #approvalResult>
           <ElRadioGroup v-model="form.model.approvalResult" class="hazard-workflow-dialog__choice">

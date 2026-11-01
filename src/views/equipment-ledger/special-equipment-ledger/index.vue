@@ -37,8 +37,7 @@
 
     <ArtTableQuery
       ref="tableQueryRef"
-      :model-value="searchQuery"
-      @update:model-value="replaceReactiveModel(searchQuery, $event)"
+      v-model="searchQuery"
       class="special-equipment-page__table"
       :api-fn="fetchTableData"
       :search-items="searchItems"
@@ -64,8 +63,6 @@
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import dayjs from 'dayjs'
   import { ElTag } from 'element-plus'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -125,7 +122,7 @@
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const equipmentDialogRef = ref<EquipmentDialogExpose>()
   const reminderDialogRef = ref<ReminderDialogExpose>()
-  const searchQuery = reactive<TableParams>({ current: 1, size: 20 })
+  const searchQuery = ref<TableParams>({ current: 1, size: 20 })
   const tree = reactive<{
     categoryTree: SmisEquipmentCategory[]
     locationTree: SmisStorageLocation[]

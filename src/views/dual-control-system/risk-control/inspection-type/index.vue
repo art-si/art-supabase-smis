@@ -39,10 +39,14 @@
       />
       <InspectionTypeDialog ref="dialogRef" @success="handleDialogSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -78,6 +82,7 @@
   import InspectionTypeDialog, {
     type InspectionTypeDialogOpenData
   } from './modules/inspection-type-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_inspection_type', '排查类型')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -93,7 +98,7 @@
     handleOpen: (data: InspectionTypeDialogOpenData) => Promise<void>
   }
 
-  const { confirmDelete, confirmAction } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap } = storeToRefs(userStore)
@@ -214,11 +219,23 @@
     {
       permission: 'SmisDualControlInspectionType:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: { selectedCount: number }) =>
         `确定删除选中的 ${selectedCount} 个排查类型吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteInspectionTypes(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.typeName ?? '排查类型')
+          })),
+          permission: 'SmisDualControlInspectionType:Delete',
+          remove: async () => {
+            await deleteInspectionTypes(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -326,13 +343,22 @@
       ? tableQueryRef.value?.refreshCreate()
       : tableQueryRef.value?.refreshUpdate())
   const handleDelete = async (row: SmisInspectionType) => {
-    try {
-      await confirmDelete(`确定删除排查类型“${row.typeName}”吗？`)
-      await deleteInspectionTypes([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.typeName ?? '排查类型')
+        }
+      ],
+      permission: 'SmisDualControlInspectionType:Delete',
+      confirmMessage: `确定删除排查类型“${row.typeName}”吗？`,
+      remove: async () => {
+        await deleteInspectionTypes([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   onMounted(async () => {
     await Promise.all([

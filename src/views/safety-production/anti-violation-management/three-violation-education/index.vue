@@ -21,8 +21,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="three-violation-page__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -44,15 +43,18 @@
       <EducationRecordDialog ref="recordDialogRef" @success="handleSaveSuccess" />
       <ThreeViolationDetailDialog ref="detailDialogRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import dayjs from 'dayjs'
   import { storeToRefs } from 'pinia'
@@ -68,7 +70,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtButtonMore, {
@@ -97,6 +99,10 @@
   import EducationRecordDialog from './modules/education-record-dialog.vue'
   import ThreeViolationDetailDialog from './modules/three-violation-detail-dialog.vue'
   import { formatGender, printThreeViolationLedger } from './modules/three-violation-ledger'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_three_violation_education',
+    '三违教育'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -122,8 +128,6 @@
   interface DetailDialogExpose {
     handleOpen: (row: SmisThreeViolationEducation) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -131,7 +135,7 @@
   const recordDialogRef = ref<RecordDialogExpose>()
   const detailDialogRef = ref<DetailDialogExpose>()
   const checkerSearchSelection = ref<EmployeeIntegrationItem[]>([])
-  const searchQuery = reactive<SmisThreeViolationEducationSearchParams>({})
+  const searchQuery = ref<SmisThreeViolationEducationSearchParams>({})
   const organizations = shallowRef<SmisAntiViolationOrganization[]>([])
   const standards = shallowRef<SmisAntiViolationStandardOption[]>([])
   const overview = reactive<SmisThreeViolationEducationOverview>({
@@ -327,13 +331,25 @@
     {
       permission: 'SmisThreeViolationEducation:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条待教育记录吗？已完成教育的台账不可删除。`,
       disabled: ({ selectedRows }) =>
         !selectedRows.length || selectedRows.some((row) => row.educationStatus !== 'pending'),
       onClick: async ({ selectedRows, api }) => {
-        await deleteThreeViolationEducation(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: [row.employeeName, row.employeeNo].filter(Boolean).join(' · ') || '三违教育'
+          })),
+          permission: 'SmisThreeViolationEducation:Delete',
+          remove: async () => {
+            await deleteThreeViolationEducation(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -367,7 +383,7 @@
         data: formatEducationRows(
           (
             await fetchThreeViolationEducationList({
-              ...searchQuery,
+              ...searchQuery.value,
               purpose: 'export',
               from: 0,
               to: maxRows - 1
@@ -524,19 +540,29 @@
     if (item.key === 'copy') openDialog('copy', row)
     if (item.key === 'print') printThreeViolationLedger(row)
     if (item.key !== 'delete') return
-    try {
-      await confirmDelete(`确定删除“${row.employeeName}”的待教育记录吗？`)
-      await deleteThreeViolationEducation([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: [row.employeeName, row.employeeNo].filter(Boolean).join(' · ') || '三违教育'
+        }
+      ],
+      permission: 'SmisThreeViolationEducation:Delete',
+      confirmMessage: `确定删除“${row.employeeName}”的待教育记录吗？`,
+      remove: async () => {
+        await deleteThreeViolationEducation([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   const handleSaveSuccess = (): void => void tableQueryRef.value?.getData()
 
   watch(
-    () => searchQuery.checkerEmployeeId,
+    () => searchQuery.value.checkerEmployeeId,
     (value) => {
       if (!value) checkerSearchSelection.value = []
     }

@@ -34,8 +34,7 @@
       <ElScrollbar class="special-equipment-page__scroll">
         <div class="special-equipment-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -180,7 +179,6 @@
 
 <script setup lang="tsx">
   import { emptySpecialEquipmentRiskControl } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { formatPercentValue } from '@/utils/ui/format'
   import { ElProgress, ElTag } from 'element-plus'
   import type { ColumnOption } from '@/types'
@@ -210,7 +208,7 @@
     organizationId?: string
   }
 
-  const query = reactive<EquipmentQuery>({ organizationId: undefined })
+  const query = ref<EquipmentQuery>({ organizationId: undefined })
   const state = reactive<{
     loading: boolean
     error: string | null
@@ -398,7 +396,7 @@
     state.error = null
     try {
       const result = await fetchSpecialEquipmentRiskControlStatistics({
-        organizationId: query.organizationId
+        organizationId: query.value.organizationId
       })
       const organizationOptions = result.organizationOptions.length
         ? result.organizationOptions
@@ -412,7 +410,7 @@
     }
   }
   const resetQuery = (): void => {
-    query.organizationId = undefined
+    query.value.organizationId = undefined
     void loadData()
   }
   onMounted(loadData)

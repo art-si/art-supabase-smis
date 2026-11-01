@@ -18,8 +18,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="violation-record-page__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -39,14 +38,18 @@
 
       <ViolationRecordDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { uniq } from 'lodash-es'
-  import { replaceReactiveModel } from '@/utils/form/model'
+
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import dayjs from 'dayjs'
   import { ElAvatar, ElTag } from 'element-plus'
@@ -61,7 +64,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtButtonMore, {
     type ButtonMoreItem
@@ -86,6 +89,10 @@
     type ViolationRecordDialogMode,
     type ViolationRecordDialogOpenData
   } from './modules/violation-record-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_violation_record',
+    '违章记录'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -100,12 +107,10 @@
   interface DialogExpose {
     handleOpen: (data: ViolationRecordDialogOpenData) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const violatorSearchSelection = ref<EmployeeIntegrationItem[]>([])
-  const searchQuery = reactive<SmisViolationRecordSearchParams>({})
+  const searchQuery = ref<SmisViolationRecordSearchParams>({})
   const sites = shallowRef<SmisSite[]>([])
   const standards = shallowRef<SmisAntiViolationStandardOption[]>([])
   const masterLoading = ref(false)
@@ -293,11 +298,23 @@
     {
       permission: 'SmisViolationRecord:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条违章记录吗？相关人员、项目与图片引用将一并删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteViolationRecords(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.recordNo ?? '违章记录')
+          })),
+          permission: 'SmisViolationRecord:Delete',
+          remove: async () => {
+            await deleteViolationRecords(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -311,7 +328,7 @@
         data: formatExportRows(
           (
             await fetchViolationRecordList({
-              ...searchQuery,
+              ...searchQuery.value,
               purpose: 'export',
               from: 0,
               to: maxRows - 1
@@ -443,17 +460,27 @@
       return
     }
     if (item.key !== 'delete') return
-    try {
-      await confirmDelete(`确定删除违章记录“${row.recordNo}”吗？`)
-      await deleteViolationRecords([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.recordNo ?? '违章记录')
+        }
+      ],
+      permission: 'SmisViolationRecord:Delete',
+      confirmMessage: `确定删除违章记录“${row.recordNo}”吗？`,
+      remove: async () => {
+        await deleteViolationRecords([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   const handleSaveSuccess = (): void => void tableQueryRef.value?.getData()
   watch(
-    () => searchQuery.violatorEmployeeId,
+    () => searchQuery.value.violatorEmployeeId,
     (value) => {
       if (!value) violatorSearchSelection.value = []
     }

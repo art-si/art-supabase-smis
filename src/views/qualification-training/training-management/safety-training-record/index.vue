@@ -35,10 +35,14 @@
       />
       <TrainingRecordDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { useAuth } from '@/hooks/core/useAuth'
@@ -54,7 +58,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import BusinessTableIdentityCell from '@/components/business/business-table-identity-cell/index.vue'
@@ -78,6 +82,10 @@
     trainingRecordStatusLabel,
     trainingRecordStatusOptions
   } from './modules/training-record-status'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_safety_training_record',
+    '安全培训记录'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'MM-DD HH:mm',
@@ -98,7 +106,6 @@
   }
 
   const route = useRoute()
-  const { confirmDelete } = useArtFeedback()
   const { hasAuth } = useAuth()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
@@ -231,13 +238,22 @@
     void dialogRef.value?.handleOpen({ row, readonly, presetPlanId, planOptions: availablePlans })
   }
   const handleDelete = async (row: SmisSafetyTrainingRecord): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除草稿记录“${row.recordNo}”吗？`)
-      await deleteSafetyTrainingRecords([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      // 用户取消或服务端业务校验失败。
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.subject ?? '安全培训记录')
+        }
+      ],
+      permission: 'SmisSafetyTrainingRecord:Delete',
+      confirmMessage: `确定删除草稿记录“${row.recordNo}”吗？`,
+      remove: async () => {
+        await deleteSafetyTrainingRecords([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const columnsFactory = (): ColumnOption<SmisSafetyTrainingRecord>[] => [
     { type: 'selection', width: 48 },
@@ -378,11 +394,23 @@
     {
       permission: 'SmisSafetyTrainingRecord:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿记录吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteSafetyTrainingRecords(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.subject ?? '安全培训记录')
+          })),
+          permission: 'SmisSafetyTrainingRecord:Delete',
+          remove: async () => {
+            await deleteSafetyTrainingRecords(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {

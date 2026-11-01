@@ -17,8 +17,7 @@
       <ElScrollbar class="accident-statistics-page__scroll">
         <div class="accident-statistics-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -122,7 +121,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import dayjs from 'dayjs'
   import type { PieDataItem } from '@/types/component/chart'
   import type { ColumnOption } from '@/types'
@@ -160,7 +158,7 @@
     ],
     organizationId: undefined
   })
-  const query = reactive<StatisticsQuery>(initialQuery())
+  const query = ref<StatisticsQuery>(initialQuery())
   const request = useAsyncState(
     async (
       params: SmisSafetyAccidentStatisticsSearchParams
@@ -271,13 +269,13 @@
 
   const loadData = async (): Promise<void> => {
     await request.execute(0, {
-      startDate: query.dateRange?.[0],
-      endDate: query.dateRange?.[1],
-      organizationId: query.organizationId
+      startDate: query.value.dateRange?.[0],
+      endDate: query.value.dateRange?.[1],
+      organizationId: query.value.organizationId
     })
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
 

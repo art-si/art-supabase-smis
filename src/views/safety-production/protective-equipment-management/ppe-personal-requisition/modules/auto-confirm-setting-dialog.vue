@@ -9,20 +9,16 @@
     />
     <ArtForm
       ref="formRef"
-      :model-value="form"
-      @update:model-value="replaceReactiveModel(form, $event)"
+      v-model="form"
       :rules="rules"
       :items="formItems"
       :span="24"
       label-position="top"
-      :show-submit="false"
-      :show-reset="false"
     />
   </ArtDialog>
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import type { FormRules } from 'element-plus'
@@ -37,7 +33,7 @@
   const emit = defineEmits<{ success: [days: number] }>()
   const dialogRef = ref<ArtDialogExpose>()
   const formRef = ref<{ validate: () => Promise<boolean>; clearValidate: () => void }>()
-  const form = reactive<SettingForm>({ autoConfirmDays: 3 })
+  const form = ref<SettingForm>({ autoConfirmDays: 3 })
   const formItems: FormItem[] = [
     {
       label: '自动确认等待天数',
@@ -55,8 +51,8 @@
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      await savePpeSetting(form.autoConfirmDays)
-      emit('success', form.autoConfirmDays)
+      await savePpeSetting(form.value.autoConfirmDays)
+      emit('success', form.value.autoConfirmDays)
       return true
     } catch (error) {
       notifyFriendlyError(error, '自动确认设置保存失败，请检查内容后重试')
@@ -73,7 +69,7 @@
         api.setLoading(true)
         try {
           const result = await fetchPpeSetting()
-          form.autoConfirmDays = result.data?.autoConfirmDays ?? 3
+          form.value.autoConfirmDays = result.data?.autoConfirmDays ?? 3
           await nextTick()
           formRef.value?.clearValidate()
         } finally {

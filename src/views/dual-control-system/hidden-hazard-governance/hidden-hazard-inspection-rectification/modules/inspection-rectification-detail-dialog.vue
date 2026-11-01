@@ -1,5 +1,14 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg" :show-footer="false">
+  <ArtDialog
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="dialogRef"
+    size="lg"
+    :show-footer="false"
+  >
     <div v-if="record" class="inspection-rectification-detail">
       <div class="inspection-rectification-detail__identity">
         <span aria-hidden="true"><ArtSvgIcon icon="ri:shield-check-line" /></span>
@@ -9,71 +18,80 @@
           <p>{{ record.hazardDescription }}</p>
         </div>
         <ArtDictDisplay
+          class="inspection-rectification-detail__status"
           dict-code="smisHiddenHazardGovernanceStatus"
           :value="record.status"
           display="tag"
         />
       </div>
 
-      <ArtSectionCard title="检查与整改要求" subtitle="隐患来源、责任单位及整改要求">
-        <ArtDescriptions :data="record" :items="inspectionItems" :columns="2" />
-      </ArtSectionCard>
-
-      <ArtSectionCard title="整改落实结果" subtitle="实际整改说明、完成时间与现场证据">
-        <ArtDescriptions :data="record" :items="rectificationItems" :columns="2" />
-        <div class="inspection-rectification-detail__evidence">
-          <section>
-            <strong>隐患照片</strong>
-            <div
-              v-if="record.hazardImageUrls.length"
-              class="inspection-rectification-detail__evidence-gallery"
-            >
-              <ElImage
-                v-for="(url, index) in record.hazardImageUrls"
-                :key="url"
-                :src="url"
-                :preview-src-list="record.hazardImageUrls"
-                :initial-index="index"
-                fit="cover"
-                preview-teleported
-                :alt="`隐患照片 ${index + 1}`"
-              />
-            </div>
-            <ArtEmptyState
-              v-else
-              title="暂无隐患照片"
-              description="该记录尚未上传现场照片。"
-              size="compact"
-              :visual-size="64"
-            />
-          </section>
-          <section>
-            <strong>整改照片</strong>
-            <div
-              v-if="record.rectificationImageUrls.length"
-              class="inspection-rectification-detail__evidence-gallery"
-            >
-              <ElImage
-                v-for="(url, index) in record.rectificationImageUrls"
-                :key="url"
-                :src="url"
-                :preview-src-list="record.rectificationImageUrls"
-                :initial-index="index"
-                fit="cover"
-                preview-teleported
-                :alt="`整改照片 ${index + 1}`"
-              />
-            </div>
-            <ArtEmptyState
-              v-else
-              title="尚未上传整改照片"
-              description="整改完成后可在记录中补充现场照片。"
-              size="compact"
-              :visual-size="64"
-            />
-          </section>
-        </div>
-      </ArtSectionCard>
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="检查与整改要求"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="检查与整改要求" subtitle="隐患来源、责任单位及整改要求">
+              <ArtDescriptions
+                :data="record"
+                :items="inspectionItems"
+                :columns="2"
+              /> </ArtSectionCard></div
+        ></ElTabPane>
+        <ElTabPane name="section-1" label="整改落实结果"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="整改落实结果" subtitle="实际整改说明、完成时间与现场证据">
+              <ArtDescriptions :data="record" :items="rectificationItems" :columns="2" />
+              <div class="inspection-rectification-detail__evidence">
+                <section>
+                  <strong>隐患照片</strong>
+                  <div
+                    v-if="record.hazardImageUrls.length"
+                    class="inspection-rectification-detail__evidence-gallery"
+                  >
+                    <ElImage
+                      v-for="(url, index) in record.hazardImageUrls"
+                      :key="url"
+                      :src="url"
+                      :preview-src-list="record.hazardImageUrls"
+                      :initial-index="index"
+                      fit="cover"
+                      preview-teleported
+                      :alt="`隐患照片 ${index + 1}`"
+                    />
+                  </div>
+                  <ArtEmptyState
+                    v-else
+                    title="暂无隐患照片"
+                    description="该记录尚未上传现场照片。"
+                    size="compact"
+                    :visual-size="64"
+                  />
+                </section>
+                <section>
+                  <strong>整改照片</strong>
+                  <div
+                    v-if="record.rectificationImageUrls.length"
+                    class="inspection-rectification-detail__evidence-gallery"
+                  >
+                    <ElImage
+                      v-for="(url, index) in record.rectificationImageUrls"
+                      :key="url"
+                      :src="url"
+                      :preview-src-list="record.rectificationImageUrls"
+                      :initial-index="index"
+                      fit="cover"
+                      preview-teleported
+                      :alt="`整改照片 ${index + 1}`"
+                    />
+                  </div>
+                  <ArtEmptyState
+                    v-else
+                    title="尚未上传整改照片"
+                    description="整改完成后可在记录中补充现场照片。"
+                    size="compact"
+                    :visual-size="64"
+                  />
+                </section>
+              </div> </ArtSectionCard></div></ElTabPane
+      ></ElTabs>
     </div>
   </ArtDialog>
 </template>
@@ -90,6 +108,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import type { SmisRectificationNoticeRecord } from '@smis/api'
 
+  const activeDetailTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<SmisRectificationNoticeRecord>>()
   const record = shallowRef<SmisRectificationNoticeRecord | null>(null)
   const formatDate = createDateTimeFormatter({
@@ -200,7 +219,7 @@
       border-radius: var(--el-border-radius-base);
     }
 
-    &__identity > span {
+    &__identity > span[aria-hidden='true'] {
       display: grid;
       place-items: center;
       width: 48px;
@@ -208,6 +227,10 @@
       color: var(--theme-color);
       background: var(--default-box-color);
       border-radius: var(--el-border-radius-base);
+    }
+
+    &__status {
+      justify-self: start;
     }
 
     &__identity > div {
@@ -267,7 +290,7 @@
         grid-template-columns: 48px minmax(0, 1fr);
       }
 
-      &__identity > .art-dict-display {
+      &__status {
         grid-column: 1 / -1;
       }
 

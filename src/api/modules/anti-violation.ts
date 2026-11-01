@@ -132,7 +132,13 @@ export async function saveViolationCategory(params: SmisViolationCategorySavePay
 export async function deleteViolationCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_violation_categories_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '违章分类已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '违章分类已删除'
+    }
   )
 }
 
@@ -178,7 +184,13 @@ export async function saveAntiViolationStandard(params: SmisAntiViolationStandar
 export async function deleteAntiViolationStandards(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_anti_violation_standards_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '反违章标准已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '反违章标准已删除'
+    }
   )
 }
 
@@ -252,6 +264,12 @@ export async function recordThreeViolationEducation(
 export async function deleteThreeViolationEducation(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_three_violation_education_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '三违人员信息已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '三违人员信息已删除'
+    }
   )
 }

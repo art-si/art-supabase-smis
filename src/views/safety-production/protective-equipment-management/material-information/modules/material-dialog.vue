@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identitySection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="material-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:archive-stack-line" /></template>
@@ -7,6 +15,7 @@
         <p>分类、物料类型、计量单位与来源均直接沿用 MDM 物料编码主数据。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -14,8 +23,6 @@
         :span="8"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #imageUrls>
           <ArtUploadImage
@@ -103,6 +110,7 @@
   const userStore = useUserStore()
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identitySection')
   const dialogRef = ref<ArtDialogExpose<MaterialDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const categoryTree = ref<SmisMaterialCategory[]>([])
@@ -169,6 +177,7 @@
   }>({
     model: formModel,
     items: computed(() => [
+      { key: 'identitySection', label: '物料识别', type: 'tab' },
       {
         label: '物料编码',
         key: 'materialCode',
@@ -229,6 +238,8 @@
         options: (getDictMap.value.mdmMaterialSource ?? []).map(toDictionaryOption),
         props: { clearable: false, placeholder: '请选择物料来源' }
       },
+
+      { key: 'additionalSection', label: '扩展与资料', type: 'tab' },
       {
         label: '品牌',
         key: 'brand',

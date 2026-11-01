@@ -139,7 +139,13 @@ export async function saveToolIssuanceRecord(params: SmisToolIssuanceRecordSaveP
 export async function deleteToolIssuanceRecords(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_tool_issuance_records_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '发放记录草稿已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '发放记录草稿已删除'
+    }
   )
 }
 
@@ -309,7 +315,13 @@ export async function saveToolReturn(
 export async function deleteToolReturns(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_tool_returns_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '归还单已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '归还单已删除'
+    }
   )
 }
 

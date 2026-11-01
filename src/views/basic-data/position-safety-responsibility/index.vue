@@ -159,10 +159,14 @@
 
       <ResponsibilityDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import BusinessTableRowActions from '@/components/business/business-table-row-actions/index.vue'
   import { toDictionaryOption } from '@/utils/form/option'
 
@@ -189,7 +193,6 @@
     ArtTableQueryProps
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useUserStore } from '@/store/modules/user'
   import { fetchOrganizationOptionsTree } from '@/api/system-manage'
   import { exportExcel } from '@/utils/file'
@@ -216,6 +219,10 @@
   import ResponsibilityDialog, {
     type ResponsibilityDialogOpenData
   } from './modules/responsibility-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_position_safety_responsibility',
+    '岗位安全标准'
+  )
 
   defineOptions({ name: 'SmisPositionSafetyResponsibility' })
 
@@ -262,7 +269,6 @@
     handleOpen: (data: ResponsibilityDialogOpenData) => Promise<void>
   }
 
-  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -650,6 +656,7 @@
     },
     {
       type: 'delete',
+      confirm: false,
       label: '删除',
       permission: 'SmisPositionSafetyResponsibility:Delete',
       content: (context: ArtTableQueryHeaderActionContext) =>
@@ -658,8 +665,19 @@
         const rows = selectedRows as PositionSafetyResponsibility[]
         const ids = rows.map((row) => row.id).filter((id): id is string => Boolean(id))
         if (!ids.length) return
-        await deletePositionSafetyResponsibilities(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: rows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.hazardContent ?? '岗位安全标准')
+          })),
+          permission: 'SmisPositionSafetyResponsibility:Delete',
+          remove: async () => {
+            await deletePositionSafetyResponsibilities(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -803,24 +821,24 @@
   const handleDeleteRows = async (rows: PositionSafetyResponsibility[]): Promise<void> => {
     const ids = rows.map((row) => row.id).filter((id): id is string => Boolean(id))
     if (!ids.length) return
-    try {
-      await confirmAction(
+
+    await deleteRecords({
+      resources: rows.map((row) => ({
+        id: String(row.id ?? ''),
+        label: String(row.hazardContent ?? '岗位安全标准')
+      })),
+      permission: 'SmisPositionSafetyResponsibility:Delete',
+      confirmMessage:
         ids.length === 1
           ? '确定删除这条隐患排查标准吗？删除后无法恢复。'
           : `确定删除选中的 ${ids.length} 条隐患排查标准吗？`,
-        '删除确认',
-        {
-          confirmButtonText: '删除',
-          cancelButtonText: '取消',
-          type: 'warning',
-          confirmButtonType: 'danger'
-        }
-      )
-      await deletePositionSafetyResponsibilities(ids)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      // 用户取消或服务端校验失败时不追加重复提示。
-    }
+      remove: async () => {
+        await deletePositionSafetyResponsibilities(ids)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

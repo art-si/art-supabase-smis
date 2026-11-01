@@ -34,8 +34,7 @@
       <ElScrollbar class="hazard-report-page__scroll">
         <div class="hazard-report-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -157,7 +156,6 @@
 
 <script setup lang="tsx">
   import { emptyHazardGovernanceReport } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import dayjs from 'dayjs'
@@ -208,7 +206,7 @@
     organizationId: undefined
   })
 
-  const query = reactive<ReportQuery>(initialQuery())
+  const query = ref<ReportQuery>(initialQuery())
   const state = reactive<ReportState>({
     loading: false,
     error: null,
@@ -447,9 +445,11 @@
     state.error = null
     try {
       const result = await fetchHazardGovernanceReport({
-        reportedFrom: query.reportedRange?.[0],
-        reportedTo: query.reportedRange?.[1] ? `${query.reportedRange[1]}T23:59:59` : undefined,
-        organizationId: query.organizationId
+        reportedFrom: query.value.reportedRange?.[0],
+        reportedTo: query.value.reportedRange?.[1]
+          ? `${query.value.reportedRange[1]}T23:59:59`
+          : undefined,
+        organizationId: query.value.organizationId
       })
       const organizations = result.organizationOptions.length
         ? result.organizationOptions
@@ -463,7 +463,7 @@
     }
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
 

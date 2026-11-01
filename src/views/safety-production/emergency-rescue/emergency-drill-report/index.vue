@@ -44,8 +44,7 @@
       <ElScrollbar class="drill-report-page__scroll">
         <div class="drill-report-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="6"
             label-position="top"
@@ -242,7 +241,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { getFriendlySupabaseErrorMessage } from '@/utils/supabase'
   import { ElMessage } from 'element-plus'
   import { sumBy, uniq } from 'lodash-es'
@@ -289,7 +287,7 @@
   }
   const userStore = useUserStore()
   const { getUserInfo } = storeToRefs(userStore)
-  const query = reactive<ReportQuery>({})
+  const query = ref<ReportQuery>({})
   const appliedQuery = shallowRef<ReportQuery>({})
   let reportRequestId = 0
   onBeforeUnmount(() => {
@@ -410,12 +408,16 @@
     appliedQuery.value = filters
   }
   const loadReport = async (): Promise<void> => {
-    if (query.startDate && query.endDate && query.startDate > query.endDate) {
+    if (
+      query.value.startDate &&
+      query.value.endDate &&
+      query.value.startDate > query.value.endDate
+    ) {
       ElMessage.warning('开始日期不能晚于结束日期')
       return
     }
     const currentRequestId = ++reportRequestId
-    const filters = { ...query }
+    const filters = { ...query.value }
     loading.value = true
     loadError.value = null
     try {
@@ -429,7 +431,11 @@
     }
   }
   const resetQuery = () => {
-    Object.assign(query, { startDate: undefined, endDate: undefined, organizationId: undefined })
+    Object.assign(query.value, {
+      startDate: undefined,
+      endDate: undefined,
+      organizationId: undefined
+    })
     void loadReport()
   }
   const handleExport = async (): Promise<void> => {

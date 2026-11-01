@@ -30,8 +30,7 @@
       <ElScrollbar class="inspection-statistics-page__scroll">
         <div class="inspection-statistics-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="7"
             label-position="top"
@@ -111,7 +110,6 @@
 
 <script setup lang="tsx">
   import { emptyInspectionStatistics } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { formatPercentValue } from '@/utils/ui/format'
   import dayjs from 'dayjs'
   import { ElProgress } from 'element-plus'
@@ -231,7 +229,7 @@
     riskLevel: undefined
   })
 
-  const query = reactive<StatisticsQuery>(initialQuery())
+  const query = ref<StatisticsQuery>(initialQuery())
   const state = reactive<StatisticsState>({
     loading: false,
     error: null,
@@ -361,9 +359,11 @@
     void detailRef.value?.handleOpen({
       reportType: props.reportType,
       row,
-      plannedFrom: query.plannedRange?.[0],
-      plannedTo: query.plannedRange?.[1] ? `${query.plannedRange[1]}T23:59:59` : undefined,
-      riskLevel: query.riskLevel
+      plannedFrom: query.value.plannedRange?.[0],
+      plannedTo: query.value.plannedRange?.[1]
+        ? `${query.value.plannedRange[1]}T23:59:59`
+        : undefined,
+      riskLevel: query.value.riskLevel
     })
   }
   const commonColumns: ColumnOption<SmisInspectionOrganizationStat>[] = [
@@ -484,10 +484,12 @@
     try {
       const result = await fetchRiskInspectionStatistics({
         reportType: props.reportType,
-        plannedFrom: query.plannedRange?.[0],
-        plannedTo: query.plannedRange?.[1] ? `${query.plannedRange[1]}T23:59:59` : undefined,
-        organizationId: query.organizationId,
-        riskLevel: query.riskLevel
+        plannedFrom: query.value.plannedRange?.[0],
+        plannedTo: query.value.plannedRange?.[1]
+          ? `${query.value.plannedRange[1]}T23:59:59`
+          : undefined,
+        organizationId: query.value.organizationId,
+        riskLevel: query.value.riskLevel
       })
       const organizations = result.organizationOptions.length
         ? result.organizationOptions
@@ -508,7 +510,7 @@
     }
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
 

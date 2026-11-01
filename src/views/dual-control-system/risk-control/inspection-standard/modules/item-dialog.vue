@@ -8,23 +8,18 @@
       </ArtEntitySummary>
       <ArtForm
         ref="formRef"
-        :model-value="model"
-        @update:model-value="replaceReactiveModel(model, $event)"
+        v-model="model"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="20"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       />
     </div>
   </ArtDialog>
 </template>
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { ElColorPicker, type FormRules } from 'element-plus'
@@ -66,9 +61,9 @@
     tagStyle: 'info',
     status: 'enabled'
   })
-  const model = reactive(initial())
+  const model = ref(initial())
   const standardName = computed(
-    () => standards.value.find((item) => item.id === model.standardId)?.standardName || ''
+    () => standards.value.find((item) => item.id === model.value.standardId)?.standardName || ''
   )
   const statusOptions = computed(() =>
     (getDictMap.value.commonEnabledDisabledVoidedStatus ?? [])
@@ -118,9 +113,9 @@
       key: 'textColor',
       render: () =>
         h(ElColorPicker, {
-          modelValue: model.textColor,
+          modelValue: model.value.textColor,
           predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#334155'],
-          'onUpdate:modelValue': (v: string | null) => (model.textColor = v || '')
+          'onUpdate:modelValue': (v: string | null) => (model.value.textColor = v || '')
         })
     },
     {
@@ -148,12 +143,12 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveInspectionItem({
-        ...model,
-        itemCode: model.itemCode.trim().toUpperCase(),
-        inspectionContent: model.inspectionContent.trim(),
-        textColor: model.textColor || null
+        ...model.value,
+        itemCode: model.value.itemCode.trim().toUpperCase(),
+        inspectionContent: model.value.inspectionContent.trim(),
+        textColor: model.value.textColor || null
       })
-      emit('success', model.id ? 'edit' : 'add')
+      emit('success', model.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '检查项目保存失败，请检查内容后重试')
@@ -162,9 +157,12 @@
   }
   const handleOpen = async (data: ItemDialogOpenData) => {
     standards.value = data.standards
-    Object.assign(model, initial(), { tenantId: data.tenantId, standardId: data.standardId || '' })
+    Object.assign(model.value, initial(), {
+      tenantId: data.tenantId,
+      standardId: data.standardId || ''
+    })
     if (data.row)
-      Object.assign(model, {
+      Object.assign(model.value, {
         id: data.row.id,
         tenantId: data.row.tenantId,
         standardId: data.row.standardId,

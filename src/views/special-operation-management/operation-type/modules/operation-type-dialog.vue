@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    ref="dialogRef"
+    size="xl"
+    @open="
+      () => {
+        activeFormTab = 'basicSection'
+      }
+    "
+  >
     <div class="operation-type-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:tools-line" /></template>
@@ -20,6 +28,7 @@
       </div>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -27,8 +36,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #textColor>
           <div class="operation-type-dialog__color-field">
@@ -248,6 +255,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<OperationTypeDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const targetTenantId = ref<string | null>()
@@ -325,6 +333,7 @@
   }>({
     model: formModel,
     items: computed(() => [
+      { label: '类型信息', key: 'basicSection', type: 'tab' },
       {
         label: '作业类型编号',
         key: 'typeCode',
@@ -376,7 +385,7 @@
           placeholder: '补充适用范围或管理说明'
         }
       },
-      { label: '作业专有字段', key: 'fieldDivider', type: 'divider', span: 24 },
+      { label: '作业专有字段', key: 'fieldDivider', type: 'tab', span: 24 },
       {
         label: '',
         key: 'fieldDefinitions',

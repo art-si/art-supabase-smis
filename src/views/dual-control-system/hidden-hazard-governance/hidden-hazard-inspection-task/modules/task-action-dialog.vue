@@ -14,8 +14,6 @@
         :items="form.items"
         :rules="form.rules"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #employeeId>
           <ArtEmployeeSelect

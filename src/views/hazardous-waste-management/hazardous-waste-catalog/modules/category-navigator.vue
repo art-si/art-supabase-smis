@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="loading || Boolean(error) || !data.length"
     class="hazardous-category-nav smis-category-navigator flex h-full min-h-0 flex-col overflow-hidden"
     title="危废分类"
     subtitle="分类上下文与名录同步"
@@ -41,52 +40,53 @@
         @click="emit('refresh')"
       />
     </template>
-    <div class="flex min-h-0 flex-1 flex-col gap-[12px]">
-      <ElInput v-model="keyword" clearable placeholder="搜索名称或编码" aria-label="搜索危废分类"
-        ><template #prefix><ArtSvgIcon icon="ri:search-line" /></template
-      ></ElInput>
-      <button
-        type="button"
-        class="hazardous-category-nav__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-        ><ArtSvgIcon icon="ri:archive-stack-line" /><span
-          ><strong>全部名录</strong><small>{{ categoryCount }} 个分类节点</small></span
-        ><ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line"
-      /></button>
-      <ElScrollbar class="hazardous-category-nav__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ data: node }"
-            ><div class="hazardous-category-nav__node smis-category-navigator__node"
-              ><ArtSvgIcon
-                :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:price-tag-3-line'" /><span
-                ><strong :title="node.categoryName">{{ node.categoryName }}</strong
-                ><small :title="node.categoryCode"
-                  >{{ node.categoryCode }} · {{ node.catalogCount || 0 }} 项</small
-                ></span
-              ><ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" /></div
-          ></template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+    <template #toolbar>
+      <div class="flex min-h-0 flex-1 flex-col gap-[12px]">
+        <ElInput v-model="keyword" clearable placeholder="搜索名称或编码" aria-label="搜索危废分类"
+          ><template #prefix><ArtSvgIcon icon="ri:search-line" /></template
+        ></ElInput>
+        <button
+          type="button"
+          class="hazardous-category-nav__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
+          ><ArtSvgIcon icon="ri:archive-stack-line" /><span
+            ><strong>全部名录</strong><small>{{ categoryCount }} 个分类节点</small></span
+          ><ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line"
+        /></button>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }"
+        ><div class="hazardous-category-nav__node smis-category-navigator__node"
+          ><ArtSvgIcon
+            :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:price-tag-3-line'" /><span
+            ><strong :title="node.categoryName">{{ node.categoryName }}</strong
+            ><small :title="node.categoryCode"
+              >{{ node.categoryCode }} · {{ node.catalogCount || 0 }} 项</small
+            ></span
+          ><ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" /></div
+      ></template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 <script setup lang="ts">
@@ -142,13 +142,6 @@
 </script>
 <style scoped lang="scss">
   .hazardous-category-nav {
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
-
     &__all {
       display: grid;
       grid-template-columns: 36px 1fr 18px;

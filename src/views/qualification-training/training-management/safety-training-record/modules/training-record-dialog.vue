@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'sourceSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="training-record-dialog">
       <article v-if="readonly && detailRecord" class="training-record-dialog__detail">
         <header class="training-record-dialog__detail-hero">
@@ -45,100 +53,109 @@
           </article>
         </section>
 
-        <ArtSectionCard title="执行信息" subtitle="培训计划来源与实际实施情况">
-          <ArtDescriptions
-            :data="detailRecord"
-            :items="detailItems"
-            :columns="3"
-            :tablet-columns="2"
-            label-width="110"
-          />
-        </ArtSectionCard>
-
-        <ArtSectionCard title="培训内容与评价" subtitle="实际授课内容、培训效果及补充说明">
-          <div class="training-record-dialog__narratives">
-            <article>
-              <small>培训内容</small>
-              <p>{{ detailRecord.trainingContent || '暂无培训内容记录' }}</p>
-            </article>
-            <article>
-              <small>效果评价</small>
-              <p>{{ detailRecord.effectEvaluation || '暂无培训效果评价' }}</p>
-            </article>
-            <article v-if="detailRecord.remark">
-              <small>备注</small>
-              <p>{{ detailRecord.remark }}</p>
-            </article>
-          </div>
-        </ArtSectionCard>
-
-        <ArtSectionCard
-          title="人员签到与考核"
-          :subtitle="`共 ${form.participants.length} 人，已签到 ${presentCount} 人`"
-        >
-          <ArtTable
-            :data="form.participants"
-            :columns="detailAttendanceColumns"
-            :pagination="false"
-            row-key="employeeId"
-            table-layout="fixed"
-            empty-text="暂无参训人员"
-          />
-        </ArtSectionCard>
-
-        <ArtSectionCard title="归档材料" subtitle="培训资料与签到佐证材料">
-          <div class="training-record-dialog__evidence-grid">
-            <section>
-              <strong>培训附件</strong>
-              <div v-if="detailRecord.attachmentUrls.length" class="training-record-dialog__files">
-                <a
-                  v-for="(url, index) in detailRecord.attachmentUrls"
-                  :key="url"
-                  :href="safeAttachmentUrl(url)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ArtSvgIcon icon="ri:attachment-2" />
-                  <span>{{ getAttachmentNameFromUrl(url, `培训附件 ${index + 1}`) }}</span>
-                  <ArtSvgIcon icon="ri:external-link-line" />
-                </a>
-              </div>
-              <ArtEmptyState
-                v-else
-                title="暂无培训附件"
-                description="培训课件、考卷或成绩单归档后将在此展示。"
-                size="compact"
-                :visual-size="52"
-              />
-            </section>
-            <section>
-              <strong>签到附件</strong>
-              <div
-                v-if="detailRecord.signInAttachmentUrls.length"
-                class="training-record-dialog__files"
+        <ElTabs v-model="activeFormTab"
+          ><ElTabPane name="sourceSection" label="计划与执行"
+            ><div class="space-y-4 min-w-0"
+              ><ArtSectionCard title="执行信息" subtitle="培训计划来源与实际实施情况">
+                <ArtDescriptions
+                  :data="detailRecord"
+                  :items="detailItems"
+                  :columns="3"
+                  :tablet-columns="2"
+                  label-width="110"
+                />
+              </ArtSectionCard>
+              <ArtSectionCard title="培训内容与评价" subtitle="实际授课内容、培训效果及补充说明">
+                <div class="training-record-dialog__narratives">
+                  <article>
+                    <small>培训内容</small>
+                    <p>{{ detailRecord.trainingContent || '暂无培训内容记录' }}</p>
+                  </article>
+                  <article>
+                    <small>效果评价</small>
+                    <p>{{ detailRecord.effectEvaluation || '暂无培训效果评价' }}</p>
+                  </article>
+                  <article v-if="detailRecord.remark">
+                    <small>备注</small>
+                    <p>{{ detailRecord.remark }}</p>
+                  </article>
+                </div>
+              </ArtSectionCard></div
+            ></ElTabPane
+          >
+          <ElTabPane name="attendanceSection" label="签到与考核"
+            ><div class="space-y-4 min-w-0"
+              ><ArtSectionCard
+                title="人员签到与考核"
+                :subtitle="`共 ${form.participants.length} 人，已签到 ${presentCount} 人`"
               >
-                <a
-                  v-for="(url, index) in detailRecord.signInAttachmentUrls"
-                  :key="url"
-                  :href="safeAttachmentUrl(url)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ArtSvgIcon icon="ri:file-list-3-line" />
-                  <span>{{ getAttachmentNameFromUrl(url, `签到附件 ${index + 1}`) }}</span>
-                  <ArtSvgIcon icon="ri:external-link-line" />
-                </a>
-              </div>
-              <ArtEmptyState
-                v-else
-                title="暂无签到附件"
-                description="纸质签到表或现场照片归档后将在此展示。"
-                size="compact"
-                :visual-size="52"
-              />
-            </section>
-          </div>
-        </ArtSectionCard>
+                <ArtTable
+                  :data="form.participants"
+                  :columns="detailAttendanceColumns"
+                  :pagination="false"
+                  row-key="employeeId"
+                  table-layout="fixed"
+                  empty-text="暂无参训人员"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="evidenceSection" label="归档材料"
+            ><div class="space-y-4 min-w-0"
+              ><ArtSectionCard title="归档材料" subtitle="培训资料与签到佐证材料">
+                <div class="training-record-dialog__evidence-grid">
+                  <section>
+                    <strong>培训附件</strong>
+                    <div
+                      v-if="detailRecord.attachmentUrls.length"
+                      class="training-record-dialog__files"
+                    >
+                      <a
+                        v-for="(url, index) in detailRecord.attachmentUrls"
+                        :key="url"
+                        :href="safeAttachmentUrl(url)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ArtSvgIcon icon="ri:attachment-2" />
+                        <span>{{ getAttachmentNameFromUrl(url, `培训附件 ${index + 1}`) }}</span>
+                        <ArtSvgIcon icon="ri:external-link-line" />
+                      </a>
+                    </div>
+                    <ArtEmptyState
+                      v-else
+                      title="暂无培训附件"
+                      description="培训课件、考卷或成绩单归档后将在此展示。"
+                      size="compact"
+                      :visual-size="52"
+                    />
+                  </section>
+                  <section>
+                    <strong>签到附件</strong>
+                    <div
+                      v-if="detailRecord.signInAttachmentUrls.length"
+                      class="training-record-dialog__files"
+                    >
+                      <a
+                        v-for="(url, index) in detailRecord.signInAttachmentUrls"
+                        :key="url"
+                        :href="safeAttachmentUrl(url)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ArtSvgIcon icon="ri:file-list-3-line" />
+                        <span>{{ getAttachmentNameFromUrl(url, `签到附件 ${index + 1}`) }}</span>
+                        <ArtSvgIcon icon="ri:external-link-line" />
+                      </a>
+                    </div>
+                    <ArtEmptyState
+                      v-else
+                      title="暂无签到附件"
+                      description="纸质签到表或现场照片归档后将在此展示。"
+                      size="compact"
+                      :visual-size="52"
+                    />
+                  </section>
+                </div> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </article>
 
       <template v-else>
@@ -152,16 +169,14 @@
         </div>
 
         <ArtForm
+          v-model:active-tab="activeFormTab"
           ref="formRef"
-          :model-value="form"
-          @update:model-value="replaceReactiveModel(form, $event)"
+          v-model="form"
           :items="items"
           :rules="rules"
           :span="12"
           :gutter="24"
           label-position="top"
-          :show-reset="false"
-          :show-submit="false"
         >
           <template #trainingPlanId>
             <ElSelect
@@ -284,8 +299,6 @@
   import { resolveHttpUrl } from '@/utils/http-url'
   import { getAttachmentNameFromUrl } from '@/utils/file/attachment'
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -356,6 +369,7 @@
   const userStore = useUserStore()
   const { confirm } = useArtFeedback()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('sourceSection')
   const dialogRef = ref<ArtDialogExpose<TrainingRecordDialogOpenData>>()
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const attendanceTableRef = ref<ArtTableExpose>()
@@ -384,26 +398,26 @@
     remark: '',
     participants: []
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const selectedPlan = computed(() =>
-    planOptions.value.find((item) => item.id === form.trainingPlanId)
+    planOptions.value.find((item) => item.id === form.value.trainingPlanId)
   )
   const presentCount = computed(
-    () => form.participants.filter((item) => item.attendanceStatus === 'present').length
+    () => form.value.participants.filter((item) => item.attendanceStatus === 'present').length
   )
   const passCount = computed(
-    () => form.participants.filter((item) => item.assessmentResult === 'pass').length
+    () => form.value.participants.filter((item) => item.assessmentResult === 'pass').length
   )
   const averageScoreText = computed(() => {
-    const scores = form.participants
+    const scores = form.value.participants
       .map((item) => item.score)
       .filter((score): score is number => typeof score === 'number')
     if (!scores.length) return '—'
     return (scores.reduce((total, score) => total + score, 0) / scores.length).toFixed(1)
   })
   const attendanceRateText = computed(() => {
-    if (!form.participants.length) return '0%'
-    return `${Math.round((presentCount.value / form.participants.length) * 100)}%`
+    if (!form.value.participants.length) return '0%'
+    return `${Math.round((presentCount.value / form.value.participants.length) * 100)}%`
   })
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const attendanceOptions = computed(() => dictOptions('smisSafetyTrainingAttendanceStatus'))
@@ -559,6 +573,7 @@
       label: '签到信息',
       minWidth: 340,
       required: true,
+      headerTooltip: '归档前须为每位参训人员确认签到状态；保存草稿可保留待签到。',
       requiredMessage: ({ rowIndex }) => `第 ${rowIndex + 1} 行参训人员尚未完成签到状态`,
       rules: [
         {
@@ -652,10 +667,10 @@
     placeholder
   })
   const items = computed<FormItem[]>(() => [
-    { label: '计划来源', key: 'sourceSection', type: 'divider', span: 24 },
+    { label: '计划与执行', key: 'sourceSection', type: 'tab', span: 24 },
     { label: '关联培训计划', key: 'trainingPlanId', span: 24 },
     { label: '计划自动带入信息', key: 'planContext', span: 24 },
-    { label: '实际执行', key: 'executionSection', type: 'divider', span: 24 },
+
     {
       label: '实际开始时间',
       key: 'actualStartAt',
@@ -691,9 +706,9 @@
       span: 24,
       props: textArea('记录培训效果、考核情况及改进建议', 4, 3000)
     },
-    { label: '人员签到与考核', key: 'attendanceSection', type: 'divider', span: 24 },
+    { label: '签到与考核', key: 'attendanceSection', type: 'tab', span: 24 },
     { label: '签到明细', key: 'participants', span: 24 },
-    { label: '归档材料', key: 'evidenceSection', type: 'divider', span: 24 },
+    { label: '归档材料', key: 'evidenceSection', type: 'tab', span: 24 },
     { label: '培训附件', key: 'attachmentUrls', span: 24 },
     { label: '签到附件', key: 'signInAttachmentUrls', span: 24 },
     {
@@ -722,13 +737,13 @@
   const applyPlan = (id: string): void => {
     const plan = planOptions.value.find((item) => item.id === id)
     if (!plan) return
-    form.actualStartAt = dayjs(plan.plannedStartAt).format('YYYY-MM-DD HH:mm:ss')
-    form.actualEndAt = dayjs(plan.plannedEndAt).format('YYYY-MM-DD HH:mm:ss')
-    form.location = plan.location || ''
-    form.instructorName = plan.instructorName || ''
-    form.trainingContent = plan.content
-    form.trainingHours = Number(plan.trainingHours || 0)
-    form.participants = plan.participants.map(participantFromPlan)
+    form.value.actualStartAt = dayjs(plan.plannedStartAt).format('YYYY-MM-DD HH:mm:ss')
+    form.value.actualEndAt = dayjs(plan.plannedEndAt).format('YYYY-MM-DD HH:mm:ss')
+    form.value.location = plan.location || ''
+    form.value.instructorName = plan.instructorName || ''
+    form.value.trainingContent = plan.content
+    form.value.trainingHours = Number(plan.trainingHours || 0)
+    form.value.participants = plan.participants.map(participantFromPlan)
   }
   const updateAttendance = (row: SmisSafetyTrainingAttendance): void => {
     if (row.attendanceStatus === 'present') {
@@ -740,25 +755,25 @@
     }
   }
   const markAllPresent = (): void =>
-    form.participants.forEach((row) => {
+    form.value.participants.forEach((row) => {
       row.attendanceStatus = 'present'
       updateAttendance(row)
     })
   const payload = (): SmisSafetyTrainingRecordSavePayload => ({
-    id: form.id,
-    trainingPlanId: form.trainingPlanId,
-    actualStartAt: form.actualStartAt ? dayjs(form.actualStartAt).toISOString() : null,
-    actualEndAt: form.actualEndAt ? dayjs(form.actualEndAt).toISOString() : null,
-    location: normalizeNullableText(form.location),
-    instructorName: normalizeNullableText(form.instructorName),
-    lecturerName: normalizeNullableText(form.lecturerName),
-    trainingContent: normalizeNullableText(form.trainingContent),
-    trainingHours: Number(form.trainingHours || 0),
-    effectEvaluation: normalizeNullableText(form.effectEvaluation),
-    attachmentUrls: [...form.attachmentUrls],
-    signInAttachmentUrls: [...form.signInAttachmentUrls],
-    remark: normalizeNullableText(form.remark),
-    participants: form.participants.map((item) => ({
+    id: form.value.id,
+    trainingPlanId: form.value.trainingPlanId,
+    actualStartAt: form.value.actualStartAt ? dayjs(form.value.actualStartAt).toISOString() : null,
+    actualEndAt: form.value.actualEndAt ? dayjs(form.value.actualEndAt).toISOString() : null,
+    location: normalizeNullableText(form.value.location),
+    instructorName: normalizeNullableText(form.value.instructorName),
+    lecturerName: normalizeNullableText(form.value.lecturerName),
+    trainingContent: normalizeNullableText(form.value.trainingContent),
+    trainingHours: Number(form.value.trainingHours || 0),
+    effectEvaluation: normalizeNullableText(form.value.effectEvaluation),
+    attachmentUrls: [...form.value.attachmentUrls],
+    signInAttachmentUrls: [...form.value.signInAttachmentUrls],
+    remark: normalizeNullableText(form.value.remark),
+    participants: form.value.participants.map((item) => ({
       employeeId: item.employeeId,
       attendanceStatus: item.attendanceStatus as SmisSafetyTrainingAttendanceStatus,
       checkInAt: item.checkInAt ? dayjs(item.checkInAt).toISOString() : null,
@@ -773,16 +788,23 @@
     try {
       await formRef.value?.validate()
       if (
-        form.actualStartAt &&
-        form.actualEndAt &&
-        dayjs(form.actualEndAt).isBefore(dayjs(form.actualStartAt))
+        form.value.actualStartAt &&
+        form.value.actualEndAt &&
+        dayjs(form.value.actualEndAt).isBefore(dayjs(form.value.actualStartAt))
       ) {
+        await formRef.value?.focusField('actualEndAt')
         ElMessage.warning('实际结束时间不能早于开始时间')
         return
       }
       if (submit) {
-        const attendanceValidation = await attendanceTableRef.value?.validate()
+        const attendanceValidation = await attendanceTableRef.value?.validate({ focus: false })
         if (attendanceValidation && !attendanceValidation.valid) {
+          activeFormTab.value = 'attendanceSection'
+          await nextTick()
+          if (attendanceValidation.firstError) {
+            await attendanceTableRef.value?.validateField(attendanceValidation.firstError.prop)
+            ElMessage.warning(attendanceValidation.firstError.message)
+          }
           return
         }
       }
@@ -793,7 +815,7 @@
         })
       }
       submitting.value = true
-      const type = form.id ? 'edit' : 'add'
+      const type = form.value.id ? 'edit' : 'add'
       await saveSafetyTrainingRecord(payload(), submit)
       emit('success', type)
       await dialogRef.value?.handleClose(true)
@@ -804,13 +826,13 @@
     }
   }
   const initialize = (data: TrainingRecordDialogOpenData): void => {
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     readonly.value = Boolean(data.readonly)
     detailRecord.value = data.readonly && data.row ? data.row : null
     planOptions.value = data.planOptions
     if (data.row) {
       const row = data.row
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: row.id,
         recordNo: row.recordNo,
         status: row.status,
@@ -831,7 +853,7 @@
         participants: row.participants.map((item) => ({ ...item }))
       })
     } else if (data.presetPlanId) {
-      form.trainingPlanId = data.presetPlanId
+      form.value.trainingPlanId = data.presetPlanId
       applyPlan(data.presetPlanId)
     }
   }
@@ -1247,9 +1269,20 @@
         white-space: normal;
       }
 
-      &__metrics,
       &__evidence-grid {
         grid-template-columns: 1fr;
+      }
+
+      &__metrics > article {
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: var(--art-space-2);
+        padding: var(--art-space-3);
+      }
+
+      &__metrics > article > span {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
       }
     }
   }

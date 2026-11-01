@@ -8,15 +8,12 @@
       </ArtEntitySummary>
       <ArtForm
         ref="formRef"
-        :model-value="model"
-        @update:model-value="replaceReactiveModel(model, $event)"
+        v-model="model"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="20"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       />
     </div>
   </ArtDialog>
@@ -24,8 +21,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { ElColorPicker, type FormRules } from 'element-plus'
@@ -67,9 +62,9 @@
     tagStyle: 'primary',
     status: 'enabled'
   })
-  const model = reactive(initial())
+  const model = ref(initial())
   const toTree = (rows: SmisInspectionStandard[]) => {
-    const blockedId = model.id
+    const blockedId = model.value.id
     const nodes = rows
       .filter((row) => row.id !== blockedId)
       .map((row) => ({
@@ -130,9 +125,9 @@
       key: 'textColor',
       render: () =>
         h(ElColorPicker, {
-          modelValue: model.textColor,
+          modelValue: model.value.textColor,
           predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#475569'],
-          'onUpdate:modelValue': (value: string | null) => (model.textColor = value || '')
+          'onUpdate:modelValue': (value: string | null) => (model.value.textColor = value || '')
         })
     },
     {
@@ -166,13 +161,13 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveInspectionStandard({
-        ...model,
-        parentId: model.parentId || null,
-        standardCode: model.standardCode.trim().toUpperCase(),
-        standardName: model.standardName.trim(),
-        textColor: model.textColor || null
+        ...model.value,
+        parentId: model.value.parentId || null,
+        standardCode: model.value.standardCode.trim().toUpperCase(),
+        standardName: model.value.standardName.trim(),
+        textColor: model.value.textColor || null
       })
-      emit('success', model.id ? 'edit' : 'add')
+      emit('success', model.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '检查标准保存失败，请检查内容后重试')
@@ -180,10 +175,13 @@
     }
   }
   const handleOpen = async (data: StandardDialogOpenData) => {
-    Object.assign(model, initial(), { tenantId: data.tenantId, parentId: data.parentId || null })
+    Object.assign(model.value, initial(), {
+      tenantId: data.tenantId,
+      parentId: data.parentId || null
+    })
     source.value = data.standards
     if (data.row)
-      Object.assign(model, {
+      Object.assign(model.value, {
         id: data.row.id,
         tenantId: data.row.tenantId,
         parentId: data.row.parentId,

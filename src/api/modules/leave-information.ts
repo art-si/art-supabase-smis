@@ -105,6 +105,12 @@ export async function saveLeaveInformation(params: LeaveInformationSavePayload) 
 export async function deleteLeaveInformation(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_leave_information_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '请假信息已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '请假信息已删除'
+    }
   )
 }

@@ -28,8 +28,7 @@
 
       <ArtTableQuery
         ref="tableRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="tool-return-page__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -48,13 +47,16 @@
 
       <ToolReturnDialog ref="dialogRef" @success="refreshData" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { withSupabaseTableRange } from '@/utils/supabase/pagination'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
@@ -87,6 +89,7 @@
     type SmisToolReturnSearchParams
   } from '@smis/api'
   import ToolReturnDialog, { type ToolReturnDialogOpenData } from './modules/tool-return-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_tool_return', '工器具归还单')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -108,8 +111,8 @@
 
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const searchQuery = reactive<SmisToolReturnSearchParams>({})
-  const { confirmAction, confirmDelete } = useArtFeedback()
+  const searchQuery = ref<SmisToolReturnSearchParams>({})
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const overview = reactive<SmisToolReturnOverview>({
     total: 0,
@@ -190,13 +193,21 @@
       ElMessage.warning('仅草稿或已退回的归还单可以删除')
       return
     }
-    try {
-      await confirmDelete(`确定删除选中的 ${rows.length} 张归还单吗？删除后无法恢复。`)
-      await deleteToolReturns(rows.map((row) => row.id))
-      await tableRef.value?.refreshRemove()
-    } catch {
-      // 用户取消时保留当前列表。
-    }
+
+    await deleteRecords({
+      resources: rows.map((row) => ({
+        id: String(row.id ?? ''),
+        label: String(row.returnNo ?? '工器具归还单')
+      })),
+      permission: 'SmisToolRequisitionReturn:Delete',
+      confirmMessage: `确定删除选中的 ${rows.length} 张归还单吗？删除后无法恢复。`,
+      remove: async () => {
+        await deleteToolReturns(rows.map((row) => row.id))
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const handleSubmit = async (row: SmisToolReturn): Promise<void> => {
     if (!editable(row)) {
@@ -335,12 +346,24 @@
     {
       permission: 'SmisToolRequisitionReturn:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 张归还单吗？删除后无法恢复。`,
       disabled: ({ selectedRows }) => selectedRows.some((row) => !editable(row as SmisToolReturn)),
       onClick: async ({ selectedRows, api }) => {
-        await deleteToolReturns(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.returnNo ?? '工器具归还单')
+          })),
+          permission: 'SmisToolRequisitionReturn:Delete',
+          remove: async () => {
+            await deleteToolReturns(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -375,7 +398,7 @@
       exportApi: async ({ maxRows }) => ({
         data: (
           await fetchToolReturnList({
-            ...searchQuery,
+            ...searchQuery.value,
             purpose: 'export',
             from: 0,
             to: maxRows - 1

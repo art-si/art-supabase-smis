@@ -274,10 +274,14 @@
       :limit="10"
       @confirm="handleResourceConfirm"
     />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -295,7 +299,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useImageViewer } from '@/hooks/core/useImageViewer'
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -339,6 +343,7 @@
     type EquipmentLedgerDialogOpenData
   } from './modules/equipment-ledger-dialog.vue'
   import { getEquipmentProfileLabel } from '@smis/domain/equipment-profile'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('mdm_equipment', '设备')
 
   const formatTableDate = createDateTimeFormatter({
     format: 'YYYY-MM-DD',
@@ -359,7 +364,6 @@
     handleOpen: (data: EquipmentLedgerDialogOpenData) => Promise<void>
     openAccessorySelector: (kind: EquipmentAccessoryKind) => Promise<void>
   }
-  const { confirmDelete } = useArtFeedback()
   const router = useRouter()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
@@ -588,14 +592,26 @@
     {
       permission: 'SmisEquipmentLedger:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 台设备吗？被锅炉关联的压力表或安全阀需先解除关系。`,
       onClick: async ({ selectedRows, api }) => {
         const ids = selectedRows
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
-        await deleteEquipmentLedger(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.equipmentName ?? '设备')
+          })),
+          permission: 'SmisEquipmentLedger:Delete',
+          remove: async () => {
+            await deleteEquipmentLedger(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -834,9 +850,22 @@
             permission="SmisEquipmentLedger:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除设备“${row.equipmentName}”吗？`)
-              await deleteEquipmentLedger([row.id])
-              await refreshWorkspace()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.equipmentName ?? '设备')
+                  }
+                ],
+                permission: 'SmisEquipmentLedger:Delete',
+                confirmMessage: `确定删除设备“${row.equipmentName}”吗？`,
+                remove: async () => {
+                  await deleteEquipmentLedger([row.id ?? ''])
+                },
+                onDeleted: async () => {
+                  await refreshWorkspace()
+                }
+              })
             }}
           />
         </div>

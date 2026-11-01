@@ -30,8 +30,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="document-register-workspace__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -66,11 +65,14 @@
       ref="categoryDialogRef"
       @success="handleCategorySaved"
     />
+    <MasterDataDeleteGuard ref="deleteDocumentGuardRef" />
+    <MasterDataDeleteGuard ref="deleteCategoryGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
-  import { replaceReactiveModel } from '@/utils/form/model'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
   import { ElTag } from 'element-plus'
   import { watchDebounced } from '@vueuse/core'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
@@ -84,7 +86,6 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonMore, {
     type ButtonMoreItem
@@ -116,6 +117,11 @@
     type DocumentRegisterDialogOpenData
   } from './document-register-dialog.vue'
 
+  const { deleteGuardRef: deleteDocumentGuardRef, deleteRecords: deleteDocumentRecords } =
+    useRecordDeleteGuard('smis_document', '文档台账')
+  const { deleteGuardRef: deleteCategoryGuardRef, deleteRecords: deleteCategoryRecords } =
+    useRecordDeleteGuard('smis_document_category', '文档分类')
+
   interface Props {
     kind: SmisDocumentRegisterKind
   }
@@ -146,7 +152,6 @@
 
   const props = defineProps<Props>()
   const emit = defineEmits<{ compliance: [row: SmisDocumentRegister] }>()
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
@@ -161,7 +166,7 @@
     parentKey: 'parentId',
     childrenKey: 'children'
   })
-  const searchQuery = reactive<SmisDocumentRegisterSearchParams>({ kind: props.kind })
+  const searchQuery = ref<SmisDocumentRegisterSearchParams>({ kind: props.kind })
   const overview = reactive<SmisDocumentRegisterOverview>({
     total: 0,
     withAttachment: 0,
@@ -420,14 +425,26 @@
       {
         permission: permissions.value.delete,
         type: 'delete',
+        confirm: false,
         content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
           `确定删除选中的 ${selectedCount} 份文档吗？附件版本及关联评价将一并删除。`,
         onClick: async ({ selectedRows, api }) => {
-          await deleteDocumentRegisters({
-            kind: props.kind,
-            ids: selectedRows.map((row) => String(row.id))
+          await deleteDocumentRecords({
+            resources: selectedRows.map((row) => ({
+              id: String(row.id ?? ''),
+              label: String(row.fileName ?? '业务记录')
+            })),
+            permission: permissions.value.delete,
+            remove: async () => {
+              await deleteDocumentRegisters({
+                kind: props.kind,
+                ids: selectedRows.map((row) => String(row.id))
+              })
+            },
+            onDeleted: async () => {
+              await api.refreshRemove()
+            }
           })
-          await api.refreshRemove()
         }
       }
     )
@@ -452,7 +469,7 @@
       exportApi: async ({ maxRows }) => ({
         data: (
           await fetchDocumentRegisterList({
-            ...searchQuery,
+            ...searchQuery.value,
             kind: props.kind,
             purpose: 'export',
             from: 0,
@@ -604,7 +621,7 @@
   const fetchTableData = async (params: TableParams, options?: TableRequestOptions) => {
     const result = await fetchDocumentRegisterList({
       ...params,
-      ...searchQuery,
+      ...searchQuery.value,
       ...buildSupabasePageRange(params),
       kind: props.kind
     })
@@ -616,21 +633,25 @@
   }
 
   watch(
-    () => [searchQuery.fileName, searchQuery.documentCode],
+    () => [searchQuery.value.fileName, searchQuery.value.documentCode],
     () => tableQueryRef.value?.cancelRequest(),
     { flush: 'sync' }
   )
-  watchDebounced(() => [searchQuery.fileName, searchQuery.documentCode], reloadFromFilters, {
-    debounce: 360
-  })
+  watchDebounced(
+    () => [searchQuery.value.fileName, searchQuery.value.documentCode],
+    reloadFromFilters,
+    {
+      debounce: 360
+    }
+  )
   watch(
     () => [
-      searchQuery.categoryId,
-      searchQuery.isSpecialEquipment,
-      searchQuery.obtainedDateRange?.[0],
-      searchQuery.obtainedDateRange?.[1],
-      searchQuery.evaluationDateRange?.[0],
-      searchQuery.evaluationDateRange?.[1]
+      searchQuery.value.categoryId,
+      searchQuery.value.isSpecialEquipment,
+      searchQuery.value.obtainedDateRange?.[0],
+      searchQuery.value.obtainedDateRange?.[1],
+      searchQuery.value.evaluationDateRange?.[0],
+      searchQuery.value.evaluationDateRange?.[1]
     ],
     reloadFromFilters
   )
@@ -648,7 +669,7 @@
   }
   const handleCategorySelect = (key: string): void => {
     selectedCategoryKey.value = key
-    searchQuery.categoryId = key === 'all' ? undefined : key
+    searchQuery.value.categoryId = key === 'all' ? undefined : key
   }
   const openCategoryDialog = (row?: SmisDocumentCategory): void => {
     void categoryDialogRef.value?.handleOpen({
@@ -662,29 +683,29 @@
     })
   }
   const handleCategoryDelete = async (row: SmisDocumentCategory): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除文档分类“${row.categoryName}”吗？仅空分类允许删除。`)
-      await deleteDocumentCategories([row.id])
-      selectedCategoryKey.value = 'all'
-      searchQuery.categoryId = undefined
-      await loadCategories()
-      await tableQueryRef.value?.getData()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteCategoryRecords({
+      resources: [{ id: row.id, label: row.categoryName }],
+      permission: 'SmisRequiredKnowledge:CategoryDelete',
+      remove: () => deleteDocumentCategories([row.id ?? '']),
+      onDeleted: async () => {
+        selectedCategoryKey.value = 'all'
+        searchQuery.value.categoryId = undefined
+        await loadCategories()
+        await tableQueryRef.value?.getData()
+      }
+    })
   }
   const handleCategorySaved = async (): Promise<void> => {
     await loadCategories()
     await tableQueryRef.value?.getData()
   }
   const handleDelete = async (row: SmisDocumentRegister): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除“${row.fileName}”吗？附件版本将一并删除。`)
-      await deleteDocumentRegisters({ kind: props.kind, ids: [row.id] })
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteDocumentRecords({
+      resources: [{ id: row.id, label: row.fileName }],
+      permission: permissions.value.delete,
+      remove: () => deleteDocumentRegisters({ kind: props.kind, ids: [row.id ?? ''] }),
+      onDeleted: () => tableQueryRef.value?.refreshRemove() ?? Promise.resolve()
+    })
   }
   const handleMoreAction = async (
     item: ButtonMoreItem,

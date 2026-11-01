@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identitySection'
+      }
+    "
+    ref="dialogRef"
+    size="lg"
+  >
     <div class="hazardous-catalog-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:flask-line" /></template>
@@ -7,6 +15,7 @@
         ><p>安全措施和危险特性均引用系统字典，确保单据与导出口径一致。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -14,8 +23,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #presentation>
           <DisplayStyleField
@@ -67,6 +74,7 @@
   const emit = defineEmits<{ success: [] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identitySection')
   const dialogRef = ref<ArtDialogExpose<CatalogDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const categoryTree = ref<SmisHazardousWasteCategory[]>([])
@@ -105,6 +113,7 @@
   }>({
     model,
     items: computed(() => [
+      { key: 'identitySection', label: '危废识别', type: 'tab' },
       {
         label: '危废编号',
         key: 'wasteCode',
@@ -134,6 +143,8 @@
         type: 'input',
         props: { maxlength: 100, clearable: true, placeholder: '如 液态 / 固态' }
       },
+
+      { key: 'additionalSection', label: '特性与管理', type: 'tab' },
       {
         label: '安全措施',
         key: 'safetyMeasure',

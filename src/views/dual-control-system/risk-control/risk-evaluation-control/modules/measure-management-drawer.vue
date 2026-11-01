@@ -185,10 +185,14 @@
 
       <MeasureDialog ref="measureDialogRef" @success="handleMeasureSaved" />
     </div>
+    <MasterDataDeleteGuard ref="deleteMeasureGuardRef" />
   </ArtDrawer>
 </template>
 
 <script setup lang="ts">
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+
   import { uniq } from 'lodash-es'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -209,6 +213,9 @@
   } from '@smis/api'
   import MeasureDialog, { type MeasureDialogOpenData } from './measure-dialog.vue'
 
+  const { deleteGuardRef: deleteMeasureGuardRef, deleteRecords: deleteMeasureRecords } =
+    useRecordDeleteGuard('smis_risk_control_measure', '防控措施')
+
   export interface MeasureManagementDrawerExpose {
     handleOpen: (item: SmisRiskItem) => Promise<void>
   }
@@ -222,7 +229,7 @@
   const measureDialogRef = ref<MeasureDialogExpose>()
   const item = shallowRef<SmisRiskItem>()
   const state = reactive({ rows: [] as SmisRiskControlMeasure[], loading: false, error: '' })
-  const { confirmDelete, confirmAction } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
 
   const riskPointName = computed(
@@ -279,14 +286,15 @@
   }
 
   const deleteMeasure = async (row: SmisRiskControlMeasure): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除防控措施“${row.controlMeasure}”吗？`)
-    } catch {
-      return
-    }
-    await deleteRiskControlMeasures([row.id])
-    await loadMeasures()
-    emit('success')
+    await deleteMeasureRecords({
+      resources: [{ id: row.id ?? '', label: row.controlMeasure }],
+      permission: 'SmisDualControlRiskEvaluationControl:DeleteMeasure',
+      remove: () => deleteRiskControlMeasures([row.id ?? '']),
+      onDeleted: async () => {
+        await loadMeasures()
+        emit('success')
+      }
+    })
   }
 
   const handleOpen = async (selectedItem: SmisRiskItem): Promise<void> => {

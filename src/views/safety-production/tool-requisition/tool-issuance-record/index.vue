@@ -30,8 +30,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         :api-fn="fetchTableData"
         :search-items="searchItems"
         :columns-factory="columnsFactory"
@@ -50,10 +49,14 @@
       <IssuanceRecordDialog ref="recordDialogRef" @success="refreshData" />
       <IssuanceStatisticsDialog ref="statisticsDialogRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { replaceReactiveModel } from '@/utils/form/model'
   import { useMasterDataDeleteProcessingContext } from '@/hooks/core/useMasterDataDeleteProcessing'
   import MasterDeleteProcessingNotice from '@/components/business/master-delete-processing-notice/index.vue'
@@ -103,6 +106,10 @@
   } from '@smis/api'
   import IssuanceRecordDialog from './modules/issuance-record-dialog.vue'
   import IssuanceStatisticsDialog from './modules/issuance-statistics-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_tool_issuance_record',
+    '工器具发放记录'
+  )
 
   defineOptions({ name: 'SmisToolIssuanceRecord' })
 
@@ -131,7 +138,7 @@
   const { confirmAction } = useArtFeedback()
   const recordDialogRef = ref<RecordDialogExpose>()
   const statisticsDialogRef = ref<StatisticsDialogExpose>()
-  const searchQuery = reactive<SmisToolIssuanceRecordSearchParams>({})
+  const searchQuery = ref<SmisToolIssuanceRecordSearchParams>({})
   const referenceError = ref('')
   watch(
     () => [
@@ -142,12 +149,12 @@
     ([active, recordId, recordNo]) => {
       referenceError.value = ''
       if (!active) {
-        replaceReactiveModel(searchQuery, {})
+        replaceReactiveModel(searchQuery.value, {})
         void tableQueryRef.value?.getData()
         return
       }
       if (!recordId || !recordNo) return
-      replaceReactiveModel(searchQuery, { keyword: recordNo })
+      replaceReactiveModel(searchQuery.value, { keyword: recordNo })
       void tableQueryRef.value?.getData()
     },
     { immediate: true }
@@ -320,13 +327,25 @@
     {
       permission: 'SmisToolIssuanceRecord:Delete',
       type: 'delete',
+      confirm: false,
       disabled: ({ selectedRows }) =>
         selectedRows.some((row) => (row as SmisToolIssuanceRecord).status !== 'draft'),
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteToolIssuanceRecords(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.issuanceNo ?? '工器具发放记录')
+          })),
+          permission: 'SmisToolIssuanceRecord:Delete',
+          remove: async () => {
+            await deleteToolIssuanceRecords(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -382,7 +401,7 @@
       exportApi: async ({ maxRows }) => ({
         data: (
           await fetchToolIssuanceRecordList({
-            ...searchQuery,
+            ...searchQuery.value,
             purpose: 'export',
             from: 0,
             to: maxRows - 1

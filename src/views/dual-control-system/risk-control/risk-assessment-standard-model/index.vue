@@ -221,9 +221,13 @@
         @success="loadModels"
       />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 <script setup lang="ts">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
@@ -231,7 +235,6 @@
   import BusinessWorkspaceHeader, {
     type BusinessWorkspaceMetric
   } from '@/components/business/business-workspace-header/index.vue'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useTenantScopeAccessPolicy } from '@/hooks/core/useTenantScopeAccessPolicy'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import {
@@ -245,6 +248,11 @@
   } from '@smis/api'
   import CriterionDialog, { type CriterionDialogOpenData } from './modules/criterion-dialog.vue'
   import LevelDialog, { type LevelDialogOpenData } from './modules/level-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_risk_assessment_criterion',
+    '风险判定标准'
+  )
+
   defineOptions({ name: 'SmisDualControlRiskAssessmentStandardModel' })
   interface CriterionDialogExpose {
     handleOpen: (data: CriterionDialogOpenData) => Promise<void>
@@ -252,7 +260,6 @@
   interface LevelDialogExpose {
     handleOpen: (data: LevelDialogOpenData) => Promise<void>
   }
-  const { confirmDelete } = useArtFeedback()
   const { isCrossTenantReadOnly } = useTenantScopeAccessPolicy()
   const tenantScopeStore = useTenantScopeStore()
   const { effectiveTenantId, revision } = storeToRefs(tenantScopeStore)
@@ -347,13 +354,22 @@
     })
   const openLevel = (row: SmisRiskAssessmentLevel) => void levelDialogRef.value?.handleOpen({ row })
   const deleteCriterion = async (row: SmisRiskAssessmentCriterion) => {
-    try {
-      await confirmDelete(`确定删除分值 ${row.score} 的判定标准吗？`)
-      await deleteRiskAssessmentCriteria([row.id])
-      await loadModels()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.score ?? '风险判定标准')
+        }
+      ],
+      permission: 'SmisDualControlRiskAssessmentStandardModel:Delete',
+      confirmMessage: `确定删除分值 ${row.score} 的判定标准吗？`,
+      remove: async () => {
+        await deleteRiskAssessmentCriteria([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await loadModels()
+      }
+    })
   }
   onMounted(async () => {
     await tenantScopeStore.loadTenantOptions()

@@ -35,10 +35,14 @@
       />
       <TrainingPlanDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -54,7 +58,7 @@
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
   import { useUserStore } from '@/store/modules/user'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtButtonMore, {
     type ButtonMoreItem
@@ -76,6 +80,10 @@
   import TrainingPlanDialog, {
     type TrainingPlanDialogOpenData
   } from './modules/training-plan-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_safety_training_plan',
+    '安全培训计划'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'MM-DD HH:mm',
@@ -92,7 +100,6 @@
   const router = useRouter()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const searchQuery = ref<SmisSafetyTrainingPlanSearchParams>({})
@@ -244,13 +251,22 @@
     await tableRef.value?.refreshUpdate()
   }
   const handleDelete = async (row: SmisSafetyTrainingPlan) => {
-    try {
-      await confirmDelete(`确定删除草稿计划“${row.subject}”吗？`)
-      await deleteSafetyTrainingPlans([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或服务端校验失败 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.subject ?? '安全培训计划')
+        }
+      ],
+      permission: 'SmisSafetyTrainingPlan:Delete',
+      confirmMessage: `确定删除草稿计划“${row.subject}”吗？`,
+      remove: async () => {
+        await deleteSafetyTrainingPlans([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const moreActions = (row: SmisSafetyTrainingPlan): ButtonMoreItem[] => [
     {
@@ -418,11 +434,23 @@
     {
       permission: 'SmisSafetyTrainingPlan:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿计划吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteSafetyTrainingPlans(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.subject ?? '安全培训计划')
+          })),
+          permission: 'SmisSafetyTrainingPlan:Delete',
+          remove: async () => {
+            await deleteSafetyTrainingPlans(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {

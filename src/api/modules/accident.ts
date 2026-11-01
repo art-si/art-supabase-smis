@@ -105,7 +105,13 @@ export async function saveAccidentReport(params: SmisAccidentReportSavePayload) 
 export async function deleteAccidentReports(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_accident_reports_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '事故快报已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '事故快报已删除'
+    }
   )
 }
 
@@ -152,7 +158,13 @@ export async function saveHistoricalAccidentCase(params: SmisHistoricalAccidentC
 export async function deleteHistoricalAccidentCases(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_historical_accident_cases_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '事故案例已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '事故案例已删除'
+    }
   )
 }
 
@@ -225,7 +237,13 @@ export async function saveAccidentAnalysis(params: SmisAccidentAnalysisSavePaylo
 export async function deleteAccidentAnalyses(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_accident_analyses_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '事故分析单已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '事故分析单已删除'
+    }
   )
 }
 
@@ -270,6 +288,12 @@ export async function saveWorkInjuryDeclaration(params: SmisWorkInjurySavePayloa
 export async function deleteWorkInjuryDeclarations(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_work_injury_declarations_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '工伤申报已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '工伤申报已删除'
+    }
   )
 }

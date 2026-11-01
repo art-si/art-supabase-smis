@@ -1,5 +1,12 @@
 <template>
-  <ArtDrawer ref="drawerRef">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+  >
     <div v-if="detail" class="hazard-detail">
       <div class="hazard-detail__hero">
         <ElImage
@@ -28,32 +35,41 @@
         </div>
       </div>
 
-      <ArtSectionCard title="台账信息" subtitle="危险源识别、数量、地点与分级信息">
-        <ArtDescriptions :data="detail" :items="ledgerItems" :columns="2" />
-      </ArtSectionCard>
-      <ArtSectionCard title="评价与备案" subtitle="危险源评价和备案记录">
-        <ArtDescriptions :data="detail" :items="filingItems" :columns="2" />
-      </ArtSectionCard>
-      <ArtSectionCard title="管控责任" subtitle="系统组织部门与责任人信息">
-        <ArtDescriptions :data="detail" :items="responsibilityItems" :columns="2" />
-      </ArtSectionCard>
-      <ArtSectionCard
-        v-if="detail.imageUrls.length"
-        title="现场照片"
-        :subtitle="`共 ${detail.imageUrls.length} 张`"
-      >
-        <div class="hazard-detail__gallery">
-          <ElImage
-            v-for="(url, index) in detail.imageUrls"
-            :key="url"
-            :src="url"
-            :preview-src-list="detail.imageUrls"
-            :initial-index="index"
-            fit="cover"
-            preview-teleported
-          />
-        </div>
-      </ArtSectionCard>
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="危险源与责任"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="台账信息" subtitle="危险源识别、数量、地点与分级信息">
+              <ArtDescriptions :data="detail" :items="ledgerItems" :columns="2" />
+            </ArtSectionCard>
+            <ArtSectionCard title="管控责任" subtitle="系统组织部门与责任人信息">
+              <ArtDescriptions
+                :data="detail"
+                :items="responsibilityItems"
+                :columns="2"
+              /> </ArtSectionCard></div
+        ></ElTabPane>
+        <ElTabPane name="section-1" label="评价与资料"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="评价与备案" subtitle="危险源评价和备案记录">
+              <ArtDescriptions :data="detail" :items="filingItems" :columns="2" />
+            </ArtSectionCard>
+            <ArtSectionCard
+              v-if="detail.imageUrls.length"
+              title="现场照片"
+              :subtitle="`共 ${detail.imageUrls.length} 张`"
+            >
+              <div class="hazard-detail__gallery">
+                <ElImage
+                  v-for="(url, index) in detail.imageUrls"
+                  :key="url"
+                  :src="url"
+                  :preview-src-list="detail.imageUrls"
+                  :initial-index="index"
+                  fit="cover"
+                  preview-teleported
+                />
+              </div> </ArtSectionCard></div></ElTabPane
+      ></ElTabs>
     </div>
   </ArtDrawer>
 </template>
@@ -71,6 +87,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import type { SmisHazardSource } from '@smis/api'
 
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<SmisHazardSource>>()
   const detail = shallowRef<SmisHazardSource | null>(null)
   const emptyText = (value?: string | null) => value || '—'

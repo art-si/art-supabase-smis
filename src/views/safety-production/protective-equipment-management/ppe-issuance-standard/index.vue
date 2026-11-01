@@ -17,8 +17,7 @@
       </BusinessWorkspaceHeader>
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         :api-fn="fetchTableData"
         :search-items="searchItems"
         :columns-factory="columnsFactory"
@@ -35,15 +34,18 @@
       />
       <IssuanceStandardDialog ref="dialogRef" kind="ppe" @success="refresh" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
@@ -53,7 +55,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import BusinessTableRowActions from '@/components/business/business-table-row-actions/index.vue'
@@ -72,6 +74,10 @@
   import IssuanceStandardDialog, {
     type IssuanceStandardDialogExpose
   } from '../../shared/issuance-standard-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_ppe_issuance_standard',
+    '劳保用品发放标准'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -83,10 +89,9 @@
   type TableParams = SmisPpeIssuanceStandardSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
   const userStore = useUserStore()
-  const { confirmDelete } = useArtFeedback()
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<IssuanceStandardDialogExpose>()
-  const searchQuery = reactive<SmisPpeIssuanceStandardSearchParams>({})
+  const searchQuery = ref<SmisPpeIssuanceStandardSearchParams>({})
   const overview = reactive<SmisPpeIssuanceStandardOverview>({
     total: 0,
     enabled: 0,
@@ -176,7 +181,7 @@
       ],
       exportApi: async ({ maxRows }) => {
         const result = await fetchPpeIssuanceStandardList({
-          ...searchQuery,
+          ...searchQuery.value,
           purpose: 'export',
           from: 0,
           to: maxRows - 1
@@ -193,11 +198,23 @@
     {
       permission: 'SmisPpeIssuanceStandard:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条发放标准吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deletePpeIssuanceStandards(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.standardName ?? '劳保用品发放标准')
+          })),
+          permission: 'SmisPpeIssuanceStandard:Delete',
+          remove: async () => {
+            await deletePpeIssuanceStandards(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -280,9 +297,22 @@
             permission="SmisPpeIssuanceStandard:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除发放标准“${row.standardName}”吗？`)
-              await deletePpeIssuanceStandards([row.id])
-              await refresh()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.standardName ?? '劳保用品发放标准')
+                  }
+                ],
+                permission: 'SmisPpeIssuanceStandard:Delete',
+                confirmMessage: `确定删除发放标准“${row.standardName}”吗？`,
+                remove: async () => {
+                  await deletePpeIssuanceStandards([row.id ?? ''])
+                },
+                onDeleted: async () => {
+                  await refresh()
+                }
+              })
             }}
           />
         </BusinessTableRowActions>

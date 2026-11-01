@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identity'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="accident-report-dialog">
       <div class="accident-report-dialog__context">
         <span><ArtSvgIcon icon="ri:alarm-warning-line" /></span>
@@ -10,16 +18,14 @@
       </div>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #reporterEmployeeId>
           <ArtEmployeeSelect
@@ -60,16 +66,14 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
   import dayjs from 'dayjs'
   import { cloneDeep } from 'lodash-es'
-  import { computed, nextTick, onDeactivated, reactive, ref, shallowRef } from 'vue'
+  import { computed, nextTick, onDeactivated, ref, shallowRef } from 'vue'
   import { storeToRefs } from 'pinia'
-  import type { FormRules } from 'element-plus'
+  import { ElMessage, type FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
@@ -129,6 +133,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identity')
   const dialogRef = ref<ArtDialogExpose<AccidentReportDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const measuresEditorRef = ref<InstanceType<typeof AccidentMeasuresEditor>>()
@@ -157,16 +162,16 @@
     measures: [],
     people: []
   })
-  const form = reactive<AccidentReportForm>(initialForm())
+  const form = ref<AccidentReportForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
-    { label: '事故识别', key: 'identity', type: 'divider', span: 24 },
+    { label: '事故信息', key: 'identity', type: 'tab', span: 24 },
     {
       label: '事故编号',
       key: 'accidentNo',
       type: 'input',
       description: numberRule.description.value,
-      props: numberRule.inputProps(Boolean(form.id), '保存后自动生成', true)
+      props: numberRule.inputProps(Boolean(form.value.id), '保存后自动生成', true)
     },
     {
       label: '事故名称',
@@ -189,7 +194,7 @@
       span: 24,
       props: { maxlength: 300, placeholder: '请输入具体地点，便于现场追溯' }
     },
-    { label: '分类与影响', key: 'classification', type: 'divider', span: 24 },
+
     {
       label: '事故类别',
       key: 'accidentCategories',
@@ -218,7 +223,7 @@
       type: 'number',
       props: { min: 0, precision: 2, controlsPosition: 'right', class: '!w-full' }
     },
-    { label: '人员影响与事发经过', key: 'peopleImpact', type: 'divider', span: 24 },
+    { label: '人员影响与经过', key: 'peopleImpact', type: 'tab', span: 24 },
     {
       label: '轻伤人数',
       key: 'minorInjuryCount',
@@ -285,7 +290,7 @@
         placeholder: '按时间顺序简要记录事故发生、现场处置和人员影响'
       }
     },
-    { label: '分析与判定', key: 'analysis', type: 'divider', span: 24 },
+    { label: '分析与判定', key: 'analysis', type: 'tab', span: 24 },
     {
       label: '原因分析',
       key: 'causeAnalysis',
@@ -313,9 +318,9 @@
       }
     },
     { label: '事故照片', key: 'imageUrls', type: 'text', span: 24 },
-    { label: '防范措施', key: 'prevention', type: 'divider', span: 24 },
+    { label: '防范措施', key: 'prevention', type: 'tab', span: 24 },
     { label: '', key: 'measures', type: 'text', span: 24 },
-    { label: '人员信息', key: 'personnel', type: 'divider', span: 24 },
+    { label: '人员信息', key: 'personnel', type: 'tab', span: 24 },
     { label: '', key: 'people', type: 'text', span: 24 }
   ])
   const rules: FormRules<AccidentReportForm> = {
@@ -330,9 +335,9 @@
       {
         validator: (_rule, value, callback) => {
           const casualtyCount =
-            Number(form.minorInjuryCount || 0) +
-            Number(form.seriousInjuryCount || 0) +
-            Number(form.deathCount || 0)
+            Number(form.value.minorInjuryCount || 0) +
+            Number(form.value.seriousInjuryCount || 0) +
+            Number(form.value.deathCount || 0)
           if (Number(value || 0) < casualtyCount) {
             callback(new Error('现场人数不能少于轻伤、重伤和死亡人数之和'))
             return
@@ -349,36 +354,42 @@
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      const measuresValidation = await measuresEditorRef.value?.validate()
+      const measuresValidation = await measuresEditorRef.value?.validate({ focus: false })
       if (measuresValidation && !measuresValidation.valid) {
+        activeFormTab.value = 'prevention'
+        await nextTick()
+        if (measuresValidation.firstError) {
+          await measuresEditorRef.value?.validateField(measuresValidation.firstError.prop)
+          ElMessage.warning(measuresValidation.firstError.message)
+        }
         return false
       }
       await saveAccidentReport({
-        id: form.id,
-        accidentName: form.accidentName.trim(),
-        reporterEmployeeId: form.reporterEmployeeId,
-        accidentTime: form.accidentTime,
-        accidentLocation: form.accidentLocation.trim(),
-        accidentCategories: [...form.accidentCategories],
-        operationAreaOrganizationId: form.operationAreaOrganizationId || null,
-        accidentLevel: form.accidentLevel as SmisAccidentLevel,
-        indirectEconomicLoss: Number(form.indirectEconomicLoss || 0),
-        minorInjuryCount: Number(form.minorInjuryCount || 0),
-        seriousInjuryCount: Number(form.seriousInjuryCount || 0),
-        deathCount: Number(form.deathCount || 0),
-        onSiteCount: Number(form.onSiteCount || 0),
-        briefDescription: form.briefDescription.trim(),
-        causeAnalysis: form.causeAnalysis.trim(),
-        resultDetermination: form.resultDetermination.trim(),
-        imageUrls: [...form.imageUrls],
-        measures: form.measures.map((measure, index) => ({
+        id: form.value.id,
+        accidentName: form.value.accidentName.trim(),
+        reporterEmployeeId: form.value.reporterEmployeeId,
+        accidentTime: form.value.accidentTime,
+        accidentLocation: form.value.accidentLocation.trim(),
+        accidentCategories: [...form.value.accidentCategories],
+        operationAreaOrganizationId: form.value.operationAreaOrganizationId || null,
+        accidentLevel: form.value.accidentLevel as SmisAccidentLevel,
+        indirectEconomicLoss: Number(form.value.indirectEconomicLoss || 0),
+        minorInjuryCount: Number(form.value.minorInjuryCount || 0),
+        seriousInjuryCount: Number(form.value.seriousInjuryCount || 0),
+        deathCount: Number(form.value.deathCount || 0),
+        onSiteCount: Number(form.value.onSiteCount || 0),
+        briefDescription: form.value.briefDescription.trim(),
+        causeAnalysis: form.value.causeAnalysis.trim(),
+        resultDetermination: form.value.resultDetermination.trim(),
+        imageUrls: [...form.value.imageUrls],
+        measures: form.value.measures.map((measure, index) => ({
           id: measure.id,
           plannedMeasure: measure.plannedMeasure.trim(),
           plannedImplementationDate: measure.plannedImplementationDate || null,
           responsibleEmployeeId: measure.responsibleEmployeeId || null,
           sort: index
         })),
-        people: form.people.map((person, index) => ({
+        people: form.value.people.map((person, index) => ({
           id: person.id,
           employeeId: person.employeeId,
           jobYears: person.jobYears ?? null,
@@ -390,7 +401,7 @@
           sort: index
         }))
       })
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '事故快报保存失败，请检查内容后重试')
@@ -398,12 +409,12 @@
     }
   }
   const handleOpen = async (data: AccidentReportDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     organizations.value = data.organizations
     reporterSelection.value = []
     if (data.row) {
       const row = cloneDeep(data.row)
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: row.id,
         accidentNo: row.accidentNo,
         accidentName: row.accidentName,
@@ -427,7 +438,7 @@
       })
       reporterSelection.value = toEmployeeSelection(row.reporterEmployee)
     } else if (data.currentEmployee) {
-      form.reporterEmployeeId = data.currentEmployee.id
+      form.value.reporterEmployeeId = data.currentEmployee.id
       reporterSelection.value = toEmployeeSelection(data.currentEmployee)
     }
     await nextTick()
@@ -452,7 +463,7 @@
         }
       },
       onConfirm: handleSubmit,
-      onReset: () => Object.assign(form, initialForm())
+      onReset: () => Object.assign(form.value, initialForm())
     })
   }
   onDeactivated(() => dialogRef.value?.handleClose())

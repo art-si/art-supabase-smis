@@ -62,10 +62,14 @@
     </div>
 
     <EquipmentCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { ElTag } from 'element-plus'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
@@ -80,7 +84,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import TreeUtils from '@/utils/tree'
@@ -104,6 +108,10 @@
   import EquipmentCategoryDialog, {
     type EquipmentCategoryDialogOpenData
   } from './modules/equipment-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'mdm_equipment_category',
+    '设备分类'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -134,8 +142,6 @@
     loading: boolean
     error: string | null
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
   const { effectiveTenantId, isAllTenants } = storeToRefs(useTenantScopeStore())
@@ -219,6 +225,7 @@
     {
       permission: 'SmisEquipmentCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个设备分类吗？存在未选中的下级分类时将无法删除。`,
       onClick: async ({ selectedRows, api }) => {
@@ -226,8 +233,19 @@
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
         if (ids.includes(tree.selectedKey)) resetTreeSelection()
-        await deleteEquipmentCategories(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '设备分类')
+          })),
+          permission: 'SmisEquipmentCategory:Delete',
+          remove: async () => {
+            await deleteEquipmentCategories(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -398,16 +416,24 @@
 
   const handleDelete = async (row: SmisEquipmentCategory): Promise<void> => {
     if (!row.id) return
-    try {
-      await confirmDelete(
-        `确定删除设备分类“${row.categoryName}”吗？存在下级分类或已被设备引用时将无法删除。`
-      )
-      if (tree.selectedKey === row.id) resetTreeSelection()
-      await deleteEquipmentCategories([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或业务校验未通过 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.categoryName ?? '设备分类')
+        }
+      ],
+      permission: 'SmisEquipmentCategory:Delete',
+      confirmMessage: `确定删除设备分类“${row.categoryName}”吗？存在下级分类或已被设备引用时将无法删除。`,
+      remove: async () => {
+        await deleteEquipmentCategories([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        if (tree.selectedKey === row.id) resetTreeSelection()
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

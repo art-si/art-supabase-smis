@@ -61,10 +61,14 @@
       <MaterialDialog ref="dialogRef" @success="handleSaveSuccess" />
       <MaterialDetailDrawer ref="detailRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import type { TableRequestOptions } from '@/hooks/core/useTable'
@@ -79,7 +83,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -103,6 +107,7 @@
   import MaterialCategoryNavigator from '../shared/material-category-navigator.vue'
   import MaterialDialog, { type MaterialDialogOpenData } from './modules/material-dialog.vue'
   import MaterialDetailDrawer from './modules/material-detail-drawer.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('mdm_material', '物料')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -131,7 +136,6 @@
     loading: boolean
     error: string | null
   }
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -276,11 +280,23 @@
     {
       permission: 'SmisMaterialInformation:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条物料信息吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteMaterials(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.materialName ?? '物料')
+          })),
+          permission: 'SmisMaterialInformation:Delete',
+          remove: async () => {
+            await deleteMaterials(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -433,9 +449,22 @@
             permission="SmisMaterialInformation:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除物料“${row.materialName}”吗？`)
-              await deleteMaterials([row.id])
-              await tableQueryRef.value?.getData()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.materialName ?? '物料')
+                  }
+                ],
+                permission: 'SmisMaterialInformation:Delete',
+                confirmMessage: `确定删除物料“${row.materialName}”吗？`,
+                remove: async () => {
+                  await deleteMaterials([row.id ?? ''])
+                },
+                onDeleted: async () => {
+                  await tableQueryRef.value?.getData()
+                }
+              })
             }}
           />
         </div>

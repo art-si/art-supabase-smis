@@ -121,7 +121,13 @@ export async function savePpeIssuanceRecord(params: SmisPpeIssuanceRecordSavePay
 export async function deletePpeIssuanceRecords(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_ppe_issuance_records_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '发放记录草稿已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '发放记录草稿已删除'
+    }
   )
 }
 

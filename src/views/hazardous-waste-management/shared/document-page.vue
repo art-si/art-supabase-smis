@@ -24,8 +24,7 @@
         <MasterDeleteProcessingNotice :table="tableQueryRef" />
         <ArtTableQuery
           ref="tableQueryRef"
-          :model-value="searchQuery"
-          @update:model-value="replaceReactiveModel(searchQuery, $event)"
+          v-model="searchQuery"
           class="min-h-0 min-w-0 flex-1"
           :api-fn="fetchData"
           :search-items="searchItems"
@@ -147,7 +146,7 @@
       ? deleteProcessing.value.resourceId || undefined
       : undefined
   })
-  const searchQuery = reactive<SmisHazardousWasteDocumentSearchParams>(referenceQuery())
+  const searchQuery = ref<SmisHazardousWasteDocumentSearchParams>(referenceQuery())
   watch(
     () => [
       deleteProcessing.value.active,
@@ -156,7 +155,7 @@
       isWarehouseReference.value
     ],
     () => {
-      replaceReactiveModel(searchQuery, referenceQuery())
+      replaceReactiveModel(searchQuery.value, referenceQuery())
       void tableQueryRef.value?.getData()
     }
   )
@@ -606,9 +605,9 @@
   }
   onMounted(async () => {
     const [result] = await Promise.all([
-      searchQuery.warehouseId
+      searchQuery.value.warehouseId
         ? fetchHazardousWasteWarehouseList(
-            { ids: [searchQuery.warehouseId] },
+            { ids: [searchQuery.value.warehouseId] },
             { showErrorMessage: false }
           )
         : Promise.resolve({ data: [] }),

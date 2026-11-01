@@ -234,7 +234,7 @@ const emptyTaskOverview = (): SmisHiddenHazardTaskOverview => ({
 export async function fetchHiddenHazardPlanOptions(): Promise<SmisHiddenHazardPlanOptions> {
   const result = await responseHandle<Partial<SmisHiddenHazardPlanOptions>>(
     () => supabase.rpc('smis_list_hidden_hazard_plan_options_secure'),
-    { showErrorMessage: true }
+    { showErrorMessage: true, breakReturn: true }
   )
   return {
     inspectionTypes: result.data?.inspectionTypes ?? [],
@@ -300,7 +300,13 @@ export async function saveHiddenHazardInspectionPlan(
 export async function deleteHiddenHazardInspectionPlans(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_hidden_hazard_inspection_plans_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '隐患排查计划已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '隐患排查计划已删除'
+    }
   )
 }
 

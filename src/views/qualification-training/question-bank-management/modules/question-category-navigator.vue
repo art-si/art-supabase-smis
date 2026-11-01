@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="loading || Boolean(error) || !data.length"
     class="question-category-navigator smis-category-navigator"
     title="题库分类"
     subtitle="按培训主题分层组织题目"
@@ -42,81 +41,79 @@
       />
     </template>
 
-    <div class="question-category-navigator__content smis-category-navigator__content">
-      <ElInput v-model="keyword" clearable placeholder="搜索分类名称" aria-label="搜索题库分类">
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
+    <template #toolbar>
+      <div class="question-category-navigator__content smis-category-navigator__content">
+        <ElInput v-model="keyword" clearable placeholder="搜索分类名称" aria-label="搜索题库分类">
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
 
-      <button
-        type="button"
-        class="question-category-navigator__all smis-category-navigator__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:folder-open-line" /></span>
-        <span>
-          <strong>全部题目</strong>
-          <small>{{ totalQuestions }} 道题目</small>
-        </span>
-        <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
-      </button>
-
-      <div
-        class="question-category-navigator__section-label smis-category-navigator__section-label"
-      >
-        <span>分类结构</span>
-        <small>{{ categoryCount }} 个节点</small>
-      </div>
-
-      <ElScrollbar
-        class="question-category-navigator__scrollbar smis-category-navigator__scrollbar"
-      >
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
+        <button
+          type="button"
+          class="question-category-navigator__all smis-category-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
         >
-          <template #default="{ data: node }">
-            <div class="question-category-navigator__node smis-category-navigator__node">
-              <span
-                class="question-category-navigator__node-icon smis-category-navigator__node-icon"
-                :class="{ 'is-disabled': node.status === 'disabled' }"
-                aria-hidden="true"
-              >
-                <ArtSvgIcon :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:folder-line'" />
-              </span>
-              <span>
-                <strong :title="node.categoryName">{{ node.categoryName }}</strong>
-                <small>
-                  {{ node.questionCount || 0 }} 道题
-                  <template v-if="node.status === 'disabled'"> · 已停用</template>
-                </small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="question-category-navigator__check smis-category-navigator__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:folder-open-line" /></span>
+          <span>
+            <strong>全部题目</strong>
+            <small>{{ totalQuestions }} 道题目</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
+        </button>
+
+        <div
+          class="question-category-navigator__section-label smis-category-navigator__section-label"
+        >
+          <span>分类结构</span>
+          <small>{{ categoryCount }} 个节点</small>
+        </div>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="question-category-navigator__node smis-category-navigator__node">
+          <span
+            class="question-category-navigator__node-icon smis-category-navigator__node-icon"
+            :class="{ 'is-disabled': node.status === 'disabled' }"
+            aria-hidden="true"
+          >
+            <ArtSvgIcon :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:folder-line'" />
+          </span>
+          <span>
+            <strong :title="node.categoryName">{{ node.categoryName }}</strong>
+            <small>
+              {{ node.questionCount || 0 }} 道题
+              <template v-if="node.status === 'disabled'"> · 已停用</template>
+            </small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="question-category-navigator__check smis-category-navigator__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 

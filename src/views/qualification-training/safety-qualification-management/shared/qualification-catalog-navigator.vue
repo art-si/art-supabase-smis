@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="loading || Boolean(error) || !data.length"
     class="qualification-catalog-navigator flex h-full min-h-0 flex-col overflow-hidden"
     :title="`${title}层级`"
     subtitle="选择节点后同步筛选右侧数据"
@@ -21,67 +20,72 @@
         @click="emit('refresh')"
       />
     </template>
-    <div class="qualification-catalog-navigator__content">
-      <ElInput v-model="keyword" clearable :placeholder="`搜索${title}名称或编码`"
-        ><template #prefix><ArtSvgIcon icon="ri:search-line" /></template
-      ></ElInput>
-      <button
-        type="button"
-        class="qualification-catalog-navigator__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:archive-stack-line" /></span>
-        <span
-          ><strong>全部{{ title }}</strong
-          ><small>{{ nodeCount }} 个节点</small></span
+    <template #toolbar>
+      <div class="qualification-catalog-navigator__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          :placeholder="`搜索${title}名称或编码`"
+          :aria-label="`搜索${title}名称或编码`"
+          ><template #prefix><ArtSvgIcon icon="ri:search-line" /></template
+        ></ElInput>
+        <button
+          type="button"
+          class="qualification-catalog-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
         >
-        <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" />
-      </button>
-      <ElScrollbar class="qualification-catalog-navigator__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          node-key="id"
-          default-expand-all
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ data: node }">
-            <div class="qualification-catalog-navigator__node">
-              <ArtSvgIcon
-                :icon="
-                  node.nodeKind === 'category'
-                    ? 'ri:folder-settings-line'
-                    : node.childCount
-                      ? 'ri:folder-3-line'
-                      : 'ri:file-list-3-line'
-                "
-              />
-              <span
-                ><strong :title="node.itemName">{{ node.itemName }}</strong
-                ><small
-                  >{{ node.itemCode }} · {{ node.nodeKind === 'category' ? '作业类别' : '项目'
-                  }}<template v-if="node.status === 'disabled'"> · 已停用</template></small
-                ></span
-              >
-              <ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:archive-stack-line" /></span>
+          <span
+            ><strong>全部{{ title }}</strong
+            ><small>{{ nodeCount }} 个节点</small></span
+          >
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" />
+        </button>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      node-key="id"
+      default-expand-all
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="qualification-catalog-navigator__node">
+          <ArtSvgIcon
+            :icon="
+              node.nodeKind === 'category'
+                ? 'ri:folder-settings-line'
+                : node.childCount
+                  ? 'ri:folder-3-line'
+                  : 'ri:file-list-3-line'
+            "
+          />
+          <span
+            ><strong :title="node.itemName">{{ node.itemName }}</strong
+            ><small
+              >{{ node.itemCode }} · {{ node.nodeKind === 'category' ? '作业类别' : '项目'
+              }}<template v-if="node.status === 'disabled'"> · 已停用</template></small
+            ></span
+          >
+          <ArtSvgIcon v-if="selectedKey === node.id" icon="ri:check-line" />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -135,13 +139,6 @@
 
 <style scoped lang="scss">
   .qualification-catalog-navigator {
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
-
     :deep(.art-section-card__body) {
       display: flex;
       flex-direction: column;
@@ -186,11 +183,6 @@
     &__node > span {
       display: grid;
       min-width: 0;
-    }
-
-    &__scrollbar {
-      flex: 1;
-      min-height: 0;
     }
 
     :deep(.el-tree) {

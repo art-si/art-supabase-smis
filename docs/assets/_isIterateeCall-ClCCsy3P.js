@@ -1,1 +1,0 @@
-import{F as e,N as t,P as n,z as r}from"./_baseIteratee-CPI_0FGK.js";function i(i,a,o){if(!r(o))return!1;var s=typeof a;return(s==`number`?t(o)&&e(a,o.length):s==`string`&&a in o)?n(o[a],i):!1}export{i as t};

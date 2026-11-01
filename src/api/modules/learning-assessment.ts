@@ -80,7 +80,13 @@ export async function deleteQuestionCategory(id: string) {
         p_action: 'delete',
         p_payload: { id }
       }),
-    { showMessage: true, breakReturn: true, message: '题库分类已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '题库分类已删除'
+    }
   )
 }
 
@@ -98,7 +104,13 @@ export async function saveQuestion(payload: SmisQuestionPayload) {
 export async function deleteQuestions(ids: string[]) {
   return await responseHandle<{ affected: number }>(
     () => supabase.rpc('smis_manage_question_secure', { p_action: 'delete', p_payload: { ids } }),
-    { showMessage: true, breakReturn: true, message: '题目已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '题目已删除'
+    }
   )
 }
 
@@ -185,7 +197,13 @@ export async function transitionExamPaper(id: string, action: 'publish' | 'close
 export async function deleteExamPapers(ids: string[]) {
   return await responseHandle<{ affected: number }>(
     () => supabase.rpc('smis_manage_exam_paper_secure', { p_action: 'delete', p_payload: { ids } }),
-    { showMessage: true, breakReturn: true, message: '试卷已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '试卷已删除'
+    }
   )
 }
 
@@ -307,7 +325,13 @@ export async function transitionCourse(id: string, action: 'publish' | 'close') 
 export async function deleteCourses(ids: string[]) {
   return await responseHandle<{ affected: number }>(
     () => supabase.rpc('smis_manage_course_secure', { p_action: 'delete', p_payload: { ids } }),
-    { showMessage: true, breakReturn: true, message: '课程已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '课程已删除'
+    }
   )
 }
 

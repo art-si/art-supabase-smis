@@ -1,0 +1,1 @@
+import{B as e,F as t,I as n,P as r}from"./_baseIteratee-DkSpgNPG.js";function i(i,a,o){if(!e(o))return!1;var s=typeof a;return(s==`number`?r(o)&&n(a,o.length):s==`string`&&a in o)?t(o[a],i):!1}export{i as t};

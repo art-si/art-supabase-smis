@@ -92,6 +92,7 @@ export async function deleteHazardousWasteWarehouses(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_hazardous_waste_warehouses_secure', { p_ids: ids }),
     {
+      showReferenceFeedback: false,
       showErrorMessage: false,
       breakReturn: true,
       requireAffected: true,
@@ -155,6 +156,7 @@ export async function deleteHazardousWasteCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_hazardous_waste_categories_secure', { p_ids: ids }),
     {
+      showReferenceFeedback: false,
       showErrorMessage: false,
       breakReturn: true,
       requireAffected: true,
@@ -182,6 +184,7 @@ export async function deleteHazardousWasteCatalog(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_hazardous_waste_catalog_secure', { p_ids: ids }),
     {
+      showReferenceFeedback: false,
       showErrorMessage: false,
       breakReturn: true,
       requireAffected: true,
@@ -314,6 +317,7 @@ export async function deleteHazardousWasteDocuments(
         p_ids: ids
       }),
     {
+      showReferenceFeedback: false,
       breakReturn: true,
       showErrorMessage: false,
       requireAffected: true,

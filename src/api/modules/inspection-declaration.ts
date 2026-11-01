@@ -100,6 +100,12 @@ export async function saveEquipmentInspection(params: SmisEquipmentInspectionSav
 export async function deleteEquipmentInspections(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_equipment_inspections_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '检验申报已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '检验申报已删除'
+    }
   )
 }

@@ -280,10 +280,14 @@
 
       <RiskMapSceneDialog ref="sceneDialogRef" @success="handleSceneSaved" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="ts">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 'vue'
   import { cloneDeep, clamp } from 'lodash-es'
   import ArtWorkspaceSplitter from '@/components/core/layouts/art-workspace-splitter/index.vue'
@@ -311,6 +315,10 @@
   } from './modules/risk-map-scene-dialog.vue'
   import RiskMapPropertyPanel from './modules/risk-map-property-panel.vue'
   import RiskMapSceneNavigator from './modules/risk-map-scene-navigator.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_risk_map_scene',
+    '四色图场景'
+  )
 
   defineOptions({ name: 'SmisDualControlRiskFourColorMap' })
 
@@ -464,16 +472,20 @@
     await loadWorkspace(id)
   }
   const handleDeleteScene = async (scene: SmisRiskMapScene): Promise<void> => {
-    try {
-      await confirmAction(
-        `确定删除场景“${scene.sceneName}”吗？场景内的图形配置将一并删除。`,
-        '删除四色图场景'
-      )
-      await deleteRiskMapScene(scene.id)
-      await loadWorkspace()
-    } catch {
-      /* 用户取消或服务端拒绝时不追加重复提示。 */
-    }
+    await deleteRecords({
+      resources: [scene].map((row) => ({
+        id: String(row.id ?? ''),
+        label: String(row.sceneName ?? '四色图场景')
+      })),
+      permission: 'SmisDualControlRiskFourColorMap:DeleteScene',
+      confirmMessage: `确定删除场景“${scene.sceneName}”吗？场景内的图形配置将一并删除。`,
+      remove: async () => {
+        await deleteRiskMapScene(scene.id)
+      },
+      onDeleted: async () => {
+        await loadWorkspace()
+      }
+    })
   }
   const shapeTypeLabel = (type: SmisRiskMapShapeType): string =>
     ({ rectangle: '矩形', circle: '圆形', polygon: '多边形', text: '文字' })[type]

@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="operation-type-navigator"
     :class="{ 'has-state': loading || error || !data.length }"
     title="作业类型"
@@ -22,58 +21,66 @@
       />
     </template>
 
-    <div class="operation-type-navigator__content">
-      <ElInput v-model="keyword" clearable placeholder="搜索作业类型">
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
+    <template #toolbar>
+      <div class="operation-type-navigator__content">
+        <ElInput v-model="keyword" clearable placeholder="搜索作业类型" aria-label="搜索作业类型">
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
 
+        <button
+          type="button"
+          class="operation-type-navigator__item operation-type-navigator__item--all"
+          :class="{ 'is-current': selectedId === null }"
+          @click="emit('select', null)"
+        >
+          <span class="operation-type-navigator__icon" aria-hidden="true">
+            <ArtSvgIcon icon="ri:stack-line" />
+          </span>
+          <span class="operation-type-navigator__label">
+            <strong>全部作业类型</strong>
+            <small>{{ data.length }} 个类型</small>
+          </span>
+          <ArtSvgIcon v-if="selectedId === null" icon="ri:check-line" />
+        </button>
+      </div>
+    </template>
+
+    <div class="operation-type-navigator__list">
       <button
+        v-for="item in filteredData"
+        :key="item.id"
         type="button"
-        class="operation-type-navigator__item operation-type-navigator__item--all"
-        :class="{ 'is-current': selectedId === null }"
-        @click="emit('select', null)"
+        class="operation-type-navigator__item"
+        :class="{ 'is-current': selectedId === item.id, 'is-voided': item.status === 'voided' }"
+        :disabled="item.status === 'voided'"
+        @click="emit('select', item.id)"
       >
-        <span class="operation-type-navigator__icon" aria-hidden="true">
-          <ArtSvgIcon icon="ri:stack-line" />
+        <span
+          class="operation-type-navigator__marker"
+          :style="{ color: item.textColor || undefined }"
+          aria-hidden="true"
+        >
+          <i :style="{ backgroundColor: item.textColor || 'var(--theme-color)' }" />
         </span>
         <span class="operation-type-navigator__label">
-          <strong>全部作业类型</strong>
-          <small>{{ data.length }} 个类型</small>
+          <strong :title="item.typeName">{{ item.typeName }}</strong>
+          <small>{{ item.typeCode }} · {{ statusLabel(item.status) }}</small>
         </span>
-        <ArtSvgIcon v-if="selectedId === null" icon="ri:check-line" />
+        <ArtSvgIcon v-if="selectedId === item.id" icon="ri:check-line" />
       </button>
-
-      <ElScrollbar class="operation-type-navigator__scrollbar">
-        <div class="operation-type-navigator__list">
-          <button
-            v-for="item in filteredData"
-            :key="item.id"
-            type="button"
-            class="operation-type-navigator__item"
-            :class="{ 'is-current': selectedId === item.id, 'is-voided': item.status === 'voided' }"
-            :disabled="item.status === 'voided'"
-            @click="emit('select', item.id)"
-          >
-            <span
-              class="operation-type-navigator__marker"
-              :style="{ color: item.textColor || undefined }"
-              aria-hidden="true"
-            >
-              <i :style="{ backgroundColor: item.textColor || 'var(--theme-color)' }" />
-            </span>
-            <span class="operation-type-navigator__label">
-              <strong :title="item.typeName">{{ item.typeName }}</strong>
-              <small>{{ item.typeCode }} · {{ statusLabel(item.status) }}</small>
-            </span>
-            <ArtSvgIcon v-if="selectedId === item.id" icon="ri:check-line" />
-          </button>
-        </div>
-      </ElScrollbar>
     </div>
+    <ArtEmptyState
+      v-if="!filteredData.length"
+      title="未找到匹配项"
+      description="请调整关键词或清空筛选条件。"
+      size="compact"
+      :visual-size="64"
+    />
   </ArtSectionCard>
 </template>
 
 <script setup lang="ts">
+  import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -117,24 +124,11 @@
     min-height: 0;
     overflow: hidden;
 
-    :deep(.art-section-card__body) {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      min-height: 0;
-      overflow: hidden;
-    }
-
     &__content {
       display: flex;
       flex: 1;
       flex-direction: column;
       gap: 12px;
-      min-height: 0;
-    }
-
-    &__scrollbar {
-      flex: 1;
       min-height: 0;
     }
 

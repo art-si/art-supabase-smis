@@ -1,7 +1,16 @@
 <template>
-  <ArtDialog ref="dialogRef" size="full">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'baseSection'
+      }
+    "
+    ref="dialogRef"
+    size="full"
+  >
     <div class="announcement-editor-dialog">
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -9,8 +18,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #audienceEmployeeIds>
           <ArtEmployeeSelect
@@ -107,6 +114,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('baseSection')
   const dialogRef = ref<ArtDialogExpose<AnnouncementEditorDialogOpenData>>()
   const recordTenantId = ref<string>()
   const formRef = ref<FormExpose>()
@@ -144,7 +152,7 @@
   }>({
     model: announcementModel,
     items: computed(() => [
-      { label: '公告信息', key: 'baseSection', type: 'divider', span: 24 },
+      { label: '公告信息', key: 'baseSection', type: 'tab', span: 24 },
       {
         label: '公告标题',
         key: 'title',
@@ -191,9 +199,9 @@
         span: 8,
         props: { inlinePrompt: true, activeText: '是', inactiveText: '否' }
       },
-      { label: '公告正文', key: 'contentSection', type: 'divider', span: 24 },
+      { label: '公告正文', key: 'contentSection', type: 'tab', span: 24 },
       { label: '内容', key: 'contentHtml', type: 'text', span: 24 },
-      { label: '发布范围与附件', key: 'scopeSection', type: 'divider', span: 24 },
+      { label: '范围与附件', key: 'scopeSection', type: 'tab', span: 24 },
       {
         label: '发布范围',
         key: 'audienceType',

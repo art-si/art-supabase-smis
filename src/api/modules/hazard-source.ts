@@ -81,7 +81,13 @@ export async function saveHazardSource(params: SmisHazardSourceSavePayload, subm
 export async function deleteHazardSources(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_hazard_sources_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '危险源已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '危险源已删除'
+    }
   )
 }
 

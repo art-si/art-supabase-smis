@@ -76,7 +76,13 @@ export async function saveSafetyTrainingPlan(
 export async function deleteSafetyTrainingPlans(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_safety_training_plans_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '培训计划已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '培训计划已删除'
+    }
   )
 }
 
@@ -135,7 +141,13 @@ export async function saveSafetyTrainingRecord(
 export async function deleteSafetyTrainingRecords(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_safety_training_records_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '培训记录已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '培训记录已删除'
+    }
   )
 }
 

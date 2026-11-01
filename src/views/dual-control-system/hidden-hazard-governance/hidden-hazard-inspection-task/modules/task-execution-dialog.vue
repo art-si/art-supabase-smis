@@ -13,14 +13,7 @@
           >{{ completedCount }} / {{ detail.items.length }}</span
         >
       </div>
-      <ArtForm
-        ref="formRef"
-        v-model="form.model"
-        :items="form.items"
-        label-position="top"
-        :show-reset="false"
-        :show-submit="false"
-      >
+      <ArtForm ref="formRef" v-model="form.model" :items="form.items" label-position="top">
         <template #attachmentUrls>
           <ArtUploadImage
             v-model="form.model.attachmentUrls"

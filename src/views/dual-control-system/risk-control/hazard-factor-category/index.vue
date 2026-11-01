@@ -41,10 +41,14 @@
 
       <HazardFactorCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -59,7 +63,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
@@ -81,6 +85,10 @@
   import HazardFactorCategoryDialog, {
     type HazardFactorCategoryDialogOpenData
   } from './modules/hazard-factor-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_hazard_factor_category',
+    '危害因素类别'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -102,8 +110,6 @@
     searchItems: ComputedRef<SearchFormItem[]>
     headerActions: ComputedRef<ArtTableQueryHeaderAction[]>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap, isPlatformSuper, getUserInfo } = storeToRefs(userStore)
@@ -204,11 +210,23 @@
     {
       permission: 'SmisDualControlHazardFactorCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个危害因素类别吗？已被业务数据使用的类别不会被删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteRowsByTenant(selectedRows as SmisHazardFactorCategory[])
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '危害因素类别')
+          })),
+          permission: 'SmisDualControlHazardFactorCategory:Delete',
+          remove: async () => {
+            await deleteRowsByTenant(selectedRows as SmisHazardFactorCategory[])
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -411,15 +429,23 @@
 
   const handleDelete = async (row: SmisHazardFactorCategory): Promise<void> => {
     if (!row.id) return
-    try {
-      await confirmDelete(
-        `确定删除危害因素类别“${row.categoryName}”吗？已被风险业务使用时请改为禁用。`
-      )
-      await deleteHazardFactorCategories([row.id], row.tenantId)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.categoryName ?? '危害因素类别')
+        }
+      ],
+      permission: 'SmisDualControlHazardFactorCategory:Delete',
+      confirmMessage: `确定删除危害因素类别“${row.categoryName}”吗？已被风险业务使用时请改为禁用。`,
+      remove: async () => {
+        await deleteHazardFactorCategories([row.id ?? ''], row.tenantId)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

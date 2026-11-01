@@ -1,10 +1,5 @@
 <template>
-  <ArtSectionCard
-    :show-scrollbar="false"
-    class="site-navigator"
-    title="场所导航"
-    subtitle="按场所层级筛选危险源"
-  >
+  <ArtSectionCard class="site-navigator" title="场所导航" subtitle="按场所层级筛选危险源">
     <template #actions>
       <ArtTreeExpandToggle
         :tree="treeRef"
@@ -14,46 +9,44 @@
       />
       <ArtIconButton icon="ri:refresh-line" label="刷新场所树" @click="$emit('refresh')" />
     </template>
-    <ElScrollbar class="site-navigator__scroll">
-      <div class="site-navigator__body" :aria-busy="loading">
-        <ArtOverlayLoading
-          v-if="loading"
-          loading
-          overlay
-          size="compact"
-          text="正在加载场所树…"
-          description=""
-        />
-        <ElAlert v-if="error" :title="error" type="error" :closable="false" show-icon />
-        <ElTree
-          ref="treeRef"
-          v-else-if="treeData.length"
-          :data="treeData"
-          node-key="id"
-          :props="{ label: 'siteName', children: 'children' }"
-          default-expand-all
-          highlight-current
-          :current-node-key="selectedKey"
-          @node-click="(node: SmisHazardSite) => $emit('select', node.id)"
-        >
-          <template #default="{ data }">
-            <span class="site-navigator__node">
-              <ArtSvgIcon :icon="data.children?.length ? 'ri:folder-3-line' : 'ri:map-pin-line'" />
-              <span :title="data.siteName">{{ data.siteName }}</span>
-            </span>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="暂无可显示内容"
-              description="请调整当前范围或稍后刷新。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-        <ArtEmptyState v-else title="暂无场所" description="请先在场所维护中建立场所树。" />
-      </div>
-    </ElScrollbar>
+    <div class="site-navigator__body" :aria-busy="loading">
+      <ArtOverlayLoading
+        v-if="loading"
+        loading
+        overlay
+        size="compact"
+        text="正在加载场所树…"
+        description=""
+      />
+      <ElAlert v-if="error" :title="error" type="error" :closable="false" show-icon />
+      <ElTree
+        ref="treeRef"
+        v-else-if="treeData.length"
+        :data="treeData"
+        node-key="id"
+        :props="{ label: 'siteName', children: 'children' }"
+        default-expand-all
+        highlight-current
+        :current-node-key="selectedKey"
+        @node-click="(node: SmisHazardSite) => $emit('select', node.id)"
+      >
+        <template #default="{ data }">
+          <span class="site-navigator__node">
+            <ArtSvgIcon :icon="data.children?.length ? 'ri:folder-3-line' : 'ri:map-pin-line'" />
+            <span :title="data.siteName">{{ data.siteName }}</span>
+          </span>
+        </template>
+        <template #empty>
+          <ArtEmptyState
+            title="暂无可显示内容"
+            description="请调整当前范围或稍后刷新。"
+            size="compact"
+            :visual-size="64"
+          />
+        </template>
+      </ElTree>
+      <ArtEmptyState v-else title="暂无场所" description="请先在场所维护中建立场所树。" />
+    </div>
   </ArtSectionCard>
 </template>
 
@@ -91,14 +84,8 @@
       min-height: 0;
     }
 
-    &__scroll {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
     &__body {
       position: relative;
-      padding: 4px 2px 12px;
     }
 
     &__node {

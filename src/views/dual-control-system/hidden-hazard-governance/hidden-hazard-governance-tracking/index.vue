@@ -32,7 +32,6 @@
         >
           <template #primary>
             <ArtSectionCard
-              :show-scrollbar="false"
               class="hazard-governance-page__navigator-card"
               title="排查类型导航"
               subtitle="按隐患来源排查类型聚焦"
@@ -51,38 +50,36 @@
                   @click="loadOptions"
                 />
               </template>
-              <ElScrollbar class="hazard-governance-page__navigator-scrollbar">
-                <nav class="hazard-governance-page__navigator" aria-label="排查类型">
-                  <button
-                    type="button"
-                    :class="{ 'is-active': !searchQuery.inspectionTypeId }"
-                    @click="selectType()"
+              <nav class="hazard-governance-page__navigator" aria-label="排查类型">
+                <button
+                  type="button"
+                  :class="{ 'is-active': !searchQuery.inspectionTypeId }"
+                  @click="selectType()"
+                >
+                  <span class="hazard-governance-page__type-mark"
+                    ><ArtSvgIcon icon="ri:apps-2-line"
+                  /></span>
+                  <span><strong>全部类型</strong><small>含登记及各来源隐患</small></span>
+                </button>
+                <button
+                  v-for="item in optionsState.inspectionTypes"
+                  :key="item.id"
+                  type="button"
+                  :class="{ 'is-active': searchQuery.inspectionTypeId === item.id }"
+                  @click="selectType(item.id)"
+                >
+                  <span
+                    class="hazard-governance-page__type-mark"
+                    :style="{ color: item.textColor || 'var(--theme-color)' }"
                   >
-                    <span class="hazard-governance-page__type-mark"
-                      ><ArtSvgIcon icon="ri:apps-2-line"
-                    /></span>
-                    <span><strong>全部类型</strong><small>含登记及各来源隐患</small></span>
-                  </button>
-                  <button
-                    v-for="item in optionsState.inspectionTypes"
-                    :key="item.id"
-                    type="button"
-                    :class="{ 'is-active': searchQuery.inspectionTypeId === item.id }"
-                    @click="selectType(item.id)"
+                    <ArtSvgIcon icon="ri:radar-line" />
+                  </span>
+                  <span
+                    ><strong>{{ item.typeName }}</strong
+                    ><small>{{ item.typeCode }}</small></span
                   >
-                    <span
-                      class="hazard-governance-page__type-mark"
-                      :style="{ color: item.textColor || 'var(--theme-color)' }"
-                    >
-                      <ArtSvgIcon icon="ri:radar-line" />
-                    </span>
-                    <span
-                      ><strong>{{ item.typeName }}</strong
-                      ><small>{{ item.typeCode }}</small></span
-                    >
-                  </button>
-                </nav>
-              </ElScrollbar>
+                </button>
+              </nav>
             </ArtSectionCard>
           </template>
 
@@ -586,20 +583,9 @@
       flex: none;
     }
 
-    &__navigator-card :deep(.art-section-card__body) {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    &__navigator-scrollbar {
-      height: 100%;
-    }
-
     &__navigator {
       display: grid;
       gap: 6px;
-      padding-right: 4px;
     }
 
     &__navigator button {

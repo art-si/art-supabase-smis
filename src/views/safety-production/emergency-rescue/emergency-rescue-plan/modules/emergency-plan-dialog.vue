@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identity'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="plan-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:file-shield-2-line" /></template>
@@ -7,16 +15,14 @@
         ><p>预案编码保存后自动生成；预案级别随适用单位自动联动，不允许手工篡改。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #applicableOrganizationId>
           <div class="plan-dialog__field-stack">
@@ -111,8 +117,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
@@ -162,6 +166,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identity')
   const dialogRef = ref<ArtDialogExpose<EmergencyPlanDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const numberRule = useDocumentNumberRule('smis.emergency_rescue_plan')
@@ -185,13 +190,13 @@
     isSpecialEquipmentDrill: false,
     description: ''
   })
-  const form = reactive<PlanForm>(initialForm())
+  const form = ref<PlanForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const flatOrganizations = computed(
     () => treeUtils.treeToList(organizations.value) as SmisTreeOrganization[]
   )
   const selectedOrganization = computed(() =>
-    flatOrganizations.value.find((item) => item.id === form.applicableOrganizationId)
+    flatOrganizations.value.find((item) => item.id === form.value.applicableOrganizationId)
   )
   const positionOptions = computed(() => positions.value)
   const isPublicScope = computed(
@@ -215,13 +220,13 @@
     dictOptions('commonBoolean').map((item) => ({ ...item, value: item.value === 'true' }))
   )
   const items = computed<FormItem[]>(() => [
-    { label: '预案信息', key: 'identity', type: 'divider', span: 24 },
+    { label: '预案与范围', key: 'identity', type: 'tab', span: 24 },
     {
       label: '预案编码',
       key: 'planNo',
       type: 'input',
       description: numberRule.description.value,
-      props: numberRule.inputProps(Boolean(form.id), '保存后自动生成', true)
+      props: numberRule.inputProps(Boolean(form.value.id), '保存后自动生成', true)
     },
     {
       label: '预案名称',
@@ -249,7 +254,7 @@
       options: dictOptions('smisEmergencyPlanFrequency'),
       props: { clearable: false }
     },
-    { label: '适用范围', key: 'scope', type: 'divider', span: 24 },
+
     { label: '适用单位', key: 'applicableOrganizationId', type: 'text' },
     { label: '预案级别', key: 'planLevel', type: 'text' },
     { label: '适用岗位', key: 'applicablePositionIds', type: 'text', span: 24 },
@@ -259,7 +264,7 @@
       type: 'segment',
       options: booleanOptions.value
     },
-    { label: '评审与附件', key: 'review', type: 'divider', span: 24 },
+    { label: '评审与资料', key: 'review', type: 'tab', span: 24 },
     {
       label: '评审时间',
       key: 'reviewDate',
@@ -278,7 +283,7 @@
     },
     { label: '预案附件', key: 'planAttachmentUrls', type: 'text', span: 24 },
     { label: '备案表附件', key: 'filingAttachmentUrls', type: 'text', span: 24 },
-    { label: '状态与说明', key: 'state', type: 'divider', span: 24 },
+
     { label: '是否有效', key: 'isValid', type: 'text' },
     {
       label: '预案描述',
@@ -310,13 +315,13 @@
       submitting.value = true
       await saveEmergencyRescuePlan(
         {
-          ...toRaw(form),
-          planCategory: form.planCategory as SmisEmergencyPlanCategory,
-          frequency: form.frequency as SmisEmergencyPlanFrequency
+          ...toRaw(form.value),
+          planCategory: form.value.planCategory as SmisEmergencyPlanCategory,
+          frequency: form.value.frequency as SmisEmergencyPlanFrequency
         },
         submit
       )
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
     } catch {
       /* 表单或服务端会给出明确提示 */
@@ -325,12 +330,12 @@
     }
   }
   const handleOpen = async (data: EmergencyPlanDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     organizations.value = data.organizations
     positions.value = data.positions
     currentIsValid.value = data.row?.isValid ?? true
     if (data.row)
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         planNo: data.row.planNo,
         planName: data.row.planName,

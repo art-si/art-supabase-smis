@@ -72,6 +72,7 @@
     label,
     minWidth,
     required,
+    headerTooltip: required ? `每项盲板都需填写${label}，与现场隔离标识保持一致。` : undefined,
     requiredMessage: required
       ? ({ rowIndex }) => `第 ${rowIndex + 1} 项盲板的${label}不能为空`
       : undefined,
@@ -81,7 +82,11 @@
         maxlength={maxlength}
         placeholder={placeholder}
         onUpdate:modelValue={(value: string) =>
-          updateItem(props.modelValue.indexOf(row), prop, value)
+          updateItem(
+            props.modelValue.findIndex((item) => item.id === row.id),
+            prop,
+            value
+          )
         }
       />
     )
@@ -101,18 +106,24 @@
       width: 76,
       fixed: 'right',
       formatter: (row) => (
-        <ElButton link type="danger" onClick={() => removeItem(props.modelValue.indexOf(row))}>
+        <ElButton
+          link
+          type="danger"
+          onClick={() => removeItem(props.modelValue.findIndex((item) => item.id === row.id))}
+        >
           移除
         </ElButton>
       )
     }
   ]
 
-  const validate = async (): Promise<ArtTableValidationResult> =>
-    (await tableRef.value?.validate()) ?? { valid: true, errors: [] }
+  const validate = async (options?: { focus?: boolean }): Promise<ArtTableValidationResult> =>
+    (await tableRef.value?.validate(options)) ?? { valid: true, errors: [] }
+  const validateField = async (prop: string): Promise<ArtTableValidationResult> =>
+    (await tableRef.value?.validateField(prop)) ?? { valid: true, errors: [] }
   const clearValidate = (): void => tableRef.value?.clearValidate()
 
-  defineExpose({ validate, clearValidate })
+  defineExpose({ validate, validateField, clearValidate })
 </script>
 
 <style scoped lang="scss">

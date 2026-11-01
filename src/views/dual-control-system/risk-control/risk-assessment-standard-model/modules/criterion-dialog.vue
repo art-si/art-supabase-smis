@@ -2,18 +2,14 @@
   <ArtDialog ref="dialogRef" size="sm"
     ><ArtForm
       ref="formRef"
-      :model-value="model"
-      @update:model-value="replaceReactiveModel(model, $event)"
+      v-model="model"
       :items="items"
       :rules="rules"
       :span="24"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
   /></ArtDialog>
 </template>
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import type { FormRules } from 'element-plus'
@@ -46,7 +42,7 @@
     score: 1,
     sort: 10
   })
-  const model = reactive(initial())
+  const model = ref(initial())
   const dimensionName = ref('')
   const items: FormItem[] = [
     {
@@ -82,7 +78,10 @@
   const submit = async () => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      await saveRiskAssessmentCriterion({ ...model, criterionText: model.criterionText.trim() })
+      await saveRiskAssessmentCriterion({
+        ...model.value,
+        criterionText: model.value.criterionText.trim()
+      })
       emit('success')
       return true
     } catch (error) {
@@ -92,9 +91,12 @@
   }
   const handleOpen = async (data: CriterionDialogOpenData) => {
     dimensionName.value = data.dimension.dimensionName
-    Object.assign(model, initial(), { tenantId: data.tenantId, dimensionId: data.dimension.id })
+    Object.assign(model.value, initial(), {
+      tenantId: data.tenantId,
+      dimensionId: data.dimension.id
+    })
     if (data.row)
-      Object.assign(model, {
+      Object.assign(model.value, {
         id: data.row.id,
         tenantId: data.tenantId,
         dimensionId: data.dimension.id,

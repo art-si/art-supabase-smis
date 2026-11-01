@@ -100,7 +100,13 @@ export async function saveMaterialCategory(params: SmisMaterialCategorySavePaylo
 export async function deleteMaterialCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_material_categories_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '物料类别已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '物料类别已删除'
+    }
   )
 }
 
@@ -156,6 +162,12 @@ export async function saveMaterial(params: SmisMaterialSavePayload) {
 export async function deleteMaterials(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_materials_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '物料信息已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '物料信息已删除'
+    }
   )
 }

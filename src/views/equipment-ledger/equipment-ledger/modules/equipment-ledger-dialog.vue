@@ -1,5 +1,14 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl" @closed="emit('closed')">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'basicSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+    @closed="emit('closed')"
+  >
     <div class="equipment-ledger-dialog">
       <ElAlert v-if="loadError" type="error" :closable="false" show-icon>
         <template #title>设备资料加载失败</template>
@@ -14,6 +23,7 @@
         >
       </div>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -21,8 +31,6 @@
         :span="8"
         :gutter="22"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #responsibleEmployeeId>
           <ArtEmployeeSelect
@@ -278,6 +286,7 @@
   const { hasAuth } = useAuth()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
+  const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<EquipmentLedgerDialogOpenData>>()
   const loadError = ref<string | null>(null)
   const currentOpenData = shallowRef<EquipmentLedgerDialogOpenData>()
@@ -443,7 +452,7 @@
   }>({
     model: formModel,
     items: computed(() => [
-      { label: '基本信息', key: 'basicSection', type: 'divider', span: 24 },
+      { label: '基本信息', key: 'basicSection', type: 'tab', span: 24 },
       {
         label: '设备编码',
         key: 'equipmentCode',
@@ -525,7 +534,7 @@
         type: 'input',
         props: commonInput('补充楼层、区域或具体点位', 200)
       },
-      { label: '组织与责任', key: 'ownerSection', type: 'divider', span: 24 },
+      { label: '组织与责任', key: 'ownerSection', type: 'tab', span: 24 },
       {
         label: '使用部门',
         key: 'usingOrganizationId',
@@ -584,7 +593,7 @@
         type: 'input',
         props: commonInput('请输入设计单位')
       },
-      { label: '状态与资产', key: 'statusSection', type: 'divider', span: 24 },
+      { label: '状态与资产', key: 'statusSection', type: 'tab', span: 24 },
       {
         label: '使用状态',
         key: 'useStatus',
@@ -682,7 +691,7 @@
         type: 'switch',
         description: '纳入特种设备检验与到期提醒范围'
       },
-      { label: '档案资料', key: 'documentSection', type: 'divider', span: 24 },
+      { label: '档案资料', key: 'documentSection', type: 'tab', span: 24 },
       { label: '维保单位资质证书', key: 'maintenanceQualificationUrl', type: 'text', span: 12 },
       { label: '使用登记证', key: 'useRegistrationCertificateUrl', type: 'text', span: 12 },
       { label: '设备铭牌', key: 'nameplateUrl', type: 'text', span: 12 },

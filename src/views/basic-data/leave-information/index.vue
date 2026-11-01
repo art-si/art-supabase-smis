@@ -63,10 +63,14 @@
 
       <LeaveInformationDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import dayjs from 'dayjs'
@@ -91,7 +95,6 @@
     ArtTableQueryProps
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useUserStore } from '@/store/modules/user'
   import { fetchOrganizationOptionsTree } from '@/api/system-manage'
   import { exportExcel } from '@/utils/file'
@@ -111,6 +114,7 @@
   import LeaveInformationDialog, {
     type LeaveInformationDialogOpenData
   } from './modules/leave-information-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('hr_leave_request', '请假信息')
 
   defineOptions({ name: 'SmisLeaveInformation' })
 
@@ -126,7 +130,7 @@
   }
 
   const ALL_KEY = 'all'
-  const { confirmAction } = useArtFeedback()
+
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const organizationTreeUtils = new TreeUtils({
@@ -420,6 +424,7 @@
     },
     {
       type: 'delete',
+      confirm: false,
       label: '删除',
       permission: 'SmisLeaveInformation:Delete',
       disabled: (context) =>
@@ -430,9 +435,20 @@
         const rows = (selectedRows as LeaveInformation[]).filter((row) => row.status === 'draft')
         const ids = rows.map((row) => row.id).filter((id): id is string => Boolean(id))
         if (!ids.length) return
-        await deleteLeaveInformation(ids)
-        await api.refreshRemove()
-        await refreshOverview()
+        await deleteRecords({
+          resources: rows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.requestNo ?? '请假信息')
+          })),
+          permission: 'SmisLeaveInformation:Delete',
+          remove: async () => {
+            await deleteLeaveInformation(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+            await refreshOverview()
+          }
+        })
       }
     },
     {
@@ -519,19 +535,22 @@
   const handleDeleteRows = async (rows: LeaveInformation[]): Promise<void> => {
     const ids = rows.map((row) => row.id).filter((id): id is string => Boolean(id))
     if (!ids.length) return
-    try {
-      await confirmAction('确定删除这条草稿请假信息吗？删除后无法恢复。', '删除确认', {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-        confirmButtonType: 'danger'
-      })
-      await deleteLeaveInformation(ids)
-      await tableQueryRef.value?.refreshRemove()
-      await refreshOverview()
-    } catch {
-      /* 用户取消或服务端拒绝时保持当前列表。 */
-    }
+
+    await deleteRecords({
+      resources: rows.map((row) => ({
+        id: String(row.id ?? ''),
+        label: String(row.requestNo ?? '请假信息')
+      })),
+      permission: 'SmisLeaveInformation:Delete',
+      confirmMessage: '确定删除这条草稿请假信息吗？删除后无法恢复。',
+      remove: async () => {
+        await deleteLeaveInformation(ids)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+        await refreshOverview()
+      }
+    })
   }
 
   onMounted(async () => {

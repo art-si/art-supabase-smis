@@ -1,5 +1,14 @@
 <template>
-  <ArtDrawer ref="drawerRef" :loading="loading" loading-text="正在加载任务详情…">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+    :loading="loading"
+    loading-text="正在加载任务详情…"
+  >
     <div v-if="detail" class="hidden-hazard-task-detail">
       <div class="hidden-hazard-task-detail__identity">
         <span aria-hidden="true"><ArtSvgIcon icon="ri:clipboard-line" /></span>
@@ -13,87 +22,104 @@
           display="tag"
         />
       </div>
-      <ArtSectionTitle title="任务信息" subtitle="来源计划、排查对象与执行时限" />
-      <dl class="hidden-hazard-task-detail__grid">
-        <div
-          ><dt>源计划编号</dt><dd>{{ detail.sourcePlanNo }}</dd></div
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="任务信息"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="任务信息" subtitle="来源计划、排查对象与执行时限" />
+            <dl class="hidden-hazard-task-detail__grid">
+              <div
+                ><dt>源计划编号</dt><dd>{{ detail.sourcePlanNo }}</dd></div
+              >
+              <div
+                ><dt>排查类型</dt><dd>{{ detail.inspectionTypeName }}</dd></div
+              >
+              <div
+                ><dt>检查单位</dt><dd>{{ detail.inspectionOrganizationName }}</dd></div
+              >
+              <div
+                ><dt>被检查单位</dt><dd>{{ detail.inspectedOrganizationName }}</dd></div
+              >
+              <div
+                ><dt>执行人</dt
+                ><dd>{{ detail.executorEmployeeName }} · {{ detail.executorEmployeeNo }}</dd></div
+              >
+              <div
+                ><dt>计划开始</dt><dd>{{ formatDate(detail.plannedStartAt) }}</dd></div
+              >
+              <div
+                ><dt>计划结束</dt><dd>{{ formatDate(detail.plannedEndAt) }}</dd></div
+              >
+              <div
+                ><dt>完成时间</dt><dd>{{ formatDate(detail.completedAt) }}</dd></div
+              >
+            </dl>
+          </div></ElTabPane
         >
-        <div
-          ><dt>排查类型</dt><dd>{{ detail.inspectionTypeName }}</dd></div
+        <ElTabPane name="section-1" label="排查结果"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle
+              title="排查内容"
+              :subtitle="`共 ${detail.items.length} 项，异常 ${abnormalCount} 项`"
+            />
+            <ul class="hidden-hazard-task-detail__items">
+              <li v-for="(item, index) in detail.items" :key="item.id" :data-result="item.result">
+                <span>{{ index + 1 }}</span>
+                <div
+                  ><strong>{{ item.standardName }}</strong
+                  ><small>{{ item.itemCode }}</small></div
+                >
+                <div
+                  ><p>{{ item.inspectionContent }}</p
+                  ><small>{{ item.remark || '暂无执行说明' }}</small></div
+                >
+                <div
+                  ><ArtDictDisplay
+                    dict-code="smisHiddenHazardInspectionResult"
+                    :value="item.result"
+                    display="tag"
+                  /><small>{{ item.hiddenHazardNo || '未生成隐患编号' }}</small></div
+                >
+              </li>
+            </ul>
+          </div></ElTabPane
         >
-        <div
-          ><dt>检查单位</dt><dd>{{ detail.inspectionOrganizationName }}</dd></div
-        >
-        <div
-          ><dt>被检查单位</dt><dd>{{ detail.inspectedOrganizationName }}</dd></div
-        >
-        <div
-          ><dt>执行人</dt
-          ><dd>{{ detail.executorEmployeeName }} · {{ detail.executorEmployeeNo }}</dd></div
-        >
-        <div
-          ><dt>计划开始</dt><dd>{{ formatDate(detail.plannedStartAt) }}</dd></div
-        >
-        <div
-          ><dt>计划结束</dt><dd>{{ formatDate(detail.plannedEndAt) }}</dd></div
-        >
-        <div
-          ><dt>完成时间</dt><dd>{{ formatDate(detail.completedAt) }}</dd></div
-        >
-      </dl>
-      <ArtSectionTitle
-        title="排查内容"
-        :subtitle="`共 ${detail.items.length} 项，异常 ${abnormalCount} 项`"
-      />
-      <ul class="hidden-hazard-task-detail__items">
-        <li v-for="(item, index) in detail.items" :key="item.id" :data-result="item.result">
-          <span>{{ index + 1 }}</span>
-          <div
-            ><strong>{{ item.standardName }}</strong
-            ><small>{{ item.itemCode }}</small></div
-          >
-          <div
-            ><p>{{ item.inspectionContent }}</p
-            ><small>{{ item.remark || '暂无执行说明' }}</small></div
-          >
-          <div
-            ><ArtDictDisplay
-              dict-code="smisHiddenHazardInspectionResult"
-              :value="item.result"
-              display="tag"
-            /><small>{{ item.hiddenHazardNo || '未生成隐患编号' }}</small></div
-          >
-        </li>
-      </ul>
-      <ArtSectionTitle title="操作记录" subtitle="任务生成、转交、进度保存、完成与取消事件" />
-      <ElTimeline class="hidden-hazard-task-detail__timeline">
-        <ElTimelineItem
-          v-for="event in [...detail.events].reverse()"
-          :key="event.id"
-          :timestamp="formatDate(event.eventAt)"
-          placement="top"
-        >
-          <div class="hidden-hazard-task-detail__event"
-            ><strong>{{ eventLabels[event.eventType] }}</strong
-            ><p>{{ event.eventContent || '系统记录' }}</p
-            ><small>{{ event.operatorName || '系统' }}</small></div
-          >
-        </ElTimelineItem>
-      </ElTimeline>
-      <div
-        v-if="detail.executionSummary || detail.transferReason || detail.cancellationReason"
-        class="hidden-hazard-task-detail__notes"
+        <ElTabPane name="section-2" label="流转记录"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle
+              title="操作记录"
+              subtitle="任务生成、转交、进度保存、完成与取消事件"
+            />
+            <ElTimeline class="hidden-hazard-task-detail__timeline">
+              <ElTimelineItem
+                v-for="event in [...detail.events].reverse()"
+                :key="event.id"
+                :timestamp="formatDate(event.eventAt)"
+                placement="top"
+              >
+                <div class="hidden-hazard-task-detail__event"
+                  ><strong>{{ eventLabels[event.eventType] }}</strong
+                  ><p>{{ event.eventContent || '系统记录' }}</p
+                  ><small>{{ event.operatorName || '系统' }}</small></div
+                >
+              </ElTimelineItem>
+            </ElTimeline>
+            <div
+              v-if="detail.executionSummary || detail.transferReason || detail.cancellationReason"
+              class="hidden-hazard-task-detail__notes"
+            >
+              <p v-if="detail.executionSummary"
+                ><strong>执行总结</strong><span>{{ detail.executionSummary }}</span></p
+              >
+              <p v-if="detail.transferReason"
+                ><strong>转交原因</strong><span>{{ detail.transferReason }}</span></p
+              >
+              <p v-if="detail.cancellationReason"
+                ><strong>取消原因</strong><span>{{ detail.cancellationReason }}</span></p
+              >
+            </div></div
+          ></ElTabPane
+        ></ElTabs
       >
-        <p v-if="detail.executionSummary"
-          ><strong>执行总结</strong><span>{{ detail.executionSummary }}</span></p
-        >
-        <p v-if="detail.transferReason"
-          ><strong>转交原因</strong><span>{{ detail.transferReason }}</span></p
-        >
-        <p v-if="detail.cancellationReason"
-          ><strong>取消原因</strong><span>{{ detail.cancellationReason }}</span></p
-        >
-      </div>
     </div>
   </ArtDrawer>
 </template>
@@ -115,6 +141,7 @@
   export interface HiddenHazardTaskDetailOpenData {
     row: SmisHiddenHazardInspectionTask
   }
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<HiddenHazardTaskDetailOpenData>>()
   const detail = shallowRef<SmisHiddenHazardInspectionTaskDetail | null>(null)
   const loading = ref(false)

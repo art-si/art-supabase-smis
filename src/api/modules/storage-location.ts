@@ -109,6 +109,7 @@ export async function deleteStorageLocations(ids: string[]) {
   const result = await responseHandle<number>(
     () => supabase.rpc('smis_delete_storage_locations_secure', { p_ids: ids }),
     {
+      showReferenceFeedback: false,
       showMessage: false,
       showErrorMessage: false,
       breakReturn: true,

@@ -38,9 +38,13 @@
       />
       <DuplicateDialog ref="dialogRef" @success="handleDialogSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -77,6 +81,10 @@
     type SmisDuplicateConfigurationSearchParams
   } from '@smis/api'
   import DuplicateDialog, { type DuplicateDialogOpenData } from './modules/duplicate-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_duplicate_configuration',
+    '重复配置'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -95,7 +103,7 @@
   interface DialogExpose {
     handleOpen: (data: DuplicateDialogOpenData) => Promise<void>
   }
-  const { confirmDelete, confirmAction } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap } = storeToRefs(userStore)
@@ -259,11 +267,23 @@
     {
       permission: 'SmisDualControlDuplicateConfiguration:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: { selectedCount: number }) =>
         `确定删除选中的 ${selectedCount} 个重复配置吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteDuplicateConfigurations(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.contentItem ?? '重复配置')
+          })),
+          permission: 'SmisDualControlDuplicateConfiguration:Delete',
+          remove: async () => {
+            await deleteDuplicateConfigurations(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -394,13 +414,22 @@
       ? tableQueryRef.value?.refreshCreate()
       : tableQueryRef.value?.refreshUpdate())
   const handleDelete = async (row: SmisDuplicateConfiguration) => {
-    try {
-      await confirmDelete(`确定删除重复配置“${row.contentItem}”吗？`)
-      await deleteDuplicateConfigurations([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.contentItem ?? '重复配置')
+        }
+      ],
+      permission: 'SmisDualControlDuplicateConfiguration:Delete',
+      confirmMessage: `确定删除重复配置“${row.contentItem}”吗？`,
+      remove: async () => {
+        await deleteDuplicateConfigurations([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   const loadMenus = async () => {
     menus.value = await fetchConfigurableMenuOptions()

@@ -1,5 +1,12 @@
 <template>
-  <ArtDrawer ref="drawerRef">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+  >
     <div v-if="detail" class="material-detail-drawer">
       <div class="material-detail-drawer__hero">
         <ElImage
@@ -16,29 +23,38 @@
         >
         <ArtDictDisplay dict-code="commonEnabledStatus" :value="detail.status" display="tag" />
       </div>
-      <ArtSectionCard title="基本信息" subtitle="物料识别、分类与计量口径">
-        <ArtDescriptions :data="detail" :items="basicItems" :columns="2" />
-      </ArtSectionCard>
-      <ArtSectionCard title="扩展信息" subtitle="品牌、材质、产地与业务说明">
-        <ArtDescriptions :data="detail" :items="extendedItems" :columns="2" />
-      </ArtSectionCard>
-      <ArtSectionCard
-        v-if="detail.imageUrls?.length"
-        title="物料图片"
-        :subtitle="`共 ${detail.imageUrls.length} 张`"
-      >
-        <div class="material-detail-drawer__gallery">
-          <ElImage
-            v-for="(url, index) in detail.imageUrls"
-            :key="url"
-            :src="url"
-            :preview-src-list="detail.imageUrls"
-            :initial-index="index"
-            fit="cover"
-            preview-teleported
-          />
-        </div>
-      </ArtSectionCard>
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="基本信息"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="基本信息" subtitle="物料识别、分类与计量口径">
+              <ArtDescriptions
+                :data="detail"
+                :items="basicItems"
+                :columns="2"
+              /> </ArtSectionCard></div
+        ></ElTabPane>
+        <ElTabPane name="section-1" label="扩展与图片"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionCard title="扩展信息" subtitle="品牌、材质、产地与业务说明">
+              <ArtDescriptions :data="detail" :items="extendedItems" :columns="2" />
+            </ArtSectionCard>
+            <ArtSectionCard
+              v-if="detail.imageUrls?.length"
+              title="物料图片"
+              :subtitle="`共 ${detail.imageUrls.length} 张`"
+            >
+              <div class="material-detail-drawer__gallery">
+                <ElImage
+                  v-for="(url, index) in detail.imageUrls"
+                  :key="url"
+                  :src="url"
+                  :preview-src-list="detail.imageUrls"
+                  :initial-index="index"
+                  fit="cover"
+                  preview-teleported
+                />
+              </div> </ArtSectionCard></div></ElTabPane
+      ></ElTabs>
     </div>
   </ArtDrawer>
 </template>
@@ -53,6 +69,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import type { SmisMaterial } from '@smis/api'
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<SmisMaterial>>()
   const detail = shallowRef<SmisMaterial | null>(null)
   const basicItems: ArtDescriptionItem<SmisMaterial>[] = [

@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="risk-map-scene-navigator"
     title="场景层级"
     :subtitle="`共 ${rows.length} 个场景`"
@@ -36,69 +35,68 @@
       </ElButton>
     </template>
 
-    <ElInput
-      :model-value="keyword"
-      class="risk-map-scene-navigator__search"
-      clearable
-      placeholder="搜索场景名称"
-      aria-label="搜索四色图场景"
-      @update:model-value="emit('update:keyword', $event)"
-    >
-      <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-    </ElInput>
-
-    <ElScrollbar class="risk-map-scene-navigator__scrollbar">
-      <ElTree
-        ref="treeRef"
-        :data="treeData"
-        node-key="id"
-        :props="treeProps"
-        :expand-on-click-node="false"
-        default-expand-all
-        highlight-current
-        :current-node-key="selectedId"
-        @node-click="emit('select', $event)"
+    <template #toolbar>
+      <ElInput
+        :model-value="keyword"
+        class="risk-map-scene-navigator__search"
+        clearable
+        placeholder="搜索场景名称"
+        aria-label="搜索四色图场景"
+        @update:model-value="emit('update:keyword', $event)"
       >
-        <template #default="{ data }">
-          <div class="risk-map-scene-navigator__node" :title="data.sceneName">
-            <span><ArtSvgIcon icon="ri:map-pin-range-line" /></span>
-            <div class="risk-map-scene-navigator__node-copy">
-              <strong>{{ data.sceneName }}</strong>
-              <small>{{ data.shapes?.length || 0 }} 个图形</small>
-            </div>
-            <div class="risk-map-scene-navigator__node-actions" @click.stop>
-              <ArtIconButton
-                icon="ri:add-line"
-                label="新增下级场景"
-                permission="SmisDualControlRiskFourColorMap:AddScene"
-                @click="emit('add-child', data)"
-              />
-              <ArtIconButton
-                icon="ri:edit-line"
-                label="编辑场景"
-                permission="SmisDualControlRiskFourColorMap:EditScene"
-                @click="emit('edit', data)"
-              />
-              <ArtIconButton
-                icon="ri:delete-bin-line"
-                label="删除场景"
-                tone="danger"
-                permission="SmisDualControlRiskFourColorMap:DeleteScene"
-                @click="emit('delete', data)"
-              />
-            </div>
+        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+      </ElInput>
+    </template>
+    <ElTree
+      ref="treeRef"
+      :data="treeData"
+      node-key="id"
+      :props="treeProps"
+      :expand-on-click-node="false"
+      default-expand-all
+      highlight-current
+      :current-node-key="selectedId"
+      @node-click="emit('select', $event)"
+    >
+      <template #default="{ data }">
+        <div class="risk-map-scene-navigator__node" :title="data.sceneName">
+          <span><ArtSvgIcon icon="ri:map-pin-range-line" /></span>
+          <div class="risk-map-scene-navigator__node-copy">
+            <strong>{{ data.sceneName }}</strong>
+            <small>{{ data.shapes?.length || 0 }} 个图形</small>
           </div>
-        </template>
-        <template #empty>
-          <ArtEmptyState
-            :title="keyword ? '暂无匹配场景' : '暂无可显示内容'"
-            :description="keyword ? '请更换关键词或清空搜索条件。' : '请稍后刷新。'"
-            size="compact"
-            :visual-size="64"
-          />
-        </template>
-      </ElTree>
-    </ElScrollbar>
+          <div class="risk-map-scene-navigator__node-actions" @click.stop>
+            <ArtIconButton
+              icon="ri:add-line"
+              label="新增下级场景"
+              permission="SmisDualControlRiskFourColorMap:AddScene"
+              @click="emit('add-child', data)"
+            />
+            <ArtIconButton
+              icon="ri:edit-line"
+              label="编辑场景"
+              permission="SmisDualControlRiskFourColorMap:EditScene"
+              @click="emit('edit', data)"
+            />
+            <ArtIconButton
+              icon="ri:delete-bin-line"
+              label="删除场景"
+              tone="danger"
+              permission="SmisDualControlRiskFourColorMap:DeleteScene"
+              @click="emit('delete', data)"
+            />
+          </div>
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          :title="keyword ? '暂无匹配场景' : '暂无可显示内容'"
+          :description="keyword ? '请更换关键词或清空搜索条件。' : '请稍后刷新。'"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -143,11 +141,6 @@
 
     &__search {
       margin-bottom: var(--art-space-3);
-    }
-
-    &__scrollbar {
-      flex: 1 1 auto;
-      min-height: 0;
     }
 
     &__node {

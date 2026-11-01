@@ -17,8 +17,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="announcement-page__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -39,15 +38,18 @@
       <AnnouncementDetailDialog ref="detailDialogRef" @read="handleRead" />
       <AnnouncementReadStatsDialog ref="statsDialogRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { ElTag } from 'element-plus'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -86,6 +88,7 @@
   } from './modules/announcement-editor-dialog.vue'
   import AnnouncementDetailDialog from './modules/announcement-detail-dialog.vue'
   import AnnouncementReadStatsDialog from './modules/announcement-read-stats-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_announcement', '公告')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -103,14 +106,14 @@
     handleOpen: (row: SmisAnnouncement) => Promise<void>
   }
 
-  const { confirmAction, confirmDelete } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const editorDialogRef = ref<EditorDialogExpose>()
   const detailDialogRef = ref<RecordDialogExpose>()
   const statsDialogRef = ref<RecordDialogExpose>()
-  const searchQuery = reactive<SmisAnnouncementSearchParams>({})
+  const searchQuery = ref<SmisAnnouncementSearchParams>({})
   const categories = shallowRef<SmisAnnouncementCategoryOption[]>([])
   const organizations = shallowRef<SmisAnnouncementOrganization[]>([])
   const canManage = ref(false)
@@ -232,13 +235,25 @@
     {
       permission: 'SmisViolationAnnouncement:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条公告草稿吗？`,
       disabled: ({ selectedRows }) =>
         !selectedRows.length || selectedRows.some((row) => row.lifecycleStatus !== 'draft'),
       onClick: async ({ selectedRows, api }) => {
-        await deleteAnnouncements(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.title ?? '公告')
+          })),
+          permission: 'SmisViolationAnnouncement:Delete',
+          remove: async () => {
+            await deleteAnnouncements(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -406,13 +421,22 @@
     }
   }
   const handleDelete = async (row: SmisAnnouncement): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除公告草稿“${row.title}”吗？`)
-      await deleteAnnouncements([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.title ?? '公告')
+        }
+      ],
+      permission: 'SmisViolationAnnouncement:Delete',
+      confirmMessage: `确定删除公告草稿“${row.title}”吗？`,
+      remove: async () => {
+        await deleteAnnouncements([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   const handleMoreAction = async (item: ButtonMoreItem, row: SmisAnnouncement): Promise<void> => {
     if (item.key === 'edit') openEditor(row)

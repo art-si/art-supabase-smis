@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'basicSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="issuance-dialog">
       <ArtEntitySummary spaced>
         <template #icon
@@ -9,16 +17,14 @@
         ><p>适用岗位或组织至少选择一项；保存时按编号规则自动生成 3 位流水标准编号。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="formItems"
         :rules="rules"
         :span="8"
         :gutter="20"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #positionIds>
           <ArtTableMultipleSelect
@@ -63,49 +69,50 @@
             <template #empty><SmisDataSourceEmptyActions source="organization" /></template>
           </ArtTreeMultipleSelect>
         </template>
-      </ArtForm>
-
-      <ArtSectionCard
-        :title="isTool ? '工器具明细标准' : '防护用品明细标准'"
-        subtitle="选择物料后自动带入名称、编码、规格型号、计量单位与图片。"
-      >
-        <template #actions>
-          <ArtTableMultipleSelect
-            v-model="selectedMaterialIds"
-            :selected-data="selectedMaterials"
-            :api-fn="fetchMaterials"
-            :columns="materialColumns"
-            row-key="id"
-            label-key="materialName"
-            description-key="materialCode"
-            :title="isTool ? '选择工器具物料' : '选择防护用品物料'"
-            subtitle="支持多选，确认后批量加入明细标准"
-            placeholder="新增明细"
-            search-placeholder="搜索物料名称或编码"
-            :empty-text="isTool ? '暂无可选的工器具物料' : '暂无可选防护用品'"
-            :empty-description="
-              isTool
-                ? '当前租户没有匹配的启用工器具。请在物料信息中新增物料，将物料类型设为“工器具”并启用；仅在现有类别不适用时再维护类别。'
-                : '当前租户没有匹配的启用防护用品，请在物料信息中新增或调整物料类型。'
-            "
-            @update:selected-data="handleMaterialsSelected"
+        <template #detailItems
+          ><ArtSectionCard
+            :title="isTool ? '工器具明细标准' : '防护用品明细标准'"
+            subtitle="选择物料后自动带入名称、编码、规格型号、计量单位与图片。"
           >
-            <template #empty>
-              <SmisDataSourceEmptyActions source="material" />
+            <template #actions>
+              <ArtTableMultipleSelect
+                v-model="selectedMaterialIds"
+                :selected-data="selectedMaterials"
+                :api-fn="fetchMaterials"
+                :columns="materialColumns"
+                row-key="id"
+                label-key="materialName"
+                description-key="materialCode"
+                :title="isTool ? '选择工器具物料' : '选择防护用品物料'"
+                subtitle="支持多选，确认后批量加入明细标准"
+                placeholder="新增明细"
+                search-placeholder="搜索物料名称或编码"
+                :empty-text="isTool ? '暂无可选的工器具物料' : '暂无可选防护用品'"
+                :empty-description="
+                  isTool
+                    ? '当前租户没有匹配的启用工器具。请在物料信息中新增物料，将物料类型设为“工器具”并启用；仅在现有类别不适用时再维护类别。'
+                    : '当前租户没有匹配的启用防护用品，请在物料信息中新增或调整物料类型。'
+                "
+                @update:selected-data="handleMaterialsSelected"
+              >
+                <template #empty>
+                  <SmisDataSourceEmptyActions source="material" />
+                </template>
+              </ArtTableMultipleSelect>
             </template>
-          </ArtTableMultipleSelect>
-        </template>
-        <ArtTable
-          ref="detailTableRef"
-          :data="form.details"
-          :columns="detailColumns"
-          :pagination="false"
-          row-key="materialId"
-          table-layout="fixed"
-          empty-text="暂无明细"
-          :empty-description="isTool ? '点击新增明细选择工器具。' : '点击新增明细选择防护用品。'"
-        />
-      </ArtSectionCard>
+            <ArtTable
+              ref="detailTableRef"
+              :data="form.details"
+              :columns="detailColumns"
+              :pagination="false"
+              row-key="materialId"
+              table-layout="fixed"
+              empty-text="暂无明细"
+              :empty-description="
+                isTool ? '点击新增明细选择工器具。' : '点击新增明细选择防护用品。'
+              "
+            /> </ArtSectionCard></template
+      ></ArtForm>
     </div>
   </ArtDialog>
 </template>
@@ -113,14 +120,13 @@
 <script setup lang="tsx">
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import {
     ElButton,
     ElInput,
     ElInputNumber,
+    ElMessage,
     ElOption,
     ElSelect,
     type FormRules
@@ -171,8 +177,9 @@
   const saveIssuanceStandard = isTool ? saveToolIssuanceStandard : savePpeIssuanceStandard
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
+  const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<IssuanceStandardDialogOpenData>>()
-  const formRef = ref<{ validate: () => Promise<boolean>; clearValidate: () => void }>()
+  const formRef = ref<InstanceType<typeof ArtForm>>()
   const detailTableRef = ref<ArtTableExpose>()
   const numberRule = useDocumentNumberRule(
     isTool ? 'smis.tool_issuance_standard' : 'smis.ppe_issuance_standard'
@@ -194,9 +201,9 @@
     description: '',
     details: []
   })
-  const form = reactive<FormModel>(initialForm())
+  const form = ref<FormModel>(initialForm())
   const numberProps = computed(() =>
-    numberRule.inputProps(Boolean(form.id), '保存时自动生成', true)
+    numberRule.inputProps(Boolean(form.value.id), '保存时自动生成', true)
   )
   const cycleOptions = computed(() =>
     (userStore.getDictMap.commonIssuanceCycle ?? []).map(toDictionaryOption)
@@ -205,7 +212,7 @@
     (userStore.getDictMap.commonEnabledStatus ?? []).map(toDictionaryOption)
   )
   const formItems = computed<FormItem[]>(() => [
-    { label: '标准基础', key: 'basicSection', type: 'divider', span: 24 },
+    { label: '标准基础', key: 'basicSection', type: 'tab', span: 24 },
     {
       label: '标准编号',
       key: 'standardNo',
@@ -255,7 +262,9 @@
       type: 'textarea',
       span: 24,
       props: { maxlength: 1000, placeholder: '补充适用场景、领取约束或更换条件' }
-    }
+    },
+    { key: 'detailSection', label: '明细标准', type: 'tab' },
+    { key: 'detailItems', label: '', type: 'slot', span: 24 }
   ])
   const rules: FormRules<FormModel> = {
     standardName: [{ required: true, message: '请输入发放标准名称', trigger: 'blur' }],
@@ -310,6 +319,7 @@
       prop: 'quotaQuantity',
       label: '定额数量',
       required: true,
+      headerTooltip: '填写本物料每次发放的数量，必须大于 0。',
       requiredMessage: ({ rowIndex }) => `第 ${rowIndex + 1} 行定额数量必须大于 0`,
       rules: [
         {
@@ -338,6 +348,7 @@
       prop: 'issuanceFrequency',
       label: '发放频次',
       required: true,
+      headerTooltip: '填写所选发放周期内的次数，范围为 1 至 9999。',
       requiredMessage: ({ rowIndex }) => `第 ${rowIndex + 1} 行发放频次必须为 1 至 9999`,
       rules: [
         {
@@ -413,8 +424,8 @@
   }
   const handleMaterialsSelected = (materials: SmisMaterial[]): void => {
     selectedMaterials.value = materials
-    const current = new Map(form.details.map((item) => [item.materialId, item]))
-    form.details = materials.map(
+    const current = new Map(form.value.details.map((item) => [item.materialId, item]))
+    form.value.details = materials.map(
       (material, index) =>
         current.get(material.id) ?? {
           materialId: material.id,
@@ -424,9 +435,9 @@
           specificationModel: material.specificationModel,
           basicUnit: material.basicUnit,
           imageUrls: material.imageUrls ?? [],
-          quotaQuantity: form.ratedQuantity,
-          issuanceCycle: form.issuanceCycle,
-          issuanceFrequency: form.issuanceFrequency,
+          quotaQuantity: form.value.ratedQuantity,
+          issuanceCycle: form.value.issuanceCycle,
+          issuanceFrequency: form.value.issuanceFrequency,
           status: 'enabled' as SmisPpeStandardStatus,
           remark: '',
           sort: (index + 1) * 10
@@ -434,12 +445,12 @@
     )
   }
   const removeDetail = (materialId: string) => {
-    form.details = form.details.filter((item) => item.materialId !== materialId)
+    form.value.details = form.value.details.filter((item) => item.materialId !== materialId)
     selectedMaterialIds.value = selectedMaterialIds.value.filter((id) => id !== materialId)
     selectedMaterials.value = selectedMaterials.value.filter((item) => item.id !== materialId)
   }
   const reset = async () => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     selectedPositions.value = []
     selectedOrganizations.value = []
     selectedMaterials.value = []
@@ -451,21 +462,29 @@
   const submit = async () => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      if (!form.positionIds.length && !form.organizationIds.length) {
+      if (!form.value.positionIds.length && !form.value.organizationIds.length) {
+        await formRef.value?.focusField('positionIds')
         ElMessage.warning('适用岗位和适用公司/部门至少选择一项')
         return false
       }
-      if (!form.details.length) {
+      if (!form.value.details.length) {
+        await formRef.value?.focusField('detailItems')
         ElMessage.warning(isTool ? '请至少添加一条工器具明细' : '请至少添加一条防护用品明细')
         return false
       }
-      const tableValidation = await detailTableRef.value?.validate()
+      const tableValidation = await detailTableRef.value?.validate({ focus: false })
       if (tableValidation && !tableValidation.valid) {
+        activeFormTab.value = 'detailSection'
+        await nextTick()
+        if (tableValidation.firstError) {
+          await detailTableRef.value?.validateField(tableValidation.firstError.prop)
+          ElMessage.warning(tableValidation.firstError.message)
+        }
         return false
       }
       await saveIssuanceStandard({
-        ...form,
-        details: form.details.map(
+        ...form.value,
+        details: form.value.details.map(
           ({
             materialId,
             quotaQuantity,
@@ -485,7 +504,7 @@
           })
         )
       })
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '发放标准保存失败，请检查内容后重试')
@@ -495,7 +514,7 @@
   const handleOpen = async (data: IssuanceStandardDialogOpenData): Promise<void> => {
     await reset()
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         standardNo: data.row.standardNo,
         standardName: data.row.standardName,

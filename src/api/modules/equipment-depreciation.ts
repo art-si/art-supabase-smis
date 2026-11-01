@@ -60,6 +60,12 @@ export async function saveEquipmentDepreciation(params: SmisEquipmentDepreciatio
 export async function deleteEquipmentDepreciations(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_equipment_depreciations_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '折旧方法已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '折旧方法已删除'
+    }
   )
 }

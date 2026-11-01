@@ -75,7 +75,13 @@ export async function saveRiskPoint(params: SmisRiskPointSavePayload) {
 export async function deleteRiskPoints(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_risk_points_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '风险点已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '风险点已删除'
+    }
   )
 }
 
@@ -100,7 +106,7 @@ export async function fetchRiskHazardWorkspace(riskPointId: string) {
       supabase.rpc('smis_list_risk_hazard_workspace_secure', {
         p_risk_point_id: riskPointId
       }),
-    { showErrorMessage: true }
+    { showErrorMessage: true, breakReturn: true }
   )
   return result.data ?? { activities: [], hazards: [] }
 }
@@ -126,7 +132,13 @@ export async function saveRiskActivity(params: SmisRiskActivitySavePayload) {
 export async function deleteRiskActivities(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_risk_activities_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '作业活动已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '作业活动已删除'
+    }
   )
 }
 
@@ -150,6 +162,12 @@ export async function saveRiskHazard(params: SmisRiskHazardSavePayload) {
 export async function deleteRiskHazards(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_risk_hazards_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '危害因素已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '危害因素已删除'
+    }
   )
 }

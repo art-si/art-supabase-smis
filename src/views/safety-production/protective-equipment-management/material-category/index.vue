@@ -60,10 +60,14 @@
       </div>
       <MaterialCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -77,7 +81,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import TreeUtils from '@/utils/tree'
@@ -101,6 +105,10 @@
   import MaterialCategoryDialog, {
     type MaterialCategoryDialogOpenData
   } from './modules/material-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'mdm_material_category',
+    '物料类别'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -126,8 +134,6 @@
     loading: boolean
     error: string | null
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
   const { effectiveTenantId, isAllTenants } = storeToRefs(useTenantScopeStore())
@@ -198,6 +204,7 @@
     {
       permission: 'SmisMaterialCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个物料类别吗？存在未选中的下级类别或已关联物料时将无法删除。`,
       onClick: async ({ selectedRows, api }) => {
@@ -205,8 +212,19 @@
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
         if (ids.includes(tree.selectedKey)) tree.selectedKey = ALL_KEY
-        await deleteMaterialCategories(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '物料类别')
+          })),
+          permission: 'SmisMaterialCategory:Delete',
+          remove: async () => {
+            await deleteMaterialCategories(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -297,9 +315,22 @@
             permission="SmisMaterialCategory:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除物料类别“${row.categoryName}”吗？`)
-              await deleteMaterialCategories(row.id ? [row.id] : [])
-              await tableQueryRef.value?.getData()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.categoryName ?? '物料类别')
+                  }
+                ],
+                permission: 'SmisMaterialCategory:Delete',
+                confirmMessage: `确定删除物料类别“${row.categoryName}”吗？`,
+                remove: async () => {
+                  await deleteMaterialCategories(row.id ? [row.id ?? ''] : [])
+                },
+                onDeleted: async () => {
+                  await tableQueryRef.value?.getData()
+                }
+              })
             }}
           />
         </div>

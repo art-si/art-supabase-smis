@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="violation-category-navigator smis-category-navigator"
     title="违章分类层级"
     subtitle="选择节点后同步筛选右侧数据"
@@ -22,88 +21,86 @@
       />
     </template>
 
-    <div class="violation-category-navigator__content smis-category-navigator__content">
-      <ElInput
-        v-model="keyword"
-        clearable
-        placeholder="搜索分类名称或编码"
-        aria-label="搜索违章分类名称或编码"
-      >
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <button
-        type="button"
-        class="violation-category-navigator__all smis-category-navigator__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:archive-stack-line" /></span>
-        <span>
-          <strong>全部分类</strong>
-          <small>查看当前租户全部{{ targetLabel }}</small>
-        </span>
-        <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
-      </button>
-
-      <div
-        class="violation-category-navigator__section-label smis-category-navigator__section-label"
-      >
-        <span>分类结构</span>
-        <small>{{ categoryCount }} 个节点</small>
-      </div>
-
-      <ElScrollbar
-        class="violation-category-navigator__scrollbar smis-category-navigator__scrollbar"
-      >
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
+    <template #toolbar>
+      <div class="violation-category-navigator__content smis-category-navigator__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索分类名称或编码"
+          aria-label="搜索违章分类名称或编码"
         >
-          <template #default="{ data: node }">
-            <div class="violation-category-navigator__node smis-category-navigator__node">
-              <span
-                class="violation-category-navigator__node-icon smis-category-navigator__node-icon"
-                :class="{ 'is-disabled': node.status === 'disabled' }"
-                aria-hidden="true"
-              >
-                <ArtSvgIcon
-                  :icon="node.childCount ? 'ri:folder-warning-line' : 'ri:error-warning-line'"
-                />
-              </span>
-              <span>
-                <strong :title="node.categoryName">{{ node.categoryName }}</strong>
-                <small :title="node.categoryCode">
-                  {{ node.categoryCode }} · {{ node.standardCount || 0 }} 项标准
-                  <template v-if="node.status === 'disabled'"> · 已停用</template>
-                </small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="violation-category-navigator__check smis-category-navigator__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
+
+        <button
+          type="button"
+          class="violation-category-navigator__all smis-category-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
+        >
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:archive-stack-line" /></span>
+          <span>
+            <strong>全部分类</strong>
+            <small>查看当前租户全部{{ targetLabel }}</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
+        </button>
+
+        <div
+          class="violation-category-navigator__section-label smis-category-navigator__section-label"
+        >
+          <span>分类结构</span>
+          <small>{{ categoryCount }} 个节点</small>
+        </div>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="violation-category-navigator__node smis-category-navigator__node">
+          <span
+            class="violation-category-navigator__node-icon smis-category-navigator__node-icon"
+            :class="{ 'is-disabled': node.status === 'disabled' }"
+            aria-hidden="true"
+          >
+            <ArtSvgIcon
+              :icon="node.childCount ? 'ri:folder-warning-line' : 'ri:error-warning-line'"
             />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          </span>
+          <span>
+            <strong :title="node.categoryName">{{ node.categoryName }}</strong>
+            <small :title="node.categoryCode">
+              {{ node.categoryCode }} · {{ node.standardCount || 0 }} 项标准
+              <template v-if="node.status === 'disabled'"> · 已停用</template>
+            </small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="violation-category-navigator__check smis-category-navigator__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -169,14 +166,3 @@
     }
   )
 </script>
-
-<style scoped lang="scss">
-  .violation-category-navigator {
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
-  }
-</style>

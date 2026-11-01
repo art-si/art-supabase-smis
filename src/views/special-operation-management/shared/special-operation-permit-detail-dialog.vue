@@ -1,5 +1,10 @@
 <template>
   <ArtDialog
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
     ref="dialogRef"
     size="xl"
     show-fullscreen-button
@@ -50,137 +55,148 @@
           />
         </div>
 
-        <ArtSectionCard title="基础信息" subtitle="作业范围、时间与当前流程节点">
-          <ArtDescriptions :data="record" :items="basicItems" :columns="3" />
-        </ArtSectionCard>
-
-        <ArtSectionCard
-          v-if="customDetailItems.length"
-          title="作业专有信息"
-          :subtitle="`${record.operationTypeName}的专项控制参数`"
-        >
-          <div class="permit-detail__info-grid">
-            <div v-for="item in customDetailItems" :key="item.label">
-              <span>{{ item.label }}</span
-              ><strong>{{ item.value }}</strong>
-            </div>
-          </div>
-        </ArtSectionCard>
-
-        <ArtSectionCard
-          v-if="blindPlateItems.length"
-          title="盲板明细"
-          :subtitle="`共 ${blindPlateItems.length} 项现场隔离记录`"
-        >
-          <ArtTable
-            :data="blindPlateItems"
-            :columns="blindPlateColumns"
-            :pagination="false"
-            table-layout="fixed"
-          />
-        </ArtSectionCard>
-
-        <ArtSectionCard title="责任人员" subtitle="负责人、监护、验证与交底人员">
-          <div class="permit-detail__people">
-            <div v-for="group in peopleGroups" :key="group.label">
-              <ArtSvgIcon :icon="group.icon" />
-              <div>
-                <span>{{ group.label }}</span>
-                <strong>{{ group.value }}</strong>
+        <ElTabs v-model="activeDetailTab"
+          ><ElTabPane name="section-0" label="基础与专项信息"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="基础信息" subtitle="作业范围、时间与当前流程节点">
+                <ArtDescriptions :data="record" :items="basicItems" :columns="3" />
+              </ArtSectionCard>
+              <ArtSectionCard
+                v-if="customDetailItems.length"
+                title="作业专有信息"
+                :subtitle="`${record.operationTypeName}的专项控制参数`"
+              >
+                <div class="permit-detail__info-grid">
+                  <div v-for="item in customDetailItems" :key="item.label">
+                    <span>{{ item.label }}</span
+                    ><strong>{{ item.value }}</strong>
+                  </div>
+                </div>
+              </ArtSectionCard></div
+            ></ElTabPane
+          >
+          <ElTabPane name="section-1" label="盲板明细" v-if="blindPlateItems.length"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard
+                v-if="blindPlateItems.length"
+                title="盲板明细"
+                :subtitle="`共 ${blindPlateItems.length} 项现场隔离记录`"
+              >
+                <ArtTable
+                  :data="blindPlateItems"
+                  :columns="blindPlateColumns"
+                  :pagination="false"
+                  table-layout="fixed"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-2" label="责任与人员"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="责任人员" subtitle="负责人、监护、验证与交底人员">
+                <div class="permit-detail__people">
+                  <div v-for="group in peopleGroups" :key="group.label">
+                    <ArtSvgIcon :icon="group.icon" />
+                    <div>
+                      <span>{{ group.label }}</span>
+                      <strong>{{ group.value }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </ArtSectionCard>
+              <ArtSectionCard title="作业人员明细" :subtitle="`共 ${record.workers.length} 人`">
+                <ArtTable
+                  :data="record.workers"
+                  :columns="workerColumns"
+                  :pagination="false"
+                  table-layout="fixed"
+                  empty-text="暂无作业人员"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-3" label="现场与安全"
+            ><div class="min-w-0 space-y-4"
+              ><div class="permit-detail__two-column">
+                <ArtSectionCard title="现场分析" subtitle="本次现场检测记录">
+                  <ArtTable
+                    :data="record.siteAnalysisRecords"
+                    :columns="siteAnalysisColumns"
+                    :pagination="false"
+                    table-layout="fixed"
+                    empty-text="暂无现场分析记录"
+                  />
+                </ArtSectionCard>
+                <ArtSectionCard title="安全措施" subtitle="作业前安全确认结果">
+                  <div v-if="record.safetyMeasures.length" class="permit-detail__measures">
+                    <div v-for="item in record.safetyMeasures" :key="item.id"
+                      ><ArtSvgIcon
+                        :icon="item.involved ? 'ri:checkbox-circle-fill' : 'ri:close-circle-line'"
+                      /><span>{{ item.itemName }}</span></div
+                    >
+                  </div>
+                  <ArtEmptyState
+                    v-else
+                    title="暂无安全措施记录"
+                    description="填写安全措施后，可在此查看落实情况。"
+                    size="compact"
+                    :visual-size="64"
+                  />
+                </ArtSectionCard>
               </div>
-            </div>
-          </div>
-        </ArtSectionCard>
-
-        <ArtSectionCard title="作业人员明细" :subtitle="`共 ${record.workers.length} 人`">
-          <ArtTable
-            :data="record.workers"
-            :columns="workerColumns"
-            :pagination="false"
-            table-layout="fixed"
-            empty-text="暂无作业人员"
-          />
-        </ArtSectionCard>
-
-        <div class="permit-detail__two-column">
-          <ArtSectionCard title="现场分析" subtitle="本次现场检测记录">
-            <ArtTable
-              :data="record.siteAnalysisRecords"
-              :columns="siteAnalysisColumns"
-              :pagination="false"
-              table-layout="fixed"
-              empty-text="暂无现场分析记录"
-            />
-          </ArtSectionCard>
-          <ArtSectionCard title="安全措施" subtitle="作业前安全确认结果">
-            <div v-if="record.safetyMeasures.length" class="permit-detail__measures">
-              <div v-for="item in record.safetyMeasures" :key="item.id"
-                ><ArtSvgIcon
-                  :icon="item.involved ? 'ri:checkbox-circle-fill' : 'ri:close-circle-line'"
-                /><span>{{ item.itemName }}</span></div
-              >
-            </div>
-            <ArtEmptyState
-              v-else
-              title="暂无安全措施记录"
-              description="填写安全措施后，可在此查看落实情况。"
-              size="compact"
-              :visual-size="64"
-            />
-          </ArtSectionCard>
-        </div>
-
-        <div class="permit-detail__two-column">
-          <ArtSectionCard
-            title="关联作业"
-            :subtitle="`共 ${record.relatedPermits.length} 项`"
-            :empty="!record.relatedPermits.length"
-            empty-title="暂无关联作业"
-            empty-description="关联其他作业许可后可在此核对。"
-          >
-            <ArtTable
-              :data="record.relatedPermits"
-              :columns="relatedPermitColumns"
-              :pagination="false"
-              table-layout="fixed"
-            />
-          </ArtSectionCard>
-          <ArtSectionCard
-            title="现场照片"
-            :subtitle="`共 ${record.sitePhotoUrls.length} 张`"
-            :empty="!record.sitePhotoUrls.length"
-            empty-title="暂无现场照片"
-            empty-description="上传作业现场照片后可在此查看。"
-          >
-            <ArtUploadImage :model-value="record.sitePhotoUrls" multiple readonly :size="96" />
-          </ArtSectionCard>
-        </div>
-
-        <ArtSectionCard title="流程记录" subtitle="完整保留提交、审批、验收和作废痕迹">
-          <ElTimeline v-if="record.events?.length">
-            <ElTimelineItem
-              v-for="event in record.events"
-              :key="event.id"
-              :timestamp="formatDate(event.createTime)"
-              placement="top"
-            >
-              <strong>{{ event.eventTitle }}</strong
-              ><p
-                >{{ event.operatorName || '系统'
-                }}<template v-if="event.eventDescription">
-                  · {{ event.eventDescription }}</template
-                ></p
-              >
-            </ElTimelineItem>
-          </ElTimeline>
-          <ArtEmptyState
-            v-else
-            title="暂无流程记录"
-            description="提交审批后，可在此查看流转过程。"
-            size="compact"
-            :visual-size="64"
-          />
-        </ArtSectionCard>
+              <div class="permit-detail__two-column">
+                <ArtSectionCard
+                  title="关联作业"
+                  :subtitle="`共 ${record.relatedPermits.length} 项`"
+                  :empty="!record.relatedPermits.length"
+                  empty-title="暂无关联作业"
+                  empty-description="关联其他作业许可后可在此核对。"
+                >
+                  <ArtTable
+                    :data="record.relatedPermits"
+                    :columns="relatedPermitColumns"
+                    :pagination="false"
+                    table-layout="fixed"
+                  />
+                </ArtSectionCard>
+                <ArtSectionCard
+                  title="现场照片"
+                  :subtitle="`共 ${record.sitePhotoUrls.length} 张`"
+                  :empty="!record.sitePhotoUrls.length"
+                  empty-title="暂无现场照片"
+                  empty-description="上传作业现场照片后可在此查看。"
+                >
+                  <ArtUploadImage
+                    :model-value="record.sitePhotoUrls"
+                    multiple
+                    readonly
+                    :size="96"
+                  />
+                </ArtSectionCard> </div></div
+          ></ElTabPane>
+          <ElTabPane name="section-4" label="流程记录"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="流程记录" subtitle="完整保留提交、审批、验收和作废痕迹">
+                <ElTimeline v-if="record.events?.length">
+                  <ElTimelineItem
+                    v-for="event in record.events"
+                    :key="event.id"
+                    :timestamp="formatDate(event.createTime)"
+                    placement="top"
+                  >
+                    <strong>{{ event.eventTitle }}</strong
+                    ><p
+                      >{{ event.operatorName || '系统'
+                      }}<template v-if="event.eventDescription">
+                        · {{ event.eventDescription }}</template
+                      ></p
+                    >
+                  </ElTimelineItem>
+                </ElTimeline>
+                <ArtEmptyState
+                  v-else
+                  title="暂无流程记录"
+                  description="提交审批后，可在此查看流转过程。"
+                  size="compact"
+                  :visual-size="64"
+                /> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </template>
 
       <SpecialOperationPermitPrint
@@ -230,6 +246,7 @@
     row: Pick<SmisSpecialOperationPermit, 'id' | 'tenantId' | 'permitNo'>
     mode?: 'detail' | 'print'
   }
+  const activeDetailTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<OpenData>>()
   const permitPrintRef = ref<InstanceType<typeof SpecialOperationPermitPrint>>()
   const record = shallowRef<SmisSpecialOperationPermit>()
@@ -551,6 +568,7 @@
 <style scoped lang="scss">
   .permit-detail {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
   }

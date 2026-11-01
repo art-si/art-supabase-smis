@@ -202,7 +202,7 @@ export async function deleteSafetyInspections(ids: string[], options: ApiFeedbac
     () => supabase.rpc('smis_delete_safety_inspections_secure', { p_ids: ids }),
     {
       showMessage: options.showMessage ?? true,
-      showErrorMessage: options.showErrorMessage ?? true,
+      showErrorMessage: false,
       showReferenceFeedback: false,
       breakReturn: true,
       requireAffected: true,

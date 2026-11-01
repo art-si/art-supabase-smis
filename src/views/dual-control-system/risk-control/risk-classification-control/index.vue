@@ -48,10 +48,14 @@
 
       <RiskControlPlanDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deletePlanGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
   import type { TableRequestOptions } from '@/hooks/core/useTable'
@@ -69,7 +73,6 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useUserStore } from '@/store/modules/user'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtStatusSegmented from '@/components/core/forms/art-status-segmented/index.vue'
@@ -95,6 +98,8 @@
   import RiskControlPlanDialog, {
     type RiskControlPlanDialogOpenData
   } from './modules/risk-control-plan-dialog.vue'
+  const { deleteGuardRef: deletePlanGuardRef, deleteRecords: deletePlanRecords } =
+    useRecordDeleteGuard('smis_risk_control_plan', '风险管控配置')
 
   defineOptions({ name: 'SmisDualControlRiskClassificationControl' })
   type TableParams = SmisRiskControlSearchParams &
@@ -112,8 +117,6 @@
     frequencies?: string
     levelRequirements?: string
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -515,17 +518,31 @@
     {
       permission: 'SmisDualControlRiskClassificationControl:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除或停用选中的 ${selectedCount} 项管控配置吗？已有任务的配置将停用并保留审计。`,
       disabled: ({ selectedRows }: ArtTableQueryHeaderActionContext) =>
         !(selectedRows as SmisRiskControlPoint[]).some((row) => row.planId),
       onClick: async ({ selectedRows, api }) => {
-        await deleteRiskControlPlans(
-          (selectedRows as SmisRiskControlPoint[]).flatMap((row) =>
-            row.planId ? [row.planId] : []
-          )
-        )
-        await api.refreshRemove()
+        await deletePlanRecords({
+          resources: (selectedRows as SmisRiskControlPoint[])
+            .filter((row) => Boolean(row.planId))
+            .map((row) => ({
+              id: String(row.planId ?? ''),
+              label: String(row.riskPointName ?? '业务记录')
+            })),
+          permission: 'SmisDualControlRiskClassificationControl:Delete',
+          remove: async () => {
+            await deleteRiskControlPlans(
+              (selectedRows as SmisRiskControlPoint[]).flatMap((row) =>
+                row.planId ? [row.planId] : []
+              )
+            )
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -535,16 +552,14 @@
       : tableQueryRef.value?.refreshUpdate())
   }
   const handleDelete = async (row: SmisRiskControlPoint): Promise<void> => {
-    if (!row.planId) return
-    try {
-      await confirmDelete(
-        `确定删除风险点“${row.riskPointName}”的管控配置吗？已有任务时将改为停用。`
-      )
-      await deleteRiskControlPlans([row.planId])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    const planId = row.planId
+    if (!planId) return
+    await deletePlanRecords({
+      resources: [{ id: planId, label: row.riskPointName }],
+      permission: 'SmisDualControlRiskClassificationControl:Delete',
+      remove: () => deleteRiskControlPlans([planId]),
+      onDeleted: () => tableQueryRef.value?.refreshRemove() ?? Promise.resolve()
+    })
   }
   onMounted(async () => {
     await Promise.all([

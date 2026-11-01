@@ -70,7 +70,15 @@
         />
       </div>
 
-      <ArtDialog ref="paperDialogRef" size="xl">
+      <ArtDialog
+        @open="
+          () => {
+            activeFormTab = 'basicSection'
+          }
+        "
+        ref="paperDialogRef"
+        size="xl"
+      >
         <div class="exam-page__paper-hero">
           <span aria-hidden="true"><ArtSvgIcon icon="ri:file-settings-line" /></span>
           <div>
@@ -84,16 +92,14 @@
           </ol>
         </div>
         <ArtForm
+          v-model:active-tab="activeFormTab"
           ref="paperFormRef"
-          :model-value="paperForm"
-          @update:model-value="replaceReactiveModel(paperForm, $event)"
+          v-model="paperForm"
           :items="paperItems"
           :rules="paperRules"
           :span="12"
           :gutter="24"
           label-position="top"
-          :show-reset="false"
-          :show-submit="false"
         >
           <template #questions>
             <div class="exam-page__assembly">
@@ -137,13 +143,14 @@
                   class="exam-page__rule"
                 >
                   <b>{{ index + 1 }}</b>
-                  <ElSelect v-model="rule.categoryId" clearable placeholder="全部分类"
-                    ><ElOption
-                      v-for="item in categoryOptions"
-                      :key="item.value"
-                      :label="item.label"
-                      :value="item.value"
-                  /></ElSelect>
+                  <ElTreeSelect
+                    v-model="rule.categoryId"
+                    :data="categoryOptions"
+                    check-strictly
+                    clearable
+                    filterable
+                    placeholder="全部分类"
+                  />
                   <ElSelect v-model="rule.questionType" clearable placeholder="全部题型"
                     ><ElOption
                       v-for="item in questionTypeOptions"
@@ -438,13 +445,16 @@
         >
       </ArtDialog>
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
   import { storeToRefs } from 'pinia'
   import type { FormRules } from 'element-plus'
@@ -462,6 +472,7 @@
   import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useAuth } from '@/hooks/core/useAuth'
   import { useUserStore } from '@/store/modules/user'
+  import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
@@ -513,6 +524,7 @@
     type SmisQuestionBankSearchParams,
     type SmisQuestionCategory
   } from '@smis/api'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_exam_paper', '试卷')
 
   defineOptions({ name: 'SmisExamManagement' })
   type PaperParams = SmisExamPaperSearchParams &
@@ -526,6 +538,7 @@
   const activeTab = ref<'paper' | 'record'>('paper')
   const paperTableRef = ref<ArtTableQueryExpose>()
   const recordTableRef = ref<ArtTableQueryExpose>()
+  const activeFormTab = ref('basicSection')
   const paperDialogRef = ref<ArtDialogExpose>()
   const selectedQuestionTableRef = ref<ArtTableExpose>()
   const detailDialogRef = ref<ArtDialogExpose>()
@@ -566,12 +579,16 @@
     startSession,
     stopSessionClock
   } = useExamSession()
-  const paperForm = reactive<SmisExamPaperPayload>(createExamPaperPayload())
+  const paperForm = ref<SmisExamPaperPayload>(createExamPaperPayload())
+  const categoryTree = new TreeUtils({ parentKey: 'parentId' })
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const questionTypeOptions = computed(() => dictOptions('smisQuestionType')),
     assemblyModeOptions = computed(() => dictOptions('smisExamAssemblyMode')),
     categoryOptions = computed(() =>
-      categories.value.map((item) => ({ label: item.categoryName, value: item.id }))
+      categoryTree.mapTree(categoryTree.listToTree(categories.value), (item) => ({
+        label: item.categoryName,
+        value: item.id
+      }))
     )
   const exportDictLabel = (code: string, value: unknown) =>
     dictOptions(code).find((item) => item.value === String(value))?.label ?? String(value ?? '')
@@ -591,6 +608,7 @@
       label: '分值',
       width: 124,
       required: true,
+      headerTooltip: '每道试题分值必须大于 0；试卷总分由各题分值自动汇总。',
       requiredMessage: ({ rowIndex }) => `第 ${rowIndex + 1} 道试题分值必须大于 0`,
       rules: [
         {
@@ -639,14 +657,14 @@
   })
   const totalScore = computed(() => calculateExamTotalScore(selectedQuestions.value))
   const passingScoreInvalid = computed(
-    () => totalScore.value > 0 && Number(paperForm.passingScore) > totalScore.value
+    () => totalScore.value > 0 && Number(paperForm.value.passingScore) > totalScore.value
   )
   const dateRangeInvalid = computed(() =>
-    isExamDateRangeInvalid(paperForm.openAt, paperForm.closeAt)
+    isExamDateRangeInvalid(paperForm.value.openAt, paperForm.value.closeAt)
   )
   const paperConfigurationReady = computed(
     () =>
-      Boolean(paperForm.paperTitle.trim()) &&
+      Boolean(paperForm.value.paperTitle.trim()) &&
       selectedQuestions.value.length > 0 &&
       totalScore.value > 0 &&
       !passingScoreInvalid.value &&
@@ -676,9 +694,11 @@
     { deep: true }
   )
   watch(
-    () => paperForm.allowRetake,
+    () => paperForm.value.allowRetake,
     (allowed) => {
-      paperForm.maxAttempts = allowed ? Math.max(Number(paperForm.maxAttempts || 0), 2) : 1
+      paperForm.value.maxAttempts = allowed
+        ? Math.max(Number(paperForm.value.maxAttempts || 0), 2)
+        : 1
     }
   )
   const metrics = computed<BusinessWorkspaceMetric[]>(() =>
@@ -778,7 +798,7 @@
     }
   ])
   const paperItems = computed<FormItem[]>(() => [
-    { label: '试卷信息', key: 'basicSection', type: 'divider', span: 24 },
+    { label: '试卷与规则', key: 'basicSection', type: 'tab', span: 24 },
     {
       label: '试卷标题',
       key: 'paperTitle',
@@ -800,7 +820,7 @@
       span: 6,
       props: { min: 0.01, max: 99999, precision: 2, class: '!w-full' }
     },
-    { label: '考试规则', key: 'ruleSection', type: 'divider', span: 24 },
+
     {
       label: '考试时长（分钟）',
       key: 'timeLimitMinutes',
@@ -839,13 +859,13 @@
       type: 'inputNumber',
       span: 6,
       props: {
-        min: paperForm.allowRetake ? 2 : 1,
+        min: paperForm.value.allowRetake ? 2 : 1,
         max: 20,
-        disabled: !paperForm.allowRetake,
+        disabled: !paperForm.value.allowRetake,
         class: '!w-full'
       }
     },
-    { label: '组卷与人员', key: 'assemblySection', type: 'divider', span: 24 },
+    { label: '组卷与人员', key: 'assemblySection', type: 'tab', span: 24 },
     { label: '组卷配置', key: 'questions', span: 24 },
     { label: '考试人员', key: 'employeeIds', span: 24 },
     {
@@ -872,7 +892,7 @@
     questions.value = []
     categories.value = []
     Object.assign(
-      paperForm,
+      paperForm.value,
       createExamPaperPayload(),
       row
         ? {
@@ -922,7 +942,7 @@
     })
   }
   const randomGenerate = async () => {
-    if (!paperForm.randomRule.length) {
+    if (!paperForm.value.randomRule.length) {
       ElMessage.warning('请至少添加一条随机抽题规则')
       return
     }
@@ -938,11 +958,13 @@
     }
     try {
       generating.value = true
-      selectedQuestions.value = (await generateExamQuestions(paperForm.randomRule)).map((item) => ({
-        ...item,
-        id: item.questionId,
-        questionType: item.questionType as SmisExamQuestionSelection['questionType']
-      }))
+      selectedQuestions.value = (await generateExamQuestions(paperForm.value.randomRule)).map(
+        (item) => ({
+          ...item,
+          id: item.questionId,
+          questionType: item.questionType as SmisExamQuestionSelection['questionType']
+        })
+      )
       selectedQuestionIds.value = selectedQuestions.value.map((item) => item.questionId)
       if (!selectedQuestions.value.length) {
         ElMessage.warning('当前规则没有匹配到可用题目，请调整分类、题型或数量')
@@ -959,32 +981,43 @@
     try {
       await paperFormRef.value?.validate()
       if (dateRangeInvalid.value) {
+        await paperFormRef.value?.focusField('closeAt')
         ElMessage.warning('结束时间必须晚于开放时间')
         return
       }
       if (!selectedQuestions.value.length) {
+        activeFormTab.value = 'assemblySection'
         ElMessage.warning('请至少选择一道试题后再保存')
         return
       }
-      const questionValidation = await selectedQuestionTableRef.value?.validate()
+      const questionValidation = await selectedQuestionTableRef.value?.validate({ focus: false })
       if (questionValidation && !questionValidation.valid) {
+        activeFormTab.value = 'assemblySection'
+        await nextTick()
+        if (questionValidation.firstError) {
+          await selectedQuestionTableRef.value?.validateField(questionValidation.firstError.prop)
+          ElMessage.warning(questionValidation.firstError.message)
+        }
         return
       }
       if (totalScore.value <= 0) {
+        activeFormTab.value = 'assemblySection'
         ElMessage.warning('试卷总分必须大于 0 分')
         return
       }
       if (passingScoreInvalid.value) {
+        await paperFormRef.value?.focusField('passingScore')
         ElMessage.warning('及格分数不能高于试卷总分')
         return
       }
-      if (paperForm.allowRetake && paperForm.maxAttempts < 2) {
+      if (paperForm.value.allowRetake && paperForm.value.maxAttempts < 2) {
+        await paperFormRef.value?.focusField('maxAttempts')
         ElMessage.warning('允许补考时，最多考试次数至少为 2 次')
         return
       }
       submitting.value = true
       await saveExamPaper({
-        ...paperForm,
+        ...paperForm.value,
         questions: toExamQuestionPayload(selectedQuestions.value)
       })
       await paperDialogRef.value?.handleClose(true)
@@ -1055,13 +1088,22 @@
     }
   }
   const removePaper = async (row: SmisExamPaper) => {
-    try {
-      await confirmDelete(`确定删除草稿试卷“${row.paperTitle}”吗？`)
-      await deleteExamPapers([row.id])
-      await paperTableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.paperTitle ?? '试卷')
+        }
+      ],
+      permission: 'SmisExamManagement:Delete',
+      confirmMessage: `确定删除草稿试卷“${row.paperTitle}”吗？`,
+      remove: async () => {
+        await deleteExamPapers([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await paperTableRef.value?.refreshRemove()
+      }
+    })
   }
   const paperMore = (row: SmisExamPaper): ButtonMoreItem[] => [
     {
@@ -1266,11 +1308,23 @@
     {
       permission: 'SmisExamManagement:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 份草稿试卷吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteExamPapers(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.paperTitle ?? '试卷')
+          })),
+          permission: 'SmisExamManagement:Delete',
+          remove: async () => {
+            await deleteExamPapers(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {

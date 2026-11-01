@@ -10,15 +10,12 @@
       </div>
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #accidentReportId>
           <AccidentReportSelect
@@ -44,8 +41,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import dayjs from 'dayjs'
@@ -104,7 +99,7 @@
     departmentName: '',
     injuryType: ''
   })
-  const form = reactive<WorkInjuryForm>(initialForm())
+  const form = ref<WorkInjuryForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
     {
@@ -112,7 +107,7 @@
       key: 'declarationNo',
       type: 'input',
       description: numberRule.description.value,
-      props: numberRule.inputProps(Boolean(form.id), '保存后自动生成', true)
+      props: numberRule.inputProps(Boolean(form.value.id), '保存后自动生成', true)
     },
     {
       label: '申报时间',
@@ -160,14 +155,14 @@
   watch(
     accidentSelection,
     (rows) => {
-      form.accidentNo = rows[0]?.accidentNo || ''
+      form.value.accidentNo = rows[0]?.accidentNo || ''
     },
     { deep: true }
   )
   watch(
     employeeSelection,
     (rows) => {
-      form.departmentName = employeeDepartment(rows[0] as SmisAccidentEmployee | undefined)
+      form.value.departmentName = employeeDepartment(rows[0] as SmisAccidentEmployee | undefined)
     },
     { deep: true }
   )
@@ -175,13 +170,13 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveWorkInjuryDeclaration({
-        id: form.id,
-        declarationDate: form.declarationDate,
-        accidentReportId: form.accidentReportId,
-        declarantEmployeeId: form.declarantEmployeeId,
-        injuryType: form.injuryType as SmisWorkInjuryType
+        id: form.value.id,
+        declarationDate: form.value.declarationDate,
+        accidentReportId: form.value.accidentReportId,
+        declarantEmployeeId: form.value.declarantEmployeeId,
+        injuryType: form.value.injuryType as SmisWorkInjuryType
       })
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '工伤申报保存失败，请检查内容后重试')
@@ -189,11 +184,11 @@
     }
   }
   const handleOpen = async (data: WorkInjuryDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     accidentSelection.value = []
     employeeSelection.value = []
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         declarationNo: data.row.declarationNo,
         declarationDate: data.row.declarationDate,
@@ -206,8 +201,8 @@
       accidentSelection.value = [data.row.accident]
       employeeSelection.value = [data.row.declarantEmployee]
     } else if (data.currentEmployee) {
-      form.declarantEmployeeId = data.currentEmployee.id
-      form.departmentName = employeeDepartment(data.currentEmployee)
+      form.value.declarantEmployeeId = data.currentEmployee.id
+      form.value.departmentName = employeeDepartment(data.currentEmployee)
       employeeSelection.value = [data.currentEmployee]
     }
     await nextTick()
@@ -228,7 +223,7 @@
         }
       },
       onConfirm: handleSubmit,
-      onReset: () => Object.assign(form, initialForm())
+      onReset: () => Object.assign(form.value, initialForm())
     })
   }
   onDeactivated(() => dialogRef.value?.handleClose())

@@ -93,7 +93,13 @@ export async function savePpeIssuanceStandard(params: SmisPpeIssuanceStandardSav
 export async function deletePpeIssuanceStandards(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_ppe_issuance_standards_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '发放标准已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '发放标准已删除'
+    }
   )
 }
 

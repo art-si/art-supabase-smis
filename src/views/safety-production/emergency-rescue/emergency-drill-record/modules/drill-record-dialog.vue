@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'source'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="drill-record-dialog">
       <ArtEntitySummary
         icon="ri:file-check-line"
@@ -8,16 +16,14 @@
         spaced
       />
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #drillPlanId
           ><ElSelect
@@ -103,7 +109,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -147,6 +152,7 @@
     clearValidate: () => void
   }
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
+  const activeFormTab = ref('source')
   const dialogRef = ref<ArtDialogExpose<DrillRecordDialogOpenData>>()
   const recordTenantId = ref<string>()
   const formRef = ref<FormExpose>()
@@ -172,9 +178,9 @@
     participantIds: [],
     remark: ''
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const selectedPlan = computed(() =>
-    planOptions.value.find((item) => item.id === form.drillPlanId)
+    planOptions.value.find((item) => item.id === form.value.drillPlanId)
   )
   const textArea = (placeholder: string, rows = 4) => ({
     rows,
@@ -184,10 +190,10 @@
     placeholder
   })
   const items = computed<FormItem[]>(() => [
-    { label: '计划来源', key: 'source', type: 'divider', span: 24 },
+    { label: '计划与执行', key: 'source', type: 'tab', span: 24 },
     { label: '计划编号', key: 'drillPlanId', type: 'text', span: 24 },
     { label: '计划自动带入信息', key: 'planContext', type: 'text', span: 24 },
-    { label: '实际执行', key: 'execution', type: 'divider', span: 24 },
+
     {
       label: '实际开始日期',
       key: 'actualStartDate',
@@ -216,7 +222,7 @@
       span: 24,
       props: textArea('填写本次演练目的', 3)
     },
-    { label: '过程与评价', key: 'review', type: 'divider', span: 24 },
+    { label: '过程与评价', key: 'review', type: 'tab', span: 24 },
     {
       label: '演练过程',
       key: 'drillProcess',
@@ -245,7 +251,7 @@
       span: 24,
       props: textArea('记录投入的装备、器材和应急物资', 3)
     },
-    { label: '人员与证据', key: 'evidence', type: 'divider', span: 24 },
+    { label: '人员与资料', key: 'evidence', type: 'tab', span: 24 },
     { label: '参演人员', key: 'participantIds', type: 'text', span: 24 },
     { label: '演练照片', key: 'imageUrls', type: 'text', span: 24 },
     { label: '记录附件', key: 'attachmentUrls', type: 'text', span: 24 },
@@ -263,9 +269,9 @@
   const applyPlan = (id: string) => {
     const plan = planOptions.value.find((item) => item.id === id)
     if (!plan) return
-    form.drillLocation = plan.drillLocation || ''
-    form.drillSubject = plan.drillSubject || ''
-    form.drillPurpose = plan.drillPurpose || ''
+    form.value.drillLocation = plan.drillLocation || ''
+    form.value.drillSubject = plan.drillSubject || ''
+    form.value.drillPurpose = plan.drillPurpose || ''
   }
   const toEmployees = (row: SmisEmergencyDrillRecord): EmployeeIntegrationItem[] =>
     row.participants.map((item) => ({
@@ -291,8 +297,8 @@
     try {
       await formRef.value?.validate()
       submitting.value = true
-      await saveEmergencyDrillRecord(toRaw(form), submit)
-      emit('success', form.id ? 'edit' : 'add')
+      await saveEmergencyDrillRecord(toRaw(form.value), submit)
+      emit('success', form.value.id ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
     } catch {
       /* 表单或服务端会给出明确提示 */
@@ -302,12 +308,12 @@
   }
   const handleOpen = async (data: DrillRecordDialogOpenData) => {
     recordTenantId.value = data.row?.participants[0]?.tenantId
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     planOptions.value = data.planOptions
     participantSelection.value = []
     if (data.row) {
       const row = data.row
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: row.id,
         drillPlanId: row.drillPlanId,
         actualStartDate: row.actualStartDate || '',
@@ -327,7 +333,7 @@
       })
       participantSelection.value = toEmployees(row)
     } else if (data.presetPlanId) {
-      form.drillPlanId = data.presetPlanId
+      form.value.drillPlanId = data.presetPlanId
       applyPlan(data.presetPlanId)
     }
     await nextTick()

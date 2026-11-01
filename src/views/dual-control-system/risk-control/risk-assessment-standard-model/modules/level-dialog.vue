@@ -2,20 +2,15 @@
   <ArtDialog ref="dialogRef" size="sm"
     ><ArtForm
       ref="formRef"
-      :model-value="model"
-      @update:model-value="replaceReactiveModel(model, $event)"
+      v-model="model"
       :items="items"
       :rules="rules"
       :span="24"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
   /></ArtDialog>
 </template>
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { ElColorPicker, ElMessage, type FormRules } from 'element-plus'
@@ -40,7 +35,7 @@
   const { getDictMap } = storeToRefs(userStore)
   const dialogRef = ref<ArtDialogExpose<LevelDialogOpenData>>()
   const formRef = ref<FormExpose>()
-  const model = reactive<SmisRiskAssessmentLevelPayload>({
+  const model = ref<SmisRiskAssessmentLevelPayload>({
     id: '',
     levelName: '',
     minScore: 0,
@@ -77,9 +72,9 @@
       key: 'color',
       render: () =>
         h(ElColorPicker, {
-          modelValue: model.color,
+          modelValue: model.value.color,
           predefine: ['#2563EB', '#059669', '#FACC15', '#F97316', '#DC2626'],
-          'onUpdate:modelValue': (v: string | null) => (model.color = v || '#2563EB')
+          'onUpdate:modelValue': (v: string | null) => (model.value.color = v || '#2563EB')
         })
     },
     {
@@ -108,12 +103,12 @@
       notifyFriendlyError(error, '风险等级校验失败，请重试')
       return false
     }
-    if (model.maxScore != null && model.maxScore <= model.minScore) {
+    if (model.value.maxScore != null && model.value.maxScore <= model.value.minScore) {
       ElMessage.warning('最高分必须大于最低分')
       return false
     }
     try {
-      await saveRiskAssessmentLevel({ ...model, levelName: model.levelName.trim() })
+      await saveRiskAssessmentLevel({ ...model.value, levelName: model.value.levelName.trim() })
     } catch (error) {
       notifyFriendlyError(error, '风险等级保存失败，请检查内容后重试')
       return false
@@ -122,7 +117,7 @@
     return true
   }
   const handleOpen = async (data: LevelDialogOpenData) => {
-    Object.assign(model, {
+    Object.assign(model.value, {
       id: data.row.id,
       levelName: data.row.levelName,
       minScore: data.row.minScore,

@@ -44,10 +44,14 @@
     />
 
     <InspectionDeclarationDialog ref="dialogRef" @success="refreshTable" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -62,7 +66,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useImageViewer } from '@/hooks/core/useImageViewer'
   import { useUserStore } from '@/store/modules/user'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
@@ -87,6 +91,10 @@
   import InspectionDeclarationDialog, {
     type InspectionDeclarationDialogOpenData
   } from './modules/inspection-declaration-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_equipment_inspection',
+    '检验申报'
+  )
 
   const formatTableDate = createDateTimeFormatter({
     format: 'YYYY-MM-DD',
@@ -105,8 +113,6 @@
   interface DialogExpose {
     handleOpen: (data: InspectionDeclarationDialogOpenData) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -165,14 +171,26 @@
     {
       permission: 'SmisInspectionDeclaration:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 份检验申报吗？相关生命周期记录与图片关联将一并移除。`,
       onClick: async ({ selectedRows, api }) => {
         const ids = selectedRows
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
-        await deleteEquipmentInspections(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.inspectionNo ?? '检验申报')
+          })),
+          permission: 'SmisInspectionDeclaration:Delete',
+          remove: async () => {
+            await deleteEquipmentInspections(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -350,9 +368,22 @@
             permission="SmisInspectionDeclaration:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除检验申报“${row.inspectionNo}”吗？`)
-              await deleteEquipmentInspections([row.id])
-              await refreshTable()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.inspectionNo ?? '检验申报')
+                  }
+                ],
+                permission: 'SmisInspectionDeclaration:Delete',
+                confirmMessage: `确定删除检验申报“${row.inspectionNo}”吗？`,
+                remove: async () => {
+                  await deleteEquipmentInspections([row.id ?? ''])
+                },
+                onDeleted: async () => {
+                  await refreshTable()
+                }
+              })
             }}
           />
         </div>

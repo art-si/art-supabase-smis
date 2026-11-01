@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'section-0'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="risk-point-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:map-pin-user-line" /></template>
@@ -8,135 +16,151 @@
       </ArtEntitySummary>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         custom-layout
-        :show-reset="false"
-        :show-submit="false"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :rules="rules"
         label-position="top"
       >
-        <ArtSectionTitle title="基本信息" subtitle="明确风险点身份、场所和风险类型" />
-        <div class="risk-point-dialog__grid">
-          <ElFormItem label="风险点编号">
-            <ElInput :model-value="row?.pointNo || ''" disabled placeholder="保存后自动生成" />
-          </ElFormItem>
-          <ElFormItem label="风险点名称" prop="pointName">
-            <ElInput v-model="form.pointName" maxlength="200" placeholder="请输入风险点名称" />
-          </ElFormItem>
-          <ElFormItem label="风险类型" prop="riskType">
-            <ElSelect v-model="form.riskType" class="w-full">
-              <ElOption v-for="item in riskTypeOptions" :key="item.value" v-bind="item" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="场所" prop="siteId">
-            <RiskSiteSelect v-model="form.siteId" :sites="options.sites" />
-          </ElFormItem>
-        </div>
+        <ElTabs v-model="activeFormTab"
+          ><ElTabPane name="section-0" label="风险点与设备" data-art-form-tab="section-0"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionTitle title="基本信息" subtitle="明确风险点身份、场所和风险类型" />
+              <div class="risk-point-dialog__grid">
+                <ElFormItem label="风险点编号">
+                  <ElInput
+                    :model-value="row?.pointNo || ''"
+                    disabled
+                    placeholder="保存后自动生成"
+                  />
+                </ElFormItem>
+                <ElFormItem label="风险点名称" prop="pointName">
+                  <ElInput
+                    v-model="form.pointName"
+                    maxlength="200"
+                    placeholder="请输入风险点名称"
+                  />
+                </ElFormItem>
+                <ElFormItem label="风险类型" prop="riskType">
+                  <ElSelect v-model="form.riskType" class="w-full">
+                    <ElOption v-for="item in riskTypeOptions" :key="item.value" v-bind="item" />
+                  </ElSelect>
+                </ElFormItem>
+                <ElFormItem label="场所" prop="siteId">
+                  <RiskSiteSelect v-model="form.siteId" :sites="options.sites" />
+                </ElFormItem>
+              </div>
 
-        <ArtSectionTitle
-          title="设备设施与辨识单位"
-          subtitle="普通设备可从台账选择或手工填写；特种设备必须从特种设备台账选择"
-        />
-        <div class="risk-point-dialog__grid">
-          <ElFormItem label="是否特种设备">
-            <ElSwitch
-              v-model="form.isSpecialEquipment"
-              inline-prompt
-              active-text="是"
-              inactive-text="否"
-              @change="handleSpecialEquipmentChange"
-            />
-          </ElFormItem>
-          <ElFormItem label="设备设施" prop="equipmentValue">
-            <ElSelect
-              v-model="form.equipmentValue"
-              class="w-full"
-              filterable
-              :allow-create="!form.isSpecialEquipment"
-              default-first-option
-              clearable
-              placeholder="从设备台账选择或输入设备名称"
-              @change="handleEquipmentChange"
-            >
-              <ElOption
-                v-for="item in availableEquipment"
-                :key="item.id"
-                :label="`${item.equipmentName} · ${item.equipmentCode}`"
-                :value="item.id"
-              >
-                <div class="risk-point-dialog__equipment-option">
-                  <span>{{ item.equipmentName }}</span>
-                  <small>{{ item.equipmentCode }}</small>
-                  <ElTag v-if="item.isSpecialEquipment" size="small" type="warning">特种设备</ElTag>
-                </div>
-              </ElOption>
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem class="risk-point-dialog__wide" label="辨识单位" prop="organizationIds">
-            <ElTreeSelect
-              v-model="form.organizationIds"
-              :data="organizationTree"
-              :props="organizationProps"
-              node-key="id"
-              value-key="id"
-              multiple
-              check-strictly
-              show-checkbox
-              filterable
-              collapse-tags
-              collapse-tags-tooltip
-              default-expand-all
-              placeholder="选择一个或多个辨识单位"
-              class="w-full"
-            />
-            <small class="risk-point-dialog__help"
-              >选择后自动关联组织编码，列表统一展示单位名称与编码。</small
-            >
-          </ElFormItem>
-        </div>
-
-        <ArtSectionTitle title="方案与证据" subtitle="集中维护管控方案、现场照片和业务附件" />
-        <div class="risk-point-dialog__grid">
-          <ElFormItem label="风险管控方案">
-            <ElInput
-              v-model="form.controlPlanName"
-              maxlength="300"
-              placeholder="请输入或粘贴风险管控方案名称"
-            />
-          </ElFormItem>
-          <ElFormItem label="排序">
-            <ElInputNumber v-model="form.sort" :min="0" :max="9999" class="w-full" />
-          </ElFormItem>
-          <ElFormItem class="risk-point-dialog__wide" label="管控方案附件">
-            <ArtUploadFile
-              v-model="form.controlPlanAttachmentUrls"
-              multiple
-              :limit="8"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,image/*"
-              tip="上传管控方案正文或支撑材料，单个文件不超过 20 MB"
-            />
-          </ElFormItem>
-          <ElFormItem label="风险点照片">
-            <ArtUploadImage
-              v-model="form.photoUrls"
-              multiple
-              :limit="6"
-              :size="104"
-              title="上传现场照片"
-            />
-          </ElFormItem>
-          <ElFormItem label="其他附件">
-            <ArtUploadFile
-              v-model="form.attachmentUrls"
-              multiple
-              :limit="8"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
-              tip="支持文档、表格、压缩包和图片"
-            />
-          </ElFormItem>
-        </div>
+              <ArtSectionTitle
+                title="设备设施与辨识单位"
+                subtitle="普通设备可从台账选择或手工填写；特种设备必须从特种设备台账选择"
+              />
+              <div class="risk-point-dialog__grid">
+                <ElFormItem label="是否特种设备">
+                  <ElSwitch
+                    v-model="form.isSpecialEquipment"
+                    inline-prompt
+                    active-text="是"
+                    inactive-text="否"
+                    @change="handleSpecialEquipmentChange"
+                  />
+                </ElFormItem>
+                <ElFormItem label="设备设施" prop="equipmentValue">
+                  <ElSelect
+                    v-model="form.equipmentValue"
+                    class="w-full"
+                    filterable
+                    :allow-create="!form.isSpecialEquipment"
+                    default-first-option
+                    clearable
+                    placeholder="从设备台账选择或输入设备名称"
+                    @change="handleEquipmentChange"
+                  >
+                    <ElOption
+                      v-for="item in availableEquipment"
+                      :key="item.id"
+                      :label="`${item.equipmentName} · ${item.equipmentCode}`"
+                      :value="item.id"
+                    >
+                      <div class="risk-point-dialog__equipment-option">
+                        <span>{{ item.equipmentName }}</span>
+                        <small>{{ item.equipmentCode }}</small>
+                        <ElTag v-if="item.isSpecialEquipment" size="small" type="warning"
+                          >特种设备</ElTag
+                        >
+                      </div>
+                    </ElOption>
+                  </ElSelect>
+                </ElFormItem>
+                <ElFormItem class="risk-point-dialog__wide" label="辨识单位" prop="organizationIds">
+                  <ElTreeSelect
+                    v-model="form.organizationIds"
+                    :data="organizationTree"
+                    :props="organizationProps"
+                    node-key="id"
+                    value-key="id"
+                    multiple
+                    check-strictly
+                    show-checkbox
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    default-expand-all
+                    placeholder="选择一个或多个辨识单位"
+                    class="w-full"
+                  />
+                  <small class="risk-point-dialog__help"
+                    >选择后自动关联组织编码，列表统一展示单位名称与编码。</small
+                  >
+                </ElFormItem>
+              </div>
+            </div></ElTabPane
+          >
+          <ElTabPane name="section-1" label="方案与证据" data-art-form-tab="section-1"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionTitle
+                title="方案与证据"
+                subtitle="集中维护管控方案、现场照片和业务附件" />
+              <div class="risk-point-dialog__grid">
+                <ElFormItem label="风险管控方案">
+                  <ElInput
+                    v-model="form.controlPlanName"
+                    maxlength="300"
+                    placeholder="请输入或粘贴风险管控方案名称"
+                  />
+                </ElFormItem>
+                <ElFormItem label="排序">
+                  <ElInputNumber v-model="form.sort" :min="0" :max="9999" class="w-full" />
+                </ElFormItem>
+                <ElFormItem class="risk-point-dialog__wide" label="管控方案附件">
+                  <ArtUploadFile
+                    v-model="form.controlPlanAttachmentUrls"
+                    multiple
+                    :limit="8"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,image/*"
+                    tip="上传管控方案正文或支撑材料，单个文件不超过 20 MB"
+                  />
+                </ElFormItem>
+                <ElFormItem label="风险点照片">
+                  <ArtUploadImage
+                    v-model="form.photoUrls"
+                    multiple
+                    :limit="6"
+                    :size="104"
+                    title="上传现场照片"
+                  />
+                </ElFormItem>
+                <ElFormItem label="其他附件">
+                  <ArtUploadFile
+                    v-model="form.attachmentUrls"
+                    multiple
+                    :limit="8"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,image/*"
+                    tip="支持文档、表格、压缩包和图片"
+                  />
+                </ElFormItem> </div></div></ElTabPane
+        ></ElTabs>
       </ArtForm>
     </div>
 
@@ -156,8 +180,7 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
-  import { computed, onDeactivated, reactive, ref, shallowRef } from 'vue'
+  import { computed, onDeactivated, ref, shallowRef } from 'vue'
   import { storeToRefs } from 'pinia'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -191,6 +214,7 @@
   }
 
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
+  const activeFormTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<RiskPointDialogOpenData>>()
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const submitting = ref(false)
@@ -235,10 +259,10 @@
     organizationIds: [],
     sort: 0
   })
-  const form = reactive<RiskPointForm>(initial())
+  const form = ref<RiskPointForm>(initial())
   const organizationTree = computed(() => tree.listToTree(options.value.organizations))
   const availableEquipment = computed(() =>
-    form.isSpecialEquipment
+    form.value.isSpecialEquipment
       ? options.value.equipment.filter((item) => item.isSpecialEquipment)
       : options.value.equipment
   )
@@ -249,7 +273,7 @@
       {
         validator: (_rule, value, callback) => {
           if (!String(value || '').trim()) callback(new Error('请选择或输入设备设施名称'))
-          else if (form.isSpecialEquipment && !form.equipmentId)
+          else if (form.value.isSpecialEquipment && !form.value.equipmentId)
             callback(new Error('特种设备必须从特种设备台账选择'))
           else callback()
         },
@@ -269,15 +293,15 @@
 
   const handleEquipmentChange = (value: string): void => {
     const equipment = options.value.equipment.find((item) => item.id === value)
-    form.equipmentId = equipment?.id
-    form.equipmentName = equipment?.equipmentName ?? value?.trim() ?? ''
+    form.value.equipmentId = equipment?.id
+    form.value.equipmentName = equipment?.equipmentName ?? value?.trim() ?? ''
   }
   const handleSpecialEquipmentChange = (): void => {
-    const current = options.value.equipment.find((item) => item.id === form.equipmentId)
-    if (form.isSpecialEquipment && !current?.isSpecialEquipment) {
-      form.equipmentValue = ''
-      form.equipmentId = undefined
-      form.equipmentName = ''
+    const current = options.value.equipment.find((item) => item.id === form.value.equipmentId)
+    if (form.value.isSpecialEquipment && !current?.isSpecialEquipment) {
+      form.value.equipmentValue = ''
+      form.value.equipmentId = undefined
+      form.value.equipmentName = ''
     }
     void formRef.value?.validateField('equipmentValue')
   }
@@ -288,18 +312,18 @@
       submitting.value = true
       await saveRiskPoint({
         id: row.value?.id,
-        pointName: form.pointName.trim(),
-        riskType: form.riskType,
-        siteId: form.siteId,
-        equipmentId: form.equipmentId || null,
-        equipmentName: form.equipmentName.trim(),
-        isSpecialEquipment: form.isSpecialEquipment,
-        controlPlanName: normalizeNullableText(form.controlPlanName),
-        controlPlanAttachmentUrls: [...form.controlPlanAttachmentUrls],
-        photoUrls: [...form.photoUrls],
-        attachmentUrls: [...form.attachmentUrls],
-        organizationIds: [...form.organizationIds],
-        sort: form.sort
+        pointName: form.value.pointName.trim(),
+        riskType: form.value.riskType,
+        siteId: form.value.siteId,
+        equipmentId: form.value.equipmentId || null,
+        equipmentName: form.value.equipmentName.trim(),
+        isSpecialEquipment: form.value.isSpecialEquipment,
+        controlPlanName: normalizeNullableText(form.value.controlPlanName),
+        controlPlanAttachmentUrls: [...form.value.controlPlanAttachmentUrls],
+        photoUrls: [...form.value.photoUrls],
+        attachmentUrls: [...form.value.attachmentUrls],
+        organizationIds: [...form.value.organizationIds],
+        sort: form.value.sort
       })
       emit('success', row.value ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
@@ -312,9 +336,9 @@
   const handleOpen = async (data: RiskPointDialogOpenData): Promise<void> => {
     row.value = data.row
     options.value = data.options
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         pointName: data.row.pointName,
         riskType: data.row.riskType,
         siteId: data.row.siteId,

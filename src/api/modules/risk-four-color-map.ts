@@ -130,6 +130,12 @@ export async function saveRiskMapShapes(sceneId: string, shapes: SmisRiskMapShap
 export async function deleteRiskMapScene(id: string) {
   return await responseHandle<boolean>(
     () => supabase.rpc('smis_delete_risk_map_scene_secure', { p_id: id }),
-    { showMessage: true, breakReturn: true, message: '四色图场景已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '四色图场景已删除'
+    }
   )
 }

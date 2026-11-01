@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identity'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="hazard-dialog">
       <ArtEntitySummary
         icon="ri:alarm-warning-line"
@@ -8,16 +16,14 @@
         spaced
       />
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #siteId>
           <ElTreeSelect
@@ -89,8 +95,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -143,6 +147,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
+  const activeFormTab = ref('identity')
   const dialogRef = ref<ArtDialogExpose<HazardSourceDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const numberRule = useDocumentNumberRule('smis.hazard_source')
@@ -168,16 +173,16 @@
     imageUrls: [],
     remark: ''
   })
-  const form = reactive<HazardForm>(initialForm())
+  const form = ref<HazardForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
-    { label: '识别信息', key: 'identity', type: 'divider', span: 24 },
+    { label: '危险源与责任', key: 'identity', type: 'tab', span: 24 },
     {
       label: '危险源编号',
       key: 'hazardNo',
       type: 'input',
       description: numberRule.description.value,
-      props: numberRule.inputProps(Boolean(form.id), '保存后自动生成', true)
+      props: numberRule.inputProps(Boolean(form.value.id), '保存后自动生成', true)
     },
     {
       label: '危险源名称',
@@ -212,7 +217,7 @@
       options: dictOptions('smisHazardSourceLevel'),
       props: { clearable: false }
     },
-    { label: '风险与责任', key: 'control', type: 'divider', span: 24 },
+
     {
       label: '风险等级',
       key: 'riskLevel',
@@ -222,7 +227,7 @@
     },
     { label: '管控部门', key: 'controlOrganizationId', type: 'text' },
     { label: '责任人', key: 'responsibleEmployeeId', type: 'text' },
-    { label: '评价与备案', key: 'archive', type: 'divider', span: 24 },
+    { label: '评价与资料', key: 'archive', type: 'tab', span: 24 },
     {
       label: '评价时间',
       key: 'evaluationDate',
@@ -264,7 +269,7 @@
       span: 24,
       props: { maxlength: 100, placeholder: '请输入备案号' }
     },
-    { label: '照片与说明', key: 'evidence', type: 'divider', span: 24 },
+
     { label: '危险源照片', key: 'imageUrls', type: 'text', span: 24 },
     {
       label: '备注',
@@ -315,20 +320,20 @@
       submitting.value = true
       await saveHazardSource(
         {
-          ...toRaw(form),
-          hazardLevel: form.hazardLevel as SmisHazardSourceLevel,
-          responsibleEmployeeId: form.responsibleEmployeeId || null,
-          quantity: form.quantity ?? null,
-          location: form.location || null,
-          evaluationDate: form.evaluationDate || null,
-          evaluationOrganization: form.evaluationOrganization || null,
-          filingDate: form.filingDate || null,
-          filingOrganization: form.filingOrganization || null,
-          filingNo: form.filingNo || null
+          ...toRaw(form.value),
+          hazardLevel: form.value.hazardLevel as SmisHazardSourceLevel,
+          responsibleEmployeeId: form.value.responsibleEmployeeId || null,
+          quantity: form.value.quantity ?? null,
+          location: form.value.location || null,
+          evaluationDate: form.value.evaluationDate || null,
+          evaluationOrganization: form.value.evaluationOrganization || null,
+          filingDate: form.value.filingDate || null,
+          filingOrganization: form.value.filingOrganization || null,
+          filingNo: form.value.filingNo || null
         },
         submit
       )
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
     } catch {
       /* 表单或服务端会给出明确提示 */
@@ -337,12 +342,12 @@
     }
   }
   const handleOpen = async (data: HazardSourceDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     sites.value = data.sites
     organizations.value = data.organizations
     employeeSelection.value = []
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         hazardNo: data.row.hazardNo,
         hazardName: data.row.hazardName,
@@ -362,7 +367,7 @@
         remark: data.row.remark || ''
       })
       employeeSelection.value = toEmployeeSelection(data.row)
-    } else form.siteId = data.presetSiteId || ''
+    } else form.value.siteId = data.presetSiteId || ''
     await nextTick()
     formRef.value?.clearValidate()
     await dialogRef.value?.handleOpen(data, {

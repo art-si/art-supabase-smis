@@ -2,15 +2,12 @@
   <ArtDialog ref="dialogRef" size="lg" @focus-change="isFocusMode = $event">
     <ArtForm
       ref="formRef"
-      :model-value="form"
-      @update:model-value="replaceReactiveModel(form, $event)"
+      v-model="form"
       :items="formItems"
       :rules="formRules"
       :span="12"
       :gutter="24"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
     >
       <template #context>
         <div class="responsibility-dialog__context">
@@ -43,8 +40,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -125,16 +120,16 @@
     frequencyUnit: 'day',
     revisionDate: formatWithDayjs(new Date(), 'YYYY-MM-DD') || ''
   })
-  const form = reactive<PositionSafetyResponsibility>(createInitialForm())
+  const form = ref<PositionSafetyResponsibility>(createInitialForm())
 
   const primaryCategoryItems = computed(() => getDictMap.value.smisPrimaryHazardCategory ?? [])
   const secondaryCategoryItems = computed(() => getDictMap.value.smisSecondaryHazardCategory ?? [])
   const hazardContentItems = computed(() => getDictMap.value.smisHazardContent ?? [])
   const selectedPrimaryCategory = computed(() =>
-    findDictionaryItem(primaryCategoryItems.value, form.primaryHazardCategory)
+    findDictionaryItem(primaryCategoryItems.value, form.value.primaryHazardCategory)
   )
   const selectedSecondaryCategory = computed(() =>
-    findDictionaryItem(secondaryCategoryItems.value, form.secondaryHazardCategory)
+    findDictionaryItem(secondaryCategoryItems.value, form.value.secondaryHazardCategory)
   )
   const secondaryCategoryOptions = computed<FormItemOption[]>(() => {
     return getChildDictionaryItems(secondaryCategoryItems.value, selectedPrimaryCategory.value).map(
@@ -146,7 +141,7 @@
       hazardContentItems.value,
       selectedSecondaryCategory.value
     ).map(toDictionaryOption)
-    const currentValue = form.hazardContent?.trim() ?? ''
+    const currentValue = form.value.hazardContent?.trim() ?? ''
 
     if (currentValue && !options.some((item) => item.value === currentValue)) {
       options.unshift({ label: `${currentValue}（历史值）`, value: currentValue })
@@ -192,8 +187,8 @@
       props: {
         placeholder: '请选择一级隐患类别',
         onChange: () => {
-          form.secondaryHazardCategory = ''
-          form.hazardContent = ''
+          form.value.secondaryHazardCategory = ''
+          form.value.hazardContent = ''
         }
       }
     },
@@ -203,10 +198,10 @@
       type: 'select',
       options: secondaryCategoryOptions.value,
       props: {
-        disabled: !form.primaryHazardCategory,
-        placeholder: form.primaryHazardCategory ? '请选择二级隐患类别' : '请先选择一级类别',
+        disabled: !form.value.primaryHazardCategory,
+        placeholder: form.value.primaryHazardCategory ? '请选择二级隐患类别' : '请先选择一级类别',
         onChange: () => {
-          form.hazardContent = ''
+          form.value.hazardContent = ''
         }
       }
     },
@@ -219,8 +214,10 @@
       props: {
         clearable: true,
         filterable: true,
-        disabled: !form.secondaryHazardCategory,
-        placeholder: form.secondaryHazardCategory ? '请选择隐患内容（可选）' : '请先选择二级类别'
+        disabled: !form.value.secondaryHazardCategory,
+        placeholder: form.value.secondaryHazardCategory
+          ? '请选择隐患内容（可选）'
+          : '请先选择二级类别'
       }
     },
     {
@@ -288,32 +285,32 @@
 
   const resetForm = async (): Promise<void> => {
     isFocusMode.value = false
-    Object.assign(form, createInitialForm())
+    Object.assign(form.value, createInitialForm())
     Object.assign(context, { organizationName: '', positionName: '', positionCode: '' })
     await nextTick()
     formRef.value?.clearValidate()
   }
 
   const buildPayload = (): PositionSafetyResponsibilitySavePayload => ({
-    organizationId: form.organizationId,
-    positionId: form.positionId,
-    primaryHazardCategory: form.primaryHazardCategory,
-    secondaryHazardCategory: form.secondaryHazardCategory,
-    hazardContent: normalizeNullableText(form.hazardContent),
-    hazardLevel: form.hazardLevel,
-    riskLevel: form.riskLevel,
-    inspectionItem: form.inspectionItem.trim(),
-    inspectionStandard: form.inspectionStandard.trim(),
-    inspectionFrequency: Number(form.inspectionFrequency),
-    frequencyUnit: form.frequencyUnit,
-    revisionDate: form.revisionDate
+    organizationId: form.value.organizationId,
+    positionId: form.value.positionId,
+    primaryHazardCategory: form.value.primaryHazardCategory,
+    secondaryHazardCategory: form.value.secondaryHazardCategory,
+    hazardContent: normalizeNullableText(form.value.hazardContent),
+    hazardLevel: form.value.hazardLevel,
+    riskLevel: form.value.riskLevel,
+    inspectionItem: form.value.inspectionItem.trim(),
+    inspectionStandard: form.value.inspectionStandard.trim(),
+    inspectionFrequency: Number(form.value.inspectionFrequency),
+    frequencyUnit: form.value.frequencyUnit,
+    revisionDate: form.value.revisionDate
   })
 
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      const type = form.id ? 'edit' : 'add'
-      if (type === 'edit') await editPositionSafetyResponsibility(form.id!, buildPayload())
+      const type = form.value.id ? 'edit' : 'add'
+      if (type === 'edit') await editPositionSafetyResponsibility(form.value.id!, buildPayload())
       else await addPositionSafetyResponsibility(buildPayload())
       emit('success', type)
       return true
@@ -330,7 +327,7 @@
       positionName: data.positionName,
       positionCode: data.positionCode
     })
-    Object.assign(form, {
+    Object.assign(form.value, {
       ...createInitialForm(),
       organizationId: data.organizationId,
       positionId: data.positionId,

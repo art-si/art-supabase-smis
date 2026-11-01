@@ -121,7 +121,13 @@ export async function fetchEquipmentLedgerDetail(equipmentId: string) {
 export async function deleteEquipmentLedger(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_equipment_ledger_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '设备台账已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '设备台账已删除'
+    }
   )
 }
 
@@ -163,6 +169,10 @@ export async function deleteEquipmentAttachment(equipmentId: string, attachmentI
         .delete()
         .eq('equipment_id', equipmentId)
         .eq('attachment_id', attachmentId),
-    { showMessage: true, breakReturn: true, message: '设备附件已移除' }
+    {
+      showMessage: true,
+      breakReturn: true,
+      message: '设备附件已移除'
+    }
   )
 }

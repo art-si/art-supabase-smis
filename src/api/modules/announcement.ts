@@ -93,7 +93,13 @@ export async function saveAnnouncementCategory(params: SmisAnnouncementCategoryS
 export async function deleteAnnouncementCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_announcement_categories_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '公告分类已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '公告分类已删除'
+    }
   )
 }
 
@@ -159,7 +165,13 @@ export async function withdrawAnnouncement(id: string) {
 export async function deleteAnnouncements(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_announcements_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '公告草稿已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '公告草稿已删除'
+    }
   )
 }
 

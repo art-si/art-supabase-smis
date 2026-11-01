@@ -34,8 +34,7 @@
       <ElScrollbar class="no-hazard-page__scroll">
         <div class="no-hazard-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="5"
             label-position="top"
@@ -130,7 +129,6 @@
 <script setup lang="tsx">
   import { emptyNoHazardPersonnelStatistics } from '@smis/domain/report-defaults'
   import { createDateTimeFormatter } from '@/utils/ui/format'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import dayjs from 'dayjs'
   import { ElTag } from 'element-plus'
   import type { ColumnOption } from '@/types'
@@ -170,7 +168,7 @@
     maxHazardCount: 0,
     employeeKeyword: ''
   })
-  const query = reactive<PersonnelQuery>(initialQuery())
+  const query = ref<PersonnelQuery>(initialQuery())
   const state = reactive<{
     loading: boolean
     error: string | null
@@ -236,7 +234,7 @@
     {
       label: '低频人员',
       value: state.data.overview.matchedCount,
-      description: `上报数 ≤ ${query.maxHazardCount ?? 0}`,
+      description: `上报数 ≤ ${query.value.maxHazardCount ?? 0}`,
       icon: 'ri:user-unfollow-line',
       tone: state.data.overview.matchedCount ? 'warning' : 'success'
     },
@@ -324,11 +322,13 @@
     state.error = null
     try {
       const result = await fetchNoHiddenHazardPersonnelStatistics({
-        reportedFrom: query.reportedRange?.[0],
-        reportedTo: query.reportedRange?.[1] ? `${query.reportedRange[1]}T23:59:59` : undefined,
-        organizationId: query.organizationId,
-        maxHazardCount: query.maxHazardCount,
-        employeeKeyword: query.employeeKeyword
+        reportedFrom: query.value.reportedRange?.[0],
+        reportedTo: query.value.reportedRange?.[1]
+          ? `${query.value.reportedRange[1]}T23:59:59`
+          : undefined,
+        organizationId: query.value.organizationId,
+        maxHazardCount: query.value.maxHazardCount,
+        employeeKeyword: query.value.employeeKeyword
       })
       const organizationOptions = result.organizationOptions.length
         ? result.organizationOptions
@@ -342,7 +342,7 @@
     }
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
   onMounted(loadData)

@@ -87,7 +87,13 @@ export async function saveSafetyRisk(params: SmisSafetyRiskSavePayload) {
 export async function deleteSafetyRisks(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_safety_risks_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '安全风险已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '安全风险已删除'
+    }
   )
 }
 
@@ -147,7 +153,13 @@ export async function saveRiskControlPlan(params: SmisRiskControlPlanSavePayload
 export async function deleteRiskControlPlans(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_risk_control_plans_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '风险管控配置已删除或停用' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '风险管控配置已删除或停用'
+    }
   )
 }
 

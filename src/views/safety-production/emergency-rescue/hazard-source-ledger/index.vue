@@ -58,10 +58,14 @@
       <HazardSourceDetailDrawer ref="detailRef" />
       <HazardStatisticsDialog ref="statisticsRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -82,7 +86,7 @@
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
   import { createImportReferenceLookup } from '@/utils/business/import-reference'
   import TreeUtils from '@/utils/tree'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -109,6 +113,7 @@
   import HazardStatisticsDialog from './modules/hazard-statistics-dialog.vue'
   import HazardSourceDetailDrawer from './modules/hazard-source-detail-drawer.vue'
   import { prepareHazardSourceImport } from './hazard-source-import'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_hazard_source', '危险源')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -130,7 +135,6 @@
   }
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const detailRef = ref<DetailExpose>()
@@ -502,11 +506,23 @@
     {
       permission: 'SmisHazardSourceLedger:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿危险源吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteHazardSources(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.hazardName ?? '危险源')
+          })),
+          permission: 'SmisHazardSourceLedger:Delete',
+          remove: async () => {
+            await deleteHazardSources(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -548,13 +564,22 @@
     void (type === 'add' ? tableRef.value?.refreshCreate() : tableRef.value?.refreshUpdate())
   }
   const handleDelete = async (row: SmisHazardSource): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除危险源“${row.hazardName}”吗？`)
-      await deleteHazardSources([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.hazardName ?? '危险源')
+        }
+      ],
+      permission: 'SmisHazardSourceLedger:Delete',
+      confirmMessage: `确定删除危险源“${row.hazardName}”吗？`,
+      remove: async () => {
+        await deleteHazardSources([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   onMounted(async () => {
     await Promise.all(

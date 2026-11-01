@@ -37,8 +37,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #textColor>
           <div class="hazard-factor-category-dialog__color-field">

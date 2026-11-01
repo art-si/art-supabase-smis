@@ -45,10 +45,14 @@
 
       <HistoricalAccidentCaseDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -65,7 +69,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { useUserStore } from '@/store/modules/user'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -84,6 +88,10 @@
   import HistoricalAccidentCaseDialog, {
     type HistoricalAccidentCaseDialogOpenData
   } from './modules/historical-accident-case-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_historical_accident_case',
+    '事故案例'
+  )
 
   const formatTableDate = createDateTimeFormatter({
     format: 'YYYY-MM-DD',
@@ -108,7 +116,6 @@
 
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const searchQuery = ref<HistoricalCaseSearchModel>({})
@@ -175,13 +182,22 @@
     void dialogRef.value?.handleOpen({ row, organizations: organizations.value })
   }
   const handleDelete = async (row: SmisHistoricalAccidentCase): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除事故案例“${row.accidentName}”吗？删除后无法恢复。`)
-      await deleteHistoricalAccidentCases([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      // 用户取消删除时保持当前列表状态。
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.accidentName ?? '事故案例')
+        }
+      ],
+      permission: 'SmisHistoricalAccidentCases:Delete',
+      confirmMessage: `确定删除事故案例“${row.accidentName}”吗？删除后无法恢复。`,
+      remove: async () => {
+        await deleteHistoricalAccidentCases([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const categorySummary = (row: SmisHistoricalAccidentCase): string =>
     row.accidentCategories
@@ -358,11 +374,23 @@
     {
       permission: 'SmisHistoricalAccidentCases:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条事故案例吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteHistoricalAccidentCases(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.accidentName ?? '事故案例')
+          })),
+          permission: 'SmisHistoricalAccidentCases:Delete',
+          remove: async () => {
+            await deleteHistoricalAccidentCases(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])

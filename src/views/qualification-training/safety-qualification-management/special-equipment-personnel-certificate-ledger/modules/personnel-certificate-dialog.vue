@@ -15,14 +15,11 @@
       <ArtSectionCard title="人员与证件" subtitle="证件人员为主表，人员基础资料不重复录入">
         <ArtForm
           ref="formRef"
-          :model-value="form"
-          @update:model-value="replaceReactiveModel(form, $event)"
+          v-model="form"
           :items="formItems"
           :rules="rules"
           :span="8"
           :gutter="20"
-          :show-reset="false"
-          :show-submit="false"
           scroll-to-error
         >
           <template #employeeId>
@@ -81,8 +78,6 @@
 
 <script setup lang="tsx">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText, normalizeSingleStringKey } from '@/utils/form/normalize'
@@ -204,9 +199,9 @@
     remark: '',
     items: [makeItem()]
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const certificateImageUrls = computed(() =>
-    form.certificatePhotoUrl ? [form.certificatePhotoUrl] : []
+    form.value.certificatePhotoUrl ? [form.value.certificatePhotoUrl] : []
   )
   const rules = computed<FormRules<FormModel>>(() => {
     const result: FormRules<FormModel> = {
@@ -231,12 +226,12 @@
   const warningOptions = dictOptions('commonWarningStatus')
   const reminderOptions = dictOptions('smisCertificateReminderDays')
   const dismissalOptions = dictOptions('smisCertificateDismissalReason')
-  const categoryMeta = computed(() => getCertificateCategoryMeta(form.certificateCategory))
-  const selectedCatalogIds = computed(() => form.items.map((item) => item.catalogId))
+  const categoryMeta = computed(() => getCertificateCategoryMeta(form.value.certificateCategory))
+  const selectedCatalogIds = computed(() => form.value.items.map((item) => item.catalogId))
   const activeCatalogOptions = computed(() =>
     catalogOptions.value.filter(
       (item) =>
-        isCatalogAllowedForCertificateCategory(item, form.certificateCategory) &&
+        isCatalogAllowedForCertificateCategory(item, form.value.certificateCategory) &&
         (item.status === 'enabled' || selectedCatalogIds.value.includes(item.id))
     )
   )
@@ -251,12 +246,12 @@
       : '选择后自动带出性别、组织、岗位、手机号和头像'
   )
   const projectColumnLabel = computed(() =>
-    form.certificateCategory === 'special_operation' ? '准操项目' : '作业项目'
+    form.value.certificateCategory === 'special_operation' ? '准操项目' : '作业项目'
   )
   const approvalDateLabel = computed(() => {
     if (categoryMeta.value.approvalDateLabel) return categoryMeta.value.approvalDateLabel
-    if (form.certificateCategory === 'safety_manager') return '发证日期'
-    if (form.certificateCategory === 'special_operation') return '初次发证日期'
+    if (form.value.certificateCategory === 'safety_manager') return '发证日期'
+    if (form.value.certificateCategory === 'special_operation') return '初次发证日期'
     return '批准日期'
   })
   const itemColumns = computed<ColumnOption<ItemForm>[]>(() => {
@@ -389,7 +384,7 @@
             link
             aria-label={row.reviewCount ? '已有复审记录，不能移除' : '删除作业项目'}
             disabled={Boolean(row.reviewCount)}
-            onClick={() => removeItem(form.items.findIndex((item) => item.key === row.key))}
+            onClick={() => removeItem(form.value.items.findIndex((item) => item.key === row.key))}
           >
             <ArtSvgIcon icon="ri:delete-bin-line" />
           </ElButton>
@@ -533,44 +528,44 @@
       (item) => item.catalogType === 'certificate_term' && item.itemCode === termCode
     )
     if (!term) return
-    const row = form.items[0] ?? makeItem()
+    const row = form.value.items[0] ?? makeItem()
     row.catalogId = term.id
     row.workCode = term.itemCode
     row.workCategoryId = ''
-    form.items = [row]
+    form.value.items = [row]
   }
   const addItem = (): void => {
-    form.items.push(makeItem())
+    form.value.items.push(makeItem())
   }
   const removeItem = (index: number): void => {
-    if (form.items[index]?.reviewCount) {
+    if (form.value.items[index]?.reviewCount) {
       ElMessage.warning('已有复审记录的作业项目不能移除，请保留该项目的历史证据')
       return
     }
-    form.items.splice(index, 1)
+    form.value.items.splice(index, 1)
   }
   const handleCategoryChange = (): void => {
-    form.extraFields = {}
-    form.items = [makeItem()]
+    form.value.extraFields = {}
+    form.value.items = [makeItem()]
     void loadCatalogs()
-    if (form.employeeId) void loadEmployeeDetail(form.employeeId)
+    if (form.value.employeeId) void loadEmployeeDetail(form.value.employeeId)
   }
   const applyOcrResult = (result: SmisCertificateOcrResponse): void => {
     const appliedFields: string[] = []
     const certificate = result.certificate
-    if (!form.certificateNumber.trim() && certificate.certificateNumber) {
-      form.certificateNumber = certificate.certificateNumber
+    if (!form.value.certificateNumber.trim() && certificate.certificateNumber) {
+      form.value.certificateNumber = certificate.certificateNumber
       appliedFields.push('证件编号')
     }
-    if (!form.issuingAuthority.trim() && certificate.issuingAuthority) {
-      form.issuingAuthority = certificate.issuingAuthority
+    if (!form.value.issuingAuthority.trim() && certificate.issuingAuthority) {
+      form.value.issuingAuthority = certificate.issuingAuthority
       appliedFields.push('发证机关')
     }
-    if (!form.archiveNumber.trim() && certificate.archiveNumber) {
-      form.archiveNumber = certificate.archiveNumber
+    if (!form.value.archiveNumber.trim() && certificate.archiveNumber) {
+      form.value.archiveNumber = certificate.archiveNumber
       appliedFields.push('档案编号')
     }
-    const item = form.items[0]
+    const item = form.value.items[0]
     if (item && !item.approvalDate && certificate.approvalDate) {
       item.approvalDate = certificate.approvalDate
       appliedFields.push(approvalDateLabel.value)
@@ -611,30 +606,30 @@
 
   const fetchCertificateEmployees = (
     params: Parameters<typeof fetchPersonnelCertificateEmployeeOptions>[1]
-  ) => fetchPersonnelCertificateEmployeeOptions(form.certificateCategory, params)
+  ) => fetchPersonnelCertificateEmployeeOptions(form.value.certificateCategory, params)
   const loadEmployeeDetail = async (employeeId: string): Promise<void> => {
-    const category = form.certificateCategory
+    const category = form.value.certificateCategory
     const result = await fetchPersonnelCertificateEmployeeDetail(category, employeeId)
-    if (form.certificateCategory !== category || form.employeeId !== employeeId) return
+    if (form.value.certificateCategory !== category || form.value.employeeId !== employeeId) return
     const employee = result.data
     if (!employee) return
     employeeSelection.value = [employee]
-    form.employeeIdCardNo = employee.idCardNo?.trim() || ''
-    form.employeeEducationLevel = employee.educationLevel?.trim() || ''
+    form.value.employeeIdCardNo = employee.idCardNo?.trim() || ''
+    form.value.employeeEducationLevel = employee.educationLevel?.trim() || ''
   }
   const handleEmployeeChange = (
     value: string | string[] | undefined,
     rows: EmployeeIntegrationItem[]
   ): void => {
     employeeSelection.value = rows
-    form.employeeIdCardNo = ''
-    form.employeeEducationLevel = ''
+    form.value.employeeIdCardNo = ''
+    form.value.employeeEducationLevel = ''
     const employeeId = normalizeSingleStringKey(value)
     if (employeeId) void loadEmployeeDetail(employeeId)
   }
 
   const validateItems = async (): Promise<boolean> => {
-    if (!form.items.length) {
+    if (!form.value.items.length) {
       ElMessage.warning('请至少新增一个作业项目')
       return false
     }
@@ -642,7 +637,7 @@
     if (tableValidation?.valid === false) {
       return false
     }
-    if (uniqBy(form.items, 'catalogId').length !== form.items.length) {
+    if (uniqBy(form.value.items, 'catalogId').length !== form.value.items.length) {
       ElMessage.warning('同一证件不能重复选择作业项目')
       return false
     }
@@ -654,24 +649,24 @@
       if (!(await validateItems())) return false
       const extraFields = (categoryMeta.value.extraFields ?? []).reduce<Record<string, string>>(
         (result, field) => {
-          const value = form.extraFields[field.key]?.trim()
+          const value = form.value.extraFields[field.key]?.trim()
           if (value) result[field.key] = value
           return result
         },
         {}
       )
       const payload: SmisPersonnelCertificateSavePayload = {
-        id: form.id,
-        employeeId: form.employeeId,
-        certificateCategory: form.certificateCategory,
-        certificateNumber: form.certificateNumber.trim(),
-        issuingAuthority: normalizeNullableText(form.issuingAuthority),
-        archiveNumber: normalizeNullableText(form.archiveNumber),
-        certificatePhotoUrl: form.certificatePhotoUrl || null,
-        warningStatus: form.warningStatus,
+        id: form.value.id,
+        employeeId: form.value.employeeId,
+        certificateCategory: form.value.certificateCategory,
+        certificateNumber: form.value.certificateNumber.trim(),
+        issuingAuthority: normalizeNullableText(form.value.issuingAuthority),
+        archiveNumber: normalizeNullableText(form.value.archiveNumber),
+        certificatePhotoUrl: form.value.certificatePhotoUrl || null,
+        warningStatus: form.value.warningStatus,
         extraFields,
-        remark: normalizeNullableText(form.remark),
-        items: form.items.map((item) => ({
+        remark: normalizeNullableText(form.value.remark),
+        items: form.value.items.map((item) => ({
           id: item.id,
           catalogId: item.catalogId,
           approvalDate: item.approvalDate,
@@ -681,17 +676,17 @@
         }))
       }
       const response = await savePersonnelCertificate(payload)
-      const entityId = form.id || response.data
+      const entityId = form.value.id || response.data
       if (ocrArtifactId.value && entityId) {
-        const firstItem = form.items[0]
+        const firstItem = form.value.items[0]
         const review = await reviewPersonnelCertificateOcr({
           artifactId: ocrArtifactId.value,
           entityId,
-          category: form.certificateCategory,
+          category: form.value.certificateCategory,
           finalPayload: {
-            certificateNumber: form.certificateNumber.trim(),
-            issuingAuthority: normalizeNullableText(form.issuingAuthority),
-            archiveNumber: normalizeNullableText(form.archiveNumber),
+            certificateNumber: form.value.certificateNumber.trim(),
+            issuingAuthority: normalizeNullableText(form.value.issuingAuthority),
+            archiveNumber: normalizeNullableText(form.value.archiveNumber),
             approvalDate: firstItem?.approvalDate || null,
             effectiveDate: firstItem?.effectiveDate || null
           }
@@ -706,9 +701,9 @@
     }
   }
   const loadCatalogs = async (): Promise<void> => {
-    const category = form.certificateCategory
+    const category = form.value.certificateCategory
     const result = await fetchPersonnelCertificateCatalogOptions(category)
-    if (form.certificateCategory !== category) return
+    if (form.value.certificateCategory !== category) return
     catalogOptions.value = result.data
     ensureCertificateTermItem()
   }
@@ -718,11 +713,11 @@
     aiPermission.value = data.aiPermission
     ocrArtifactId.value = ''
     ocrPanelRef.value?.reset()
-    Object.assign(form, initial())
-    if (data.category) form.certificateCategory = data.category
+    Object.assign(form.value, initial())
+    if (data.category) form.value.certificateCategory = data.category
     employeeSelection.value = []
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.mode === 'edit' ? data.row.id : undefined,
         employeeId: data.row.employeeId,
         employeeIdCardNo: data.row.idCardNo || '',
@@ -783,7 +778,7 @@
           )
           await loadCatalogs()
           ensureCertificateTermItem()
-          if (form.employeeId) await loadEmployeeDetail(form.employeeId)
+          if (form.value.employeeId) await loadEmployeeDetail(form.value.employeeId)
         } finally {
           api.setLoading(false)
         }

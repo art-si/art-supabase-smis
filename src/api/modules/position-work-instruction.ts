@@ -75,6 +75,12 @@ export async function savePositionWorkInstruction(payload: PositionWorkInstructi
 export async function deletePositionWorkInstructions(ids: string[]) {
   return await responseHandle(
     () => supabase.rpc('smis_delete_position_work_instructions_secure', { p_ids: ids }),
-    { showMessage: true, message: '岗位作业指导书已删除', breakReturn: true }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      message: '岗位作业指导书已删除',
+      breakReturn: true
+    }
   )
 }

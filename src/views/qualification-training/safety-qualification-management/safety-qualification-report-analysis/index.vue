@@ -17,8 +17,7 @@
       <ElScrollbar class="qualification-analysis__scroll">
         <div class="qualification-analysis__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -254,7 +253,6 @@
 
 <script setup lang="ts">
   import { emptySafetyQualificationAnalysis } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import dayjs from 'dayjs'
   import { useAsyncState } from '@vueuse/core'
   import type { BarDataItem, PieDataItem } from '@/types/component/chart'
@@ -300,7 +298,7 @@
     organizationId: undefined
   })
   const userStore = useUserStore()
-  const query = reactive<AnalysisQuery>(initialQuery())
+  const query = ref<AnalysisQuery>(initialQuery())
   const request = useAsyncState(
     async (params: Parameters<typeof fetchSafetyQualificationAnalysis>[0]) => {
       const result = await fetchSafetyQualificationAnalysis(params, { showErrorMessage: false })
@@ -349,7 +347,9 @@
   const categoryLabel = (value: SmisCertificateCategory): string =>
     userStore.getDictLabelByValue('smisCertificateCategory', value) || value || '未维护'
   const periodLabel = computed(() =>
-    query.dateRange?.length === 2 ? `${query.dateRange[0]} — ${query.dateRange[1]}` : '全部时间'
+    query.value.dateRange?.length === 2
+      ? `${query.value.dateRange[0]} — ${query.value.dateRange[1]}`
+      : '全部时间'
   )
   const metrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
@@ -562,13 +562,13 @@
 
   const loadData = async (): Promise<void> => {
     await request.executeImmediate({
-      startDate: query.dateRange?.[0],
-      endDate: query.dateRange?.[1],
-      organizationId: query.organizationId
+      startDate: query.value.dateRange?.[0],
+      endDate: query.value.dateRange?.[1],
+      organizationId: query.value.organizationId
     })
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     activePeriodMetric.value = 'reminder'
     void loadData()
   }

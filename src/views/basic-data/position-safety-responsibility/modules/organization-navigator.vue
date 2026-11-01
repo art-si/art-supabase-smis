@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="organization-navigator"
     title="组织范围"
     subtitle="数据来自系统管理 / 部门管理"
@@ -22,75 +21,75 @@
       />
     </template>
 
-    <div class="organization-navigator__content">
-      <ElInput
-        v-model="keyword"
-        clearable
-        placeholder="搜索组织名称或编码"
-        aria-label="搜索组织名称或编码"
-      >
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <button
-        type="button"
-        class="organization-navigator__all"
-        :class="{ 'is-active': selectedKey === allKey }"
-        @click="emit('select', allKey)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
-        <span>
-          <strong>全部组织</strong>
-          <small>跨组织浏览岗位及已维护标准</small>
-        </span>
-        <ArtSvgIcon v-if="selectedKey === allKey" icon="ri:check-line" />
-      </button>
-
-      <div class="organization-navigator__tree-label">
-        <span>组织结构</span>
-        <small>{{ organizationCount }} 个节点</small>
-      </div>
-
-      <ElScrollbar class="organization-navigator__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="matchesOrganizationNodeKeyword"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
+    <template #toolbar>
+      <div class="organization-navigator__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索组织名称或编码"
+          aria-label="搜索组织名称或编码"
         >
-          <template #default="{ data: node }">
-            <div class="organization-navigator__node">
-              <span aria-hidden="true"
-                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
-              /></span>
-              <span>
-                <strong :title="node.organizationName">{{ node.organizationName }}</strong>
-                <small :title="node.organizationCode">{{ node.organizationCode }}</small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="organization-navigator__node-check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
+
+        <button
+          type="button"
+          class="organization-navigator__all"
+          :class="{ 'is-active': selectedKey === allKey }"
+          @click="emit('select', allKey)"
+        >
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
+          <span>
+            <strong>全部组织</strong>
+            <small>跨组织浏览岗位及已维护标准</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === allKey" icon="ri:check-line" />
+        </button>
+
+        <div class="organization-navigator__tree-label">
+          <span>组织结构</span>
+          <small>{{ organizationCount }} 个节点</small>
+        </div>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="matchesOrganizationNodeKeyword"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="organization-navigator__node">
+          <span aria-hidden="true"
+            ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
+          /></span>
+          <span>
+            <strong :title="node.organizationName">{{ node.organizationName }}</strong>
+            <small :title="node.organizationCode">{{ node.organizationCode }}</small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="organization-navigator__node-check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -152,13 +151,6 @@
 <style scoped lang="scss">
   .organization-navigator {
     height: 100%;
-
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
 
     :deep(.art-section-card__body) {
       display: flex;
@@ -253,11 +245,6 @@
         font-weight: 400;
         color: var(--el-text-color-secondary);
       }
-    }
-
-    &__scrollbar {
-      flex: 1;
-      min-height: 0;
     }
 
     &__node {

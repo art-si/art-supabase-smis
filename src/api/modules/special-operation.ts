@@ -382,7 +382,13 @@ export async function deleteSpecialOperationTypes(ids: string[], tenantId?: stri
         p_ids: ids,
         p_tenant_id: tenantId || null
       }),
-    { showMessage: true, breakReturn: true, message: '作业类型已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '作业类型已删除'
+    }
   )
 }
 
@@ -454,7 +460,13 @@ export async function deleteSpecialOperationCatalogItems(
         p_ids: ids,
         p_tenant_id: tenantId || null
       }),
-    { showMessage: true, breakReturn: true, message: '配置项已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '配置项已删除'
+    }
   )
 }
 
@@ -557,7 +569,13 @@ export async function deleteSpecialOperationPermits(ids: string[], tenantId?: st
         p_ids: ids,
         p_tenant_id: tenantId || null
       }),
-    { showMessage: true, breakReturn: true, message: '作业票已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '作业票已删除'
+    }
   )
 }
 

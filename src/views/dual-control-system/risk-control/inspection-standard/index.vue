@@ -30,7 +30,6 @@
         >
           <template #primary>
             <ArtSectionCard
-              :show-scrollbar="false"
               class="inspection-standard-page__navigation-card"
               title="排查标准导航"
               subtitle="选择层级后查看关联排查项"
@@ -61,7 +60,7 @@
                   @click="loadStandards"
                 />
               </template>
-              <div class="inspection-standard-page__navigator-content">
+              <template #toolbar>
                 <ElInput
                   v-model="treeState.keyword"
                   clearable
@@ -71,61 +70,59 @@
                 >
                   <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
                 </ElInput>
-                <ElScrollbar class="inspection-standard-page__tree-scrollbar">
-                  <ElTree
-                    ref="treeRef"
-                    :data="standardTree"
-                    node-key="id"
-                    highlight-current
-                    default-expand-all
-                    :expand-on-click-node="false"
-                    :filter-node-method="filterTreeNode"
-                    @node-click="handleStandardSelect"
-                  >
-                    <template #default="{ data }">
-                      <div class="inspection-standard-page__tree-node">
-                        <span class="inspection-standard-page__tree-label"
-                          ><i :style="{ background: data.textColor || 'var(--theme-color)' }"></i
-                          ><span
-                            ><strong>{{ data.standardName }}</strong
-                            ><small>{{ data.standardCode }}</small></span
-                          ></span
-                        >
-                        <span class="inspection-standard-page__tree-actions" @click.stop>
-                          <ArtIconButton
-                            icon="ri:add-line"
-                            label="新增下级标准"
-                            permission="SmisDualControlInspectionStandard:Add"
-                            @click="openStandardDialog(undefined, data.id)"
-                          />
-                          <ArtIconButton
-                            icon="ri:edit-line"
-                            label="编辑标准"
-                            permission="SmisDualControlInspectionStandard:Edit"
-                            :disabled="data.status === 'voided'"
-                            @click="openStandardDialog(data)"
-                          />
-                          <ArtIconButton
-                            icon="ri:delete-bin-line"
-                            label="删除标准"
-                            tone="danger"
-                            permission="SmisDualControlInspectionStandard:Delete"
-                            @click="handleDeleteStandard(data)"
-                          />
-                        </span>
-                      </div>
-                    </template>
-                    <template #empty>
-                      <ArtEmptyState
-                        title="未找到匹配项"
-                        description="请调整关键词或清空筛选条件。"
-                        size="compact"
-                        :visual-size="64"
+              </template>
+              <ElTree
+                ref="treeRef"
+                :data="standardTree"
+                node-key="id"
+                highlight-current
+                default-expand-all
+                :expand-on-click-node="false"
+                :filter-node-method="filterTreeNode"
+                @node-click="handleStandardSelect"
+              >
+                <template #default="{ data }">
+                  <div class="inspection-standard-page__tree-node">
+                    <span class="inspection-standard-page__tree-label"
+                      ><i :style="{ background: data.textColor || 'var(--theme-color)' }"></i
+                      ><span
+                        ><strong>{{ data.standardName }}</strong
+                        ><small>{{ data.standardCode }}</small></span
+                      ></span
+                    >
+                    <span class="inspection-standard-page__tree-actions" @click.stop>
+                      <ArtIconButton
+                        icon="ri:add-line"
+                        label="新增下级标准"
+                        permission="SmisDualControlInspectionStandard:Add"
+                        @click="openStandardDialog(undefined, data.id)"
                       />
-                    </template>
-                  </ElTree>
-                </ElScrollbar>
-              </div>
+                      <ArtIconButton
+                        icon="ri:edit-line"
+                        label="编辑标准"
+                        permission="SmisDualControlInspectionStandard:Edit"
+                        :disabled="data.status === 'voided'"
+                        @click="openStandardDialog(data)"
+                      />
+                      <ArtIconButton
+                        icon="ri:delete-bin-line"
+                        label="删除标准"
+                        tone="danger"
+                        permission="SmisDualControlInspectionStandard:Delete"
+                        @click="handleDeleteStandard(data)"
+                      />
+                    </span>
+                  </div>
+                </template>
+                <template #empty>
+                  <ArtEmptyState
+                    title="未找到匹配项"
+                    description="请调整关键词或清空筛选条件。"
+                    size="compact"
+                    :visual-size="64"
+                  />
+                </template>
+              </ElTree>
             </ArtSectionCard>
           </template>
 
@@ -173,10 +170,15 @@
       <StandardDialog ref="standardDialogRef" @success="handleStandardSaved" />
       <ItemDialog ref="itemDialogRef" @success="handleItemSaved" />
     </div>
+    <MasterDataDeleteGuard ref="deleteStandardGuardRef" />
+    <MasterDataDeleteGuard ref="deleteItemGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -222,6 +224,11 @@
   import StandardDialog, { type StandardDialogOpenData } from './modules/standard-dialog.vue'
   import ItemDialog, { type ItemDialogOpenData } from './modules/item-dialog.vue'
 
+  const { deleteGuardRef: deleteStandardGuardRef, deleteRecords: deleteStandardRecords } =
+    useRecordDeleteGuard('smis_inspection_standard', '排查标准')
+  const { deleteGuardRef: deleteItemGuardRef, deleteRecords: deleteItemRecords } =
+    useRecordDeleteGuard('smis_inspection_item', '排查项')
+
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
     emptyText: '--',
@@ -239,7 +246,7 @@
     handleOpen: (data: ItemDialogOpenData) => Promise<void>
   }
 
-  const { confirmDelete, confirmAction } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap } = storeToRefs(userStore)
@@ -395,11 +402,23 @@
     {
       permission: 'SmisDualControlInspectionStandard:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: { selectedCount: number }) =>
         `确定删除选中的 ${selectedCount} 个排查项吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteInspectionItems(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteItemRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.itemCode ?? '业务记录')
+          })),
+          permission: 'SmisDualControlInspectionStandard:Delete',
+          remove: async () => {
+            await deleteInspectionItems(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -528,25 +547,23 @@
       .toLowerCase()
       .includes(value.toLowerCase())
   const handleDeleteStandard = async (row: SmisInspectionStandard) => {
-    try {
-      await confirmDelete(
-        `确定删除排查标准“${row.standardName}”吗？存在下级或排查项时系统会阻止删除。`
-      )
-      await deleteInspectionStandards([row.id])
-      await loadStandards()
-      void tableQueryRef.value?.refreshContext()
-    } catch {
-      /* 用户取消或业务约束阻止 */
-    }
+    await deleteStandardRecords({
+      resources: [{ id: row.id ?? '', label: row.standardName }],
+      permission: 'SmisDualControlInspectionStandard:Delete',
+      remove: () => deleteInspectionStandards([row.id ?? '']),
+      onDeleted: async () => {
+        await loadStandards()
+        await tableQueryRef.value?.refreshContext()
+      }
+    })
   }
   const handleDeleteItem = async (row: SmisInspectionItem) => {
-    try {
-      await confirmDelete(`确定删除排查项“${row.itemCode}”吗？`)
-      await deleteInspectionItems([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteItemRecords({
+      resources: [{ id: row.id ?? '', label: row.itemCode }],
+      permission: 'SmisDualControlInspectionStandard:Delete',
+      remove: () => deleteInspectionItems([row.id ?? '']),
+      onDeleted: () => tableQueryRef.value?.refreshRemove() ?? Promise.resolve()
+    })
   }
   const handleStandardSaved = async () => {
     await loadStandards()
@@ -596,34 +613,14 @@
     &__navigation-card {
       height: 100%;
 
-      :deep(.art-section-card__body),
-      :deep(.art-async-state),
-      :deep(.art-async-state__content) {
-        height: 100%;
-        min-height: 0;
-      }
-
       :deep(.art-section-card__body) {
         display: flex;
         flex-direction: column;
       }
     }
 
-    &__navigator-content {
-      display: flex;
-      flex: 1 1 auto;
-      flex-direction: column;
-      gap: 12px;
-      min-height: 0;
-    }
-
     &__tree-search {
       flex: 0 0 auto;
-    }
-
-    &__tree-scrollbar {
-      flex: 1 1 auto;
-      min-height: 0;
     }
 
     :deep(.el-tree) {

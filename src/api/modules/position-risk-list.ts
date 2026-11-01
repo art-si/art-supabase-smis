@@ -101,6 +101,12 @@ export async function editPositionRiskControl(id: string, payload: PositionRiskC
 export async function deletePositionRiskControls(ids: string[]) {
   return await responseHandle(
     () => supabase.from(TABLE_NAME).delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, message: '隐患控制措施标准已删除' }
+    {
+      breakReturn: true,
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      message: '隐患控制措施标准已删除'
+    }
   )
 }

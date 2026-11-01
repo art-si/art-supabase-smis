@@ -31,7 +31,6 @@
         >
           <template #primary>
             <ArtSectionCard
-              :show-scrollbar="false"
               class="hidden-hazard-plan-page__navigator-card"
               title="排查类型导航"
               subtitle="选择类型后聚焦对应计划"
@@ -50,37 +49,35 @@
                   @click="loadOptions"
                 />
               </template>
-              <ElScrollbar class="hidden-hazard-plan-page__navigator-scrollbar">
-                <nav class="hidden-hazard-plan-page__navigator" aria-label="排查类型">
-                  <button
-                    type="button"
-                    :class="{ 'is-active': !searchQuery.inspectionTypeId }"
-                    @click="selectType()"
+              <nav class="hidden-hazard-plan-page__navigator" aria-label="排查类型">
+                <button
+                  type="button"
+                  :class="{ 'is-active': !searchQuery.inspectionTypeId }"
+                  @click="selectType()"
+                >
+                  <span class="hidden-hazard-plan-page__type-mark"
+                    ><ArtSvgIcon icon="ri:apps-2-line"
+                  /></span>
+                  <span><strong>全部类型</strong><small>查看所有排查计划</small></span>
+                </button>
+                <button
+                  v-for="item in optionsState.data.inspectionTypes"
+                  :key="item.id"
+                  type="button"
+                  :class="{ 'is-active': searchQuery.inspectionTypeId === item.id }"
+                  @click="selectType(item.id)"
+                >
+                  <span
+                    class="hidden-hazard-plan-page__type-mark"
+                    :style="{ color: item.textColor || 'var(--theme-color)' }"
+                    ><ArtSvgIcon icon="ri:radar-line"
+                  /></span>
+                  <span
+                    ><strong>{{ item.typeName }}</strong
+                    ><small>{{ item.typeCode }}</small></span
                   >
-                    <span class="hidden-hazard-plan-page__type-mark"
-                      ><ArtSvgIcon icon="ri:apps-2-line"
-                    /></span>
-                    <span><strong>全部类型</strong><small>查看所有排查计划</small></span>
-                  </button>
-                  <button
-                    v-for="item in optionsState.data.inspectionTypes"
-                    :key="item.id"
-                    type="button"
-                    :class="{ 'is-active': searchQuery.inspectionTypeId === item.id }"
-                    @click="selectType(item.id)"
-                  >
-                    <span
-                      class="hidden-hazard-plan-page__type-mark"
-                      :style="{ color: item.textColor || 'var(--theme-color)' }"
-                      ><ArtSvgIcon icon="ri:radar-line"
-                    /></span>
-                    <span
-                      ><strong>{{ item.typeName }}</strong
-                      ><small>{{ item.typeCode }}</small></span
-                    >
-                  </button>
-                </nav>
-              </ElScrollbar>
+                </button>
+              </nav>
             </ArtSectionCard>
           </template>
 
@@ -121,10 +118,14 @@
       <PlanDialog ref="dialogRef" @success="handleSaved" />
       <PlanDetailDrawer ref="detailRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -170,6 +171,10 @@
   import PlanDetailDrawer, {
     type HiddenHazardPlanDetailOpenData
   } from './modules/plan-detail-drawer.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_hidden_hazard_inspection_plan',
+    '隐患排查计划'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -387,11 +392,23 @@
     {
       permission: 'SmisDualControlHiddenHazardInspectionPlan:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: { selectedCount: number }) =>
         `确定删除选中的 ${selectedCount} 条未派发计划吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteHiddenHazardInspectionPlans(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.planName ?? '隐患排查计划')
+          })),
+          permission: 'SmisDualControlHiddenHazardInspectionPlan:Delete',
+          remove: async () => {
+            await deleteHiddenHazardInspectionPlans(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -601,20 +618,9 @@
       flex: none;
     }
 
-    &__navigator-card :deep(.art-section-card__body) {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    &__navigator-scrollbar {
-      height: 100%;
-    }
-
     &__navigator {
       display: grid;
       gap: 6px;
-      padding-right: 4px;
     }
 
     &__navigator button {

@@ -34,8 +34,7 @@
       <ElScrollbar class="inspection-record-page__scroll">
         <div class="inspection-record-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="5"
             label-position="top"
@@ -80,7 +79,6 @@
 
 <script setup lang="tsx">
   import { emptyHiddenHazardInspectionRecord } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
@@ -133,7 +131,7 @@
     executorKeyword: '',
     isSpecialEquipment: ''
   })
-  const query = reactive<RecordQuery>(initialQuery())
+  const query = ref<RecordQuery>(initialQuery())
   const userStore = useUserStore()
   const state = reactive<{
     loading: boolean
@@ -332,11 +330,13 @@
     state.error = null
     try {
       const result = await fetchHiddenHazardInspectionRecord({
-        plannedFrom: query.plannedRange?.[0],
-        plannedTo: query.plannedRange?.[1] ? `${query.plannedRange[1]}T23:59:59` : undefined,
-        organizationId: query.organizationId,
-        executorKeyword: query.executorKeyword,
-        isSpecialEquipment: query.isSpecialEquipment
+        plannedFrom: query.value.plannedRange?.[0],
+        plannedTo: query.value.plannedRange?.[1]
+          ? `${query.value.plannedRange[1]}T23:59:59`
+          : undefined,
+        organizationId: query.value.organizationId,
+        executorKeyword: query.value.executorKeyword,
+        isSpecialEquipment: query.value.isSpecialEquipment
       })
       const organizationOptions = result.organizationOptions.length
         ? result.organizationOptions
@@ -350,7 +350,7 @@
     }
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
   onMounted(async () => {

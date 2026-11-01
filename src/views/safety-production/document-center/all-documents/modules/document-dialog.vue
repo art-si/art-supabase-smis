@@ -9,15 +9,12 @@
 
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #categoryId>
           <ElTreeSelect
@@ -83,8 +80,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -162,7 +157,7 @@
     duplicateAction: undefined,
     duplicateDocumentId: undefined
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
 
   const isUploadMode = computed(() => mode.value === 'upload')
   const contextIcon = computed(() =>
@@ -174,7 +169,7 @@
   )
   const contextTitle = computed(() =>
     mode.value === 'upload'
-      ? form.id
+      ? form.value.id
         ? '上传文档新版本'
         : '上传并登记文档'
       : mode.value === 'edit'
@@ -291,55 +286,57 @@
 
   const checkDuplicate = async (): Promise<void> => {
     duplicate.value = null
-    form.duplicateAction = undefined
-    form.duplicateDocumentId = undefined
-    if (!form.categoryId || !form.fileName || form.id) return
+    form.value.duplicateAction = undefined
+    form.value.duplicateDocumentId = undefined
+    if (!form.value.categoryId || !form.value.fileName || form.value.id) return
     const result = await findDocumentDuplicate({
-      categoryId: form.categoryId,
-      fileName: form.fileName
+      categoryId: form.value.categoryId,
+      fileName: form.value.fileName
     })
     duplicate.value = result
-    form.duplicateDocumentId = result?.id
+    form.value.duplicateDocumentId = result?.id
   }
 
   const handleCategoryChange = (): void => {
-    if (form.fileName) void checkDuplicate()
+    if (form.value.fileName) void checkDuplicate()
   }
 
   const handleUploadSuccess = (resources: Api.DataCenter.Resources.ResourceListItem[]): void => {
     const resource = resources[0]
     if (!resource) return
-    form.fileUrl = resource.url ?? ''
-    form.fileName = resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
-    form.fileType = resource.suffix || resource.mimeType || ''
-    form.fileSize = resource.sizeByte
-    if (!form.title) form.title = form.fileName.replace(/\.[^.]+$/, '')
+    form.value.fileUrl = resource.url ?? ''
+    form.value.fileName = resource.originName || getAttachmentNameFromUrl(resource.url ?? '', '')
+    form.value.fileType = resource.suffix || resource.mimeType || ''
+    form.value.fileSize = resource.sizeByte
+    if (!form.value.title) form.value.title = form.value.fileName.replace(/\.[^.]+$/, '')
     void checkDuplicate()
   }
 
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      if (duplicate.value && !form.duplicateAction) {
+      if (duplicate.value && !form.value.duplicateAction) {
         ElMessage.warning('请选择同名文件的处理方式')
         return false
       }
       await saveDocument({
-        id: form.id,
-        categoryId: form.categoryId,
-        title: form.title.trim(),
-        status: form.status,
-        summary: normalizeNullableText(form.summary),
-        fileName: isUploadMode.value ? form.fileName : null,
-        fileUrl: isUploadMode.value ? form.fileUrl : null,
-        fileType: isUploadMode.value ? form.fileType || null : null,
-        fileSize: isUploadMode.value ? (form.fileSize ?? null) : null,
-        effectiveDate: isUploadMode.value ? form.effectiveDate : null,
-        replacementNote: isUploadMode.value ? normalizeNullableText(form.replacementNote) : null,
-        duplicateAction: form.duplicateAction ?? 'none',
-        duplicateDocumentId: form.duplicateDocumentId ?? null
+        id: form.value.id,
+        categoryId: form.value.categoryId,
+        title: form.value.title.trim(),
+        status: form.value.status,
+        summary: normalizeNullableText(form.value.summary),
+        fileName: isUploadMode.value ? form.value.fileName : null,
+        fileUrl: isUploadMode.value ? form.value.fileUrl : null,
+        fileType: isUploadMode.value ? form.value.fileType || null : null,
+        fileSize: isUploadMode.value ? (form.value.fileSize ?? null) : null,
+        effectiveDate: isUploadMode.value ? form.value.effectiveDate : null,
+        replacementNote: isUploadMode.value
+          ? normalizeNullableText(form.value.replacementNote)
+          : null,
+        duplicateAction: form.value.duplicateAction ?? 'none',
+        duplicateDocumentId: form.value.duplicateDocumentId ?? null
       })
-      emit('success', form.id || form.duplicateAction === 'replace' ? 'edit' : 'add')
+      emit('success', form.value.id || form.value.duplicateAction === 'replace' ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '文档保存失败，请检查内容后重试')
@@ -348,12 +345,12 @@
   }
 
   const handleOpen = async (data: DocumentDialogOpenData): Promise<void> => {
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     mode.value = data.mode
     categories.value = data.categories
     duplicate.value = null
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         categoryId: data.row.categoryId,
         title: data.row.title,
@@ -362,7 +359,7 @@
         effectiveDate: data.row.scheduledEffectiveDate || dayjs().format('YYYY-MM-DD')
       })
     } else if (data.presetCategoryId) {
-      form.categoryId = data.presetCategoryId
+      form.value.categoryId = data.presetCategoryId
     }
     await nextTick()
     formRef.value?.clearValidate()

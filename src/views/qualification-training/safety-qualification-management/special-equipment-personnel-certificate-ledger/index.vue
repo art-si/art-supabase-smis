@@ -20,8 +20,7 @@
       </div>
       <ArtTableQuery
         ref="tableRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="min-h-0 flex-1"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -39,13 +38,16 @@
       />
       <PersonnelCertificateDialog ref="dialogRef" @success="refresh" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import dayjs from 'dayjs'
   import { ElAvatar, ElButton, ElPopover, ElScrollbar, ElTag } from 'element-plus'
@@ -59,7 +61,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -83,6 +85,10 @@
     type PersonnelCertificateDialogOpenData
   } from './modules/personnel-certificate-dialog.vue'
   import { getCertificateCategoryMeta } from './modules/certificate-category-meta'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_personnel_certificate',
+    '人员证书'
+  )
 
   defineOptions({ name: 'SmisSpecialEquipmentPersonnelCertificateLedger' })
   const certificatePermissionSets = {
@@ -162,12 +168,11 @@
   interface DialogExpose {
     handleOpen: (data: PersonnelCertificateDialogOpenData) => Promise<void>
   }
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const searchQuery = reactive<SmisPersonnelCertificateSearchParams>({})
+  const searchQuery = ref<SmisPersonnelCertificateSearchParams>({})
   const overview = reactive<SmisPersonnelCertificateOverview>({
     total: 0,
     normal: 0,
@@ -355,11 +360,23 @@
     {
       permission: permissionCode('Delete'),
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 张人员证件吗？证件项目和复审记录将一并删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deletePersonnelCertificates(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.certificateNumber ?? '人员证书')
+          })),
+          permission: permissionCode('Delete'),
+          remove: async () => {
+            await deletePersonnelCertificates(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -375,8 +392,8 @@
             SmisPersonnelCertificate,
             SmisPersonnelCertificateSearchParams
           >(fetchPersonnelCertificateList, {
-            ...searchQuery,
-            certificateCategory: category.value ?? searchQuery.certificateCategory,
+            ...searchQuery.value,
+            certificateCategory: category.value ?? searchQuery.value.certificateCategory,
             purpose: 'export'
           })
         )
@@ -599,13 +616,22 @@
     return { records: result.data, total: result.total }
   }
   const handleDelete = async (row: SmisPersonnelCertificate): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除“${row.employeeName}”的证件 ${row.certificateNumber} 吗？`)
-      await deletePersonnelCertificates([row.id])
-      await refresh()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.certificateNumber ?? '人员证书')
+        }
+      ],
+      permission: 'SmisPersonnelCertificateLedger:Delete',
+      confirmMessage: `确定删除“${row.employeeName}”的证件 ${row.certificateNumber} 吗？`,
+      remove: async () => {
+        await deletePersonnelCertificates([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await refresh()
+      }
+    })
   }
   const refresh = async (): Promise<void> => {
     await tableRef.value?.getData()

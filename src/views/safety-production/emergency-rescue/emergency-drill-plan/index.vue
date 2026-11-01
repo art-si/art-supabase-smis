@@ -36,10 +36,14 @@
       <DrillPlanDialog ref="dialogRef" @success="handleSaveSuccess" />
       <EmergencyRecordDetailDialog ref="detailDialogRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -78,6 +82,10 @@
   import EmergencyRecordDetailDialog, {
     type EmergencyRecordDetailOpenData
   } from '../shared/emergency-record-detail-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_emergency_drill_plan',
+    '应急演练计划'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -96,7 +104,7 @@
   }
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirm, confirmDelete } = useArtFeedback()
+  const { confirm } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const detailDialogRef = ref<DetailDialogExpose>()
@@ -185,13 +193,22 @@
     }
   }
   const handleDelete = async (row: SmisEmergencyDrillPlan) => {
-    try {
-      await confirmDelete(`确定删除草稿计划“${row.drillName}”吗？`)
-      await deleteEmergencyDrillPlans([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或服务端业务校验失败 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.drillName ?? '应急演练计划')
+        }
+      ],
+      permission: 'SmisEmergencyDrillPlan:Delete',
+      confirmMessage: `确定删除草稿计划“${row.drillName}”吗？`,
+      remove: async () => {
+        await deleteEmergencyDrillPlans([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const moreActions = (row: SmisEmergencyDrillPlan): ButtonMoreItem[] => [
     {
@@ -349,11 +366,23 @@
     {
       permission: 'SmisEmergencyDrillPlan:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿计划吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteEmergencyDrillPlans(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.drillName ?? '应急演练计划')
+          })),
+          permission: 'SmisEmergencyDrillPlan:Delete',
+          remove: async () => {
+            await deleteEmergencyDrillPlans(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])

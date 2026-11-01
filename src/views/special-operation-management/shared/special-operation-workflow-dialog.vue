@@ -14,8 +14,6 @@
       :validate-on-rule-change="false"
       custom-layout
       scroll-to-error
-      :show-reset="false"
-      :show-submit="false"
       root-class="workflow-form p-0! md:p-0!"
     >
       <ElFormItem v-if="action === 'start'" label="审批结果" prop="result" required>

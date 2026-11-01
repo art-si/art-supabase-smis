@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'measureSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="measure-dialog">
       <div class="measure-dialog__flow"
         ><span class="is-done"><ArtSvgIcon icon="ri:checkbox-circle-line" />已完成定量评价</span
@@ -9,110 +17,70 @@
         ></div
       >
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="model"
-        @update:model-value="replaceReactiveModel(model, $event)"
+        v-model="model"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="20"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
-      />
-      <div class="measure-dialog__positions">
-        <div class="measure-dialog__positions-head"
-          ><div
-            ><strong>防控岗位与排查周期</strong
-            ><p>一条措施可关联多个岗位，每个岗位独立配置此措施的排查频次。</p></div
-          ><ElSelect
-            v-model="selectedPositionIds"
-            multiple
-            filterable
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="选择一个或多个防控岗位"
-            ><ElOption
-              v-for="position in positions"
-              :key="position.id"
-              :label="`${position.positionName}（${position.positionCode}）`"
-              :value="position.id"
-              ><span>{{ position.positionName }}</span
-              ><small>{{ position.organizationName || position.positionCode }}</small></ElOption
-            ></ElSelect
-          ></div
-        >
-        <ElScrollbar v-if="model.positions.length" class="measure-dialog__position-scroll">
-          <ul class="measure-dialog__position-list">
-            <li v-for="binding in model.positions" :key="binding.positionId">
-              <div class="measure-dialog__position-identity">
-                <span><ArtSvgIcon icon="ri:briefcase-4-line" /></span>
-                <div>
-                  <strong>{{ positionOf(binding.positionId)?.positionName }}</strong>
-                  <small>{{ positionOf(binding.positionId)?.positionCode }}</small>
-                </div>
-              </div>
-              <label>
-                <span>排查频次</span>
-                <ElInputNumber
-                  v-model="binding.frequencyCount"
-                  :min="1"
-                  :max="999"
-                  controls-position="right"
-                />
-              </label>
-              <label>
-                <span>频次单位</span>
-                <ElSelect v-model="binding.frequencyUnit" placeholder="请选择">
-                  <ElOption
-                    v-for="option in frequencyOptions"
-                    :key="option.value"
-                    :label="option.label"
-                    :value="option.value"
-                  />
-                </ElSelect>
-              </label>
-              <div class="measure-dialog__period-preview">
-                <small>周期预览</small>
-                <ElTag type="primary" effect="plain">
-                  每 {{ binding.frequencyCount }}
-                  {{
-                    frequencyOptions.find((item) => item.value === binding.frequencyUnit)?.label ||
-                    '—'
-                  }}
-                </ElTag>
-              </div>
-              <ArtIconButton
-                icon="ri:close-line"
-                label="移除防控岗位"
-                tone="danger"
-                @click="removePosition(binding.positionId)"
-              />
-            </li>
-          </ul>
-        </ElScrollbar>
-        <ArtEmptyState
-          v-else
-          class="measure-dialog__position-empty"
-          title="尚未选择防控岗位"
-          description="从上方选择岗位后，可分别配置对应的排查频次。"
-          size="compact"
-          :visual-size="64"
-        />
-      </div>
+        ><template #positions>
+          <div class="measure-dialog__positions">
+            <div class="measure-dialog__positions-head"
+              ><div
+                ><strong>防控岗位与排查周期</strong
+                ><p>一条措施可关联多个岗位，每个岗位独立配置此措施的排查频次。</p></div
+              ><ElSelect
+                v-model="selectedPositionIds"
+                multiple
+                filterable
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="选择一个或多个防控岗位"
+                ><ElOption
+                  v-for="position in positions"
+                  :key="position.id"
+                  :label="`${position.positionName}（${position.positionCode}）`"
+                  :value="position.id"
+                  ><span>{{ position.positionName }}</span
+                  ><small>{{ position.organizationName || position.positionCode }}</small></ElOption
+                ></ElSelect
+              ></div
+            >
+            <ArtTable
+              v-if="model.positions.length"
+              ref="positionTableRef"
+              :data="model.positions"
+              :columns="positionColumns"
+              row-key="positionId"
+              :pagination="false"
+              max-height="320"
+            />
+            <ArtEmptyState
+              v-else
+              class="measure-dialog__position-empty"
+              title="尚未选择防控岗位"
+              description="从上方选择岗位后，可分别配置对应的排查频次。"
+              size="compact"
+              :visual-size="64"
+            />
+          </div> </template
+      ></ArtForm>
     </div>
   </ArtDialog>
 </template>
-<script setup lang="ts">
+<script setup lang="tsx">
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
-  import { ElMessage, type FormRules } from 'element-plus'
+  import { ElInputNumber, ElSelect, ElOption, ElMessage, type FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
+  import ArtTable, { type ArtTableExpose } from '@/components/core/tables/art-table/index.vue'
+  import type { ColumnOption } from '@/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -130,15 +98,14 @@
     item: SmisRiskItem
     row?: SmisRiskControlMeasure
   }
-  interface FormExpose {
-    validate: () => Promise<boolean>
-    clearValidate: () => void
-  }
   const emit = defineEmits<{ success: [] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const dialogRef = ref<ArtDialogExpose<MeasureDialogOpenData>>()
-  const formRef = ref<FormExpose>()
+  const formRef = ref<InstanceType<typeof ArtForm>>()
+  const activeFormTab = ref('measureSection')
+  type PositionBinding = SmisRiskControlMeasurePayload['positions'][number]
+  const positionTableRef = ref<ArtTableExpose<PositionBinding>>()
   const positions = ref<SmisRiskPositionOption[]>([])
   const selectedPositionIds = ref<string[]>([])
   const initial = (): SmisRiskControlMeasurePayload => ({
@@ -153,13 +120,14 @@
     sort: 10,
     positions: []
   })
-  const model = reactive(initial())
+  const model = ref(initial())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const categoryOptions = computed(() => dictOptions('smisControlMeasureCategory'))
   const controlLevelOptions = computed(() => dictOptions('smisControlLevel'))
   const hazardLevelOptions = computed(() => dictOptions('smisHazardLevel'))
   const frequencyOptions = computed(() => dictOptions('smisFrequencyUnit'))
   const items = computed<FormItem[]>(() => [
+    { key: 'measureSection', label: '防控措施', type: 'tab' },
     {
       label: '防控措施',
       key: 'controlMeasure',
@@ -214,7 +182,9 @@
       type: 'input',
       span: 24,
       props: { maxlength: 500, clearable: true, placeholder: '措施未执行时的可能失效表现（可选）' }
-    }
+    },
+    { key: 'positionSection', label: '岗位与周期', type: 'tab' },
+    { key: 'positions', label: '', type: 'slot', span: 24 }
   ])
   const rules: FormRules = {
     controlMeasure: [{ required: true, message: '请输入防控措施', trigger: 'blur' }],
@@ -229,29 +199,102 @@
   watch(
     selectedPositionIds,
     (ids) => {
-      const existing = new Map(model.positions.map((i) => [i.positionId, i]))
-      model.positions = ids.map(
+      const existing = new Map(model.value.positions.map((i) => [i.positionId, i]))
+      model.value.positions = ids.map(
         (id) => existing.get(id) || { positionId: id, frequencyCount: 1, frequencyUnit: 'day' }
       )
     },
     { deep: true }
   )
+
+  const positionColumns = computed<ColumnOption<PositionBinding>[]>(() => [
+    {
+      prop: 'positionId',
+      label: '防控岗位',
+      minWidth: 220,
+      formatter: (row) => (
+        <div class="grid gap-1">
+          <strong>{positionOf(row.positionId)?.positionName || '—'}</strong>
+          <small class="text-g-700">{positionOf(row.positionId)?.positionCode || '—'}</small>
+        </div>
+      )
+    },
+    {
+      prop: 'frequencyCount',
+      label: '排查频次',
+      width: 160,
+      required: true,
+      headerTooltip: '每个岗位分别设置排查周期，频次至少为 1。',
+      rules: { validator: ({ value }) => Number(value) >= 1, message: '排查频次至少为 1' },
+      formatter: (row) => (
+        <ElInputNumber
+          v-model={row.frequencyCount}
+          min={1}
+          max={999}
+          controlsPosition="right"
+          class="w-full!"
+          aria-label="排查频次"
+        />
+      )
+    },
+    {
+      prop: 'frequencyUnit',
+      label: '频次单位',
+      width: 180,
+      required: true,
+      headerTooltip: '与排查频次组合为岗位执行周期。',
+      formatter: (row) => (
+        <ElSelect
+          v-model={row.frequencyUnit}
+          class="w-full"
+          placeholder="请选择"
+          aria-label="频次单位"
+        >
+          {frequencyOptions.value.map((option) => (
+            <ElOption key={String(option.value)} label={option.label} value={option.value} />
+          ))}
+        </ElSelect>
+      )
+    },
+    {
+      prop: 'operation',
+      label: '操作',
+      width: 76,
+      fixed: 'right',
+      formatter: (row) => (
+        <ArtIconButton
+          icon="ri:close-line"
+          label="移除防控岗位"
+          tone="danger"
+          onClick={() => removePosition(row.positionId)}
+        />
+      )
+    }
+  ])
+
   const submit = async () => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      if (!model.positions.length) {
+      if (!model.value.positions.length) {
+        await formRef.value?.focusField('positions')
         ElMessage.warning('请至少选择一个防控岗位')
         return false
       }
-      if (model.positions.some((i) => !i.frequencyUnit || i.frequencyCount < 1)) {
-        ElMessage.warning('请完整配置每个岗位的排查周期')
+      const validation = await positionTableRef.value?.validate({ focus: false })
+      if (!validation?.valid) {
+        activeFormTab.value = 'positionSection'
+        await nextTick()
+        if (validation?.firstError) {
+          await positionTableRef.value?.validateField(validation.firstError.prop)
+          ElMessage.warning(validation.firstError.message)
+        }
         return false
       }
       await saveRiskControlMeasure({
-        ...model,
-        controlMeasure: model.controlMeasure.trim(),
-        standardBasis: normalizeNullableText(model.standardBasis),
-        failureMode: normalizeNullableText(model.failureMode)
+        ...model.value,
+        controlMeasure: model.value.controlMeasure.trim(),
+        standardBasis: normalizeNullableText(model.value.standardBasis),
+        failureMode: normalizeNullableText(model.value.failureMode)
       })
       emit('success')
       return true
@@ -261,11 +304,11 @@
     }
   }
   const handleOpen = async (data: MeasureDialogOpenData) => {
-    Object.assign(model, initial(), { riskItemId: data.item.id })
+    Object.assign(model.value, initial(), { riskItemId: data.item.id })
     selectedPositionIds.value = []
     positions.value = []
     if (data.row) {
-      Object.assign(model, {
+      Object.assign(model.value, {
         id: data.row.id,
         riskItemId: data.item.id,
         controlMeasure: data.row.controlMeasure,
@@ -281,7 +324,7 @@
           frequencyUnit: i.frequencyUnit
         }))
       })
-      selectedPositionIds.value = model.positions.map((i) => i.positionId)
+      selectedPositionIds.value = model.value.positions.map((i) => i.positionId)
     }
     await dialogRef.value?.handleOpen(data, {
       title: data.row ? '编辑防控措施' : '新增防控措施',
@@ -380,93 +423,6 @@
     color: var(--el-text-color-secondary);
   }
 
-  .measure-dialog__position-scroll {
-    max-height: 280px;
-  }
-
-  .measure-dialog__position-list {
-    display: grid;
-    gap: 8px;
-    padding: 0 4px 0 0;
-    margin: 0;
-    list-style: none;
-  }
-
-  .measure-dialog__position-list > li {
-    display: grid;
-    grid-template-columns: minmax(210px, 1.2fr) 142px 170px 130px 34px;
-    gap: 12px;
-    align-items: end;
-    padding: 11px 12px;
-    background: var(--default-box-color);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .measure-dialog__position-identity {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 10px;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .measure-dialog__position-identity > span {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    color: var(--theme-color);
-    background: color-mix(in srgb, var(--theme-color) 8%, var(--el-bg-color));
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .measure-dialog__position-identity strong,
-  .measure-dialog__position-identity small {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .measure-dialog__position-identity small {
-    margin-top: 3px;
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-  }
-
-  .measure-dialog__position-list label,
-  .measure-dialog__period-preview {
-    display: grid;
-    gap: 5px;
-    min-width: 0;
-  }
-
-  .measure-dialog__position-list label > span,
-  .measure-dialog__period-preview > small {
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-  }
-
-  .measure-dialog__position-list :deep(.el-input-number),
-  .measure-dialog__position-list :deep(.el-select) {
-    width: 100%;
-  }
-
-  .measure-dialog__period-preview {
-    align-content: end;
-    align-self: stretch;
-  }
-
-  .measure-dialog__period-preview .el-tag {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .measure-dialog__position-list .art-icon-button {
-    align-self: end;
-  }
-
   .measure-dialog__position-empty {
     min-height: 140px;
     background: var(--default-box-color);
@@ -474,32 +430,9 @@
     border-radius: var(--el-border-radius-base);
   }
 
-  @media (width <= 1080px) {
-    .measure-dialog__position-list > li {
-      grid-template-columns: minmax(210px, 1fr) 142px 170px 34px;
-    }
-
-    .measure-dialog__period-preview {
-      display: none;
-    }
-  }
-
   @media (width <= 760px) {
     .measure-dialog__positions-head {
       grid-template-columns: 1fr;
-    }
-
-    .measure-dialog__position-list > li {
-      grid-template-columns: minmax(0, 1fr) 34px;
-    }
-
-    .measure-dialog__position-list label {
-      grid-column: 1;
-    }
-
-    .measure-dialog__position-list .art-icon-button {
-      grid-row: 1;
-      grid-column: 2;
     }
   }
 </style>

@@ -34,8 +34,7 @@
       <ElScrollbar class="team-coverage-page__scroll">
         <div class="team-coverage-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -108,7 +107,6 @@
 
 <script setup lang="tsx">
   import { emptyTeamSelfInspectionCoverage } from '@smis/domain/report-defaults'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { formatPercentValue } from '@/utils/ui/format'
   import dayjs from 'dayjs'
   import { ElProgress } from 'element-plus'
@@ -145,7 +143,7 @@
     ],
     organizationId: undefined
   })
-  const query = reactive<CoverageQuery>(initialQuery())
+  const query = ref<CoverageQuery>(initialQuery())
   const state = reactive<{
     loading: boolean
     error: string | null
@@ -284,9 +282,11 @@
     state.error = null
     try {
       const result = await fetchTeamSelfInspectionCoverage({
-        plannedFrom: query.plannedRange?.[0],
-        plannedTo: query.plannedRange?.[1] ? `${query.plannedRange[1]}T23:59:59` : undefined,
-        organizationId: query.organizationId
+        plannedFrom: query.value.plannedRange?.[0],
+        plannedTo: query.value.plannedRange?.[1]
+          ? `${query.value.plannedRange[1]}T23:59:59`
+          : undefined,
+        organizationId: query.value.organizationId
       })
       const organizationOptions = result.organizationOptions.length
         ? result.organizationOptions
@@ -300,7 +300,7 @@
     }
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
   onMounted(loadData)

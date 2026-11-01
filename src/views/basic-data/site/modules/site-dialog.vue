@@ -1,7 +1,16 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg">
+  <ArtDialog
+    ref="dialogRef"
+    size="lg"
+    @open="
+      () => {
+        activeFormTab = 'hierarchySection'
+      }
+    "
+  >
     <div class="site-dialog">
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -9,8 +18,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #organizationId>
           <ElTreeSelect
@@ -139,6 +146,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
+  const activeFormTab = ref('hierarchySection')
   const dialogRef = ref<ArtDialogExpose<SiteDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const isEditing = ref(false)
@@ -174,7 +182,7 @@
   }>({
     model: initialForm(),
     items: computed(() => [
-      { label: '层级与归属', key: 'hierarchySection', type: 'divider', span: 24 },
+      { label: '层级与归属', key: 'hierarchySection', type: 'tab', span: 24 },
       {
         label: isEditing.value ? '所属部门' : '所属部门（可多选）',
         key: 'organizationId',
@@ -201,7 +209,7 @@
         props: { min: 0, max: 999999, step: 1, controlsPosition: 'right', class: '!w-full' }
       },
       { label: '责任人', key: 'responsibleEmployeeId', type: 'text' },
-      { label: '位置与图片', key: 'locationSection', type: 'divider', span: 24 },
+      { label: '位置与图片', key: 'locationSection', type: 'tab', span: 24 },
       { label: '', key: 'addressPicker', type: 'input', span: 24, labelWidth: 0 },
       { label: '所属图片', key: 'imageUrls', type: 'text', span: 24 },
       {

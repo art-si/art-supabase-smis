@@ -36,8 +36,7 @@
             <MasterDeleteProcessingNotice :table="tableQueryRef" />
             <ArtTableQuery
               ref="tableQueryRef"
-              :model-value="searchQuery"
-              @update:model-value="replaceReactiveModel(searchQuery, $event)"
+              v-model="searchQuery"
               class="min-h-0 min-w-0"
               :api-fn="fetchData"
               :search-items="searchItems"
@@ -67,7 +66,6 @@
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { ElTag } from 'element-plus'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -163,7 +161,7 @@
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const categoryDialogRef = ref<CategoryExpose>()
   const catalogDialogRef = ref<CatalogExpose>()
-  const searchQuery = reactive<SmisHazardousWasteCatalogSearchParams>({})
+  const searchQuery = ref<SmisHazardousWasteCatalogSearchParams>({})
   const tree = reactive<{
     data: SmisHazardousWasteCategory[]
     selectedKey: string

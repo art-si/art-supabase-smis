@@ -36,10 +36,14 @@
       <EmergencyPlanDialog ref="dialogRef" @success="handleSaveSuccess" />
       <EmergencyRecordDetailDialog ref="detailDialogRef" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -83,6 +87,10 @@
   import EmergencyRecordDetailDialog, {
     type EmergencyRecordDetailOpenData
   } from '../shared/emergency-record-detail-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_emergency_rescue_plan',
+    '应急预案'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -102,7 +110,7 @@
 
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirm, confirmDelete } = useArtFeedback()
+  const { confirm } = useArtFeedback()
   const tableRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
   const detailDialogRef = ref<DetailDialogExpose>()
@@ -192,8 +200,8 @@
   }
   const handleMoreAction = (item: ButtonMoreItem, row: SmisEmergencyRescuePlan): void => {
     if (item.key === 'push') void handlePush(row)
-    if (item.key === 'void') void handleValidity([row.id], false, row.planName)
-    if (item.key === 'activate') void handleValidity([row.id], true, row.planName)
+    if (item.key === 'void') void handleValidity([row.id ?? ''], false, row.planName)
+    if (item.key === 'activate') void handleValidity([row.id ?? ''], true, row.planName)
     if (item.key === 'delete') void handleDelete(row)
   }
   const rowActions = (row: SmisEmergencyRescuePlan): ButtonMoreItem[] => [
@@ -428,11 +436,23 @@
     {
       permission: 'SmisEmergencyRescuePlan:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条草稿预案吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteEmergencyRescuePlans(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.planName ?? '应急预案')
+          })),
+          permission: 'SmisEmergencyRescuePlan:Delete',
+          remove: async () => {
+            await deleteEmergencyRescuePlans(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -467,13 +487,22 @@
     }
   }
   const handleDelete = async (row: SmisEmergencyRescuePlan): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除草稿预案“${row.planName}”吗？`)
-      await deleteEmergencyRescuePlans([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.planName ?? '应急预案')
+        }
+      ],
+      permission: 'SmisEmergencyRescuePlan:Delete',
+      confirmMessage: `确定删除草稿预案“${row.planName}”吗？`,
+      remove: async () => {
+        await deleteEmergencyRescuePlans([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const handleSaveSuccess = (type: 'add' | 'edit'): void => {
     void (type === 'add' ? tableRef.value?.refreshCreate() : tableRef.value?.refreshUpdate())

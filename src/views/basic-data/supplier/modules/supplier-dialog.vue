@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identitySection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="supplier-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:git-merge-line" /></template>
@@ -8,6 +16,7 @@
       </ArtEntitySummary>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -15,8 +24,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #addressPicker>
           <ArtAddressPicker
@@ -90,6 +97,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identitySection')
   const dialogRef = ref<ArtDialogExpose<SupplierDialogOpenData>>()
   const formRef = ref<FormExpose>()
 
@@ -120,7 +128,7 @@
   }>({
     model: initialForm(),
     items: computed(() => [
-      { label: '单位信息', key: 'identitySection', type: 'divider', span: 24 },
+      { label: '单位信息', key: 'identitySection', type: 'tab', span: 24 },
       {
         label: '单位编码',
         key: 'supplierCode',
@@ -179,7 +187,7 @@
         ),
         props: { clearable: true, placeholder: '请选择行业' }
       },
-      { label: '联系与位置', key: 'contactSection', type: 'divider', span: 24 },
+      { label: '联系与位置', key: 'contactSection', type: 'tab', span: 24 },
       {
         label: '联系人',
         key: 'contactPerson',
@@ -193,7 +201,7 @@
         props: { maxlength: 30, clearable: true, placeholder: '请输入手机号或座机号' }
       },
       { label: '', key: 'addressPicker', type: 'input', span: 24, labelWidth: 0 },
-      { label: '补充信息', key: 'additionalSection', type: 'divider', span: 24 },
+
       {
         label: '备注',
         key: 'remark',

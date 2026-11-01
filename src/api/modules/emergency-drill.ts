@@ -58,7 +58,13 @@ export async function saveEmergencyDrillPlan(
 export async function deleteEmergencyDrillPlans(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_emergency_drill_plans_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '演练计划已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '演练计划已删除'
+    }
   )
 }
 
@@ -117,7 +123,13 @@ export async function saveEmergencyDrillRecord(
 export async function deleteEmergencyDrillRecords(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_emergency_drill_records_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '演练记录已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '演练记录已删除'
+    }
   )
 }
 

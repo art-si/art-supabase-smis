@@ -20,8 +20,7 @@
       </BusinessWorkspaceHeader>
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="min-h-0 min-w-0 flex-1"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -47,8 +46,6 @@
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { ElTag } from 'element-plus'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -136,7 +133,7 @@
   const { isAllTenants, scopeLabel } = storeToRefs(useTenantScopeStore())
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const searchQuery = reactive<SmisHazardousWasteWarehouseSearchParams>({})
+  const searchQuery = ref<SmisHazardousWasteWarehouseSearchParams>({})
   const overview = reactive<SmisHazardousWasteWarehouseOverview>({
     total: 0,
     enabled: 0,

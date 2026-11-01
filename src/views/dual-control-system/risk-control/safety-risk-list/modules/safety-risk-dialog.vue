@@ -7,16 +7,7 @@
         <p>危险编号由系统生成；完成定量评价后，该记录进入分级管控与巡查任务链路。</p>
       </ArtEntitySummary>
 
-      <ArtForm
-        custom-layout
-        :show-reset="false"
-        :show-submit="false"
-        ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
-        :rules="rules"
-        label-position="top"
-      >
+      <ArtForm custom-layout ref="formRef" v-model="form" :rules="rules" label-position="top">
         <ArtSectionTitle title="风险身份" subtitle="选择已有风险点并明确危险源类别" />
         <div class="safety-risk-dialog__grid">
           <ElFormItem label="危险编号">
@@ -129,9 +120,7 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
-  import { computed, onDeactivated, reactive, ref, shallowRef } from 'vue'
+  import { computed, onDeactivated, ref, shallowRef } from 'vue'
   import { storeToRefs } from 'pinia'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -176,7 +165,7 @@
     sort: 0,
     activityIds: []
   })
-  const form = reactive<SmisSafetyRiskSavePayload>(initial())
+  const form = ref<SmisSafetyRiskSavePayload>(initial())
   const accidentTypeOptions = computed(() =>
     (getDictMap.value.smisAccidentCategory ?? []).map(toDictionaryOption)
   )
@@ -197,7 +186,7 @@
   }
 
   const handleRiskPointChange = async (riskPointId: string): Promise<void> => {
-    form.activityIds = []
+    form.value.activityIds = []
     await loadActivities(riskPointId)
   }
 
@@ -207,12 +196,12 @@
       await formRef.value?.validate()
       submitting.value = true
       await saveSafetyRisk({
-        ...form,
+        ...form.value,
         id: row.value?.id,
-        hazardFactor: form.hazardFactor.trim(),
-        consequence: normalizeNullableText(form.consequence),
-        accidentTypes: [...form.accidentTypes],
-        activityIds: [...form.activityIds]
+        hazardFactor: form.value.hazardFactor.trim(),
+        consequence: normalizeNullableText(form.value.consequence),
+        accidentTypes: [...form.value.accidentTypes],
+        activityIds: [...form.value.activityIds]
       })
       emit('success', row.value ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
@@ -226,9 +215,9 @@
   const handleOpen = async (data: SafetyRiskDialogOpenData): Promise<void> => {
     row.value = data.row
     options.value = data.options
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         riskPointId: data.row.riskPointId,
         hazardFactor: data.row.hazardSource,
@@ -254,13 +243,13 @@
         try {
           await Promise.all([
             userStore.ensureDictLoaded('smisAccidentCategory'),
-            form.riskPointId ? loadActivities(form.riskPointId) : Promise.resolve(),
+            form.value.riskPointId ? loadActivities(form.value.riskPointId) : Promise.resolve(),
             ...(!data.options.riskPoints.length && data.loadOptions
               ? [data.loadOptions().then((loaded) => (options.value = loaded))]
               : [])
           ])
           if (data.row) {
-            form.factorCategoryId =
+            form.value.factorCategoryId =
               options.value.hazardCategories.find(
                 (item) => item.categoryName === data.row?.factorCategoryName
               )?.id || null

@@ -8,16 +8,7 @@
         :title="row?.taskNo || '未选择风险巡查任务'"
         :description="`${row?.riskPointName || '风险点待确认'} · ${row?.riskPointNo || '编号待确认'}`"
       />
-      <ArtForm
-        ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
-        :rules="rules"
-        label-position="top"
-        custom-layout
-        :show-reset="false"
-        :show-submit="false"
-      >
+      <ArtForm ref="formRef" v-model="form" :rules="rules" label-position="top" custom-layout>
         <ElFormItem v-if="mode === 'transfer'" label="转交接收人" prop="employeeId">
           <ArtEmployeeSelect
             v-model="form.employeeId"
@@ -52,8 +43,7 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
-  import { nextTick, reactive, ref, shallowRef } from 'vue'
+  import { nextTick, ref, shallowRef } from 'vue'
   import type { FormRules } from 'element-plus'
   import ArtForm from '@/components/core/forms/art-form/index.vue'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
@@ -80,7 +70,7 @@
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const row = shallowRef<SmisRiskInspectionTask>()
   const mode = ref<'cancel' | 'transfer'>('transfer')
-  const form = reactive<ActionForm>({ employeeId: undefined, reason: '' })
+  const form = ref<ActionForm>({ employeeId: undefined, reason: '' })
   const employeeSelection = shallowRef<EmployeeIntegrationItem[]>([])
   const submitting = ref(false)
   const rules: FormRules<ActionForm> = {
@@ -101,8 +91,12 @@
       await formRef.value?.validate()
       submitting.value = true
       if (mode.value === 'transfer')
-        await transferRiskInspectionTask(row.value.id, form.employeeId!, form.reason.trim())
-      else await cancelRiskInspectionTask(row.value.id, form.reason.trim())
+        await transferRiskInspectionTask(
+          row.value.id,
+          form.value.employeeId!,
+          form.value.reason.trim()
+        )
+      else await cancelRiskInspectionTask(row.value.id, form.value.reason.trim())
       emit('success')
       dialogRef.value?.handleClose(true)
     } catch {
@@ -114,8 +108,8 @@
   const handleOpen = async (data: TaskActionDialogOpenData): Promise<void> => {
     row.value = data.row
     mode.value = data.mode
-    form.employeeId = undefined
-    form.reason = ''
+    form.value.employeeId = undefined
+    form.value.reason = ''
     employeeSelection.value = []
     await dialogRef.value?.handleOpen(data, {
       title: data.mode === 'transfer' ? '转交风险巡查任务' : '取消风险巡查任务',

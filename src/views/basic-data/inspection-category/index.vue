@@ -36,10 +36,14 @@
     />
 
     <InspectionCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { ElTag } from 'element-plus'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
@@ -55,7 +59,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -74,6 +78,10 @@
   import InspectionCategoryDialog, {
     type InspectionCategoryDialogOpenData
   } from './modules/inspection-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_inspection_category',
+    '检验类别'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -95,8 +103,6 @@
     searchItems: ComputedRef<SearchFormItem[]>
     headerActions: ComputedRef<ArtTableQueryHeaderAction[]>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap, isPlatformSuper, getUserInfo } = storeToRefs(userStore)
@@ -181,11 +187,23 @@
     {
       permission: 'SmisInspectionCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个检验类别吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteRowsByTenant(selectedRows as SmisInspectionCategory[])
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '检验类别')
+          })),
+          permission: 'SmisInspectionCategory:Delete',
+          remove: async () => {
+            await deleteRowsByTenant(selectedRows as SmisInspectionCategory[])
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -313,13 +331,23 @@
 
   const handleDelete = async (row: SmisInspectionCategory): Promise<void> => {
     if (!row.id) return
-    try {
-      await confirmDelete(`确定删除检验类别“${row.categoryName}”吗？删除后无法恢复。`)
-      await deleteInspectionCategories([row.id], row.tenantId)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.categoryName ?? '检验类别')
+        }
+      ],
+      permission: 'SmisInspectionCategory:Delete',
+      confirmMessage: `确定删除检验类别“${row.categoryName}”吗？删除后无法恢复。`,
+      remove: async () => {
+        await deleteInspectionCategories([row.id ?? ''], row.tenantId)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

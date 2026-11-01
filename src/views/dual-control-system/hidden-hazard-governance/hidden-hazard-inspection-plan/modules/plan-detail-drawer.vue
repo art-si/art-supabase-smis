@@ -1,5 +1,14 @@
 <template>
-  <ArtDrawer ref="drawerRef" :loading="loading" loading-text="正在加载计划详情…">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+    :loading="loading"
+    loading-text="正在加载计划详情…"
+  >
     <div v-if="detail" class="hidden-hazard-plan-detail">
       <div class="hidden-hazard-plan-detail__identity">
         <span aria-hidden="true"><ArtSvgIcon icon="ri:calendar-check-line" /></span>
@@ -14,64 +23,73 @@
         />
       </div>
 
-      <ArtSectionTitle title="计划信息" subtitle="排查对象、执行安排与周期配置" />
-      <dl class="hidden-hazard-plan-detail__grid">
-        <div
-          ><dt>排查类型</dt><dd>{{ detail.inspectionTypeName }}</dd></div
-        >
-        <div
-          ><dt>执行人</dt
-          ><dd>{{ detail.executorEmployeeName }} · {{ detail.executorEmployeeNo }}</dd></div
-        >
-        <div
-          ><dt>检查单位</dt><dd>{{ detail.inspectionOrganizationName }}</dd></div
-        >
-        <div
-          ><dt>被检查单位</dt><dd>{{ detail.inspectedOrganizationName }}</dd></div
-        >
-        <div
-          ><dt>计划开始</dt><dd>{{ formatDate(detail.plannedStartAt) }}</dd></div
-        >
-        <div
-          ><dt>计划结束</dt><dd>{{ formatDate(detail.plannedEndAt) }}</dd></div
-        >
-        <div
-          ><dt>任务时限</dt><dd>{{ deadlineText }}</dd></div
-        >
-        <div
-          ><dt>循环周期</dt><dd>{{ cycleText }}</dd></div
-        >
-        <div
-          ><dt>创建人</dt><dd>{{ detail.createBy || '系统' }}</dd></div
-        >
-        <div
-          ><dt>创建时间</dt><dd>{{ formatDate(detail.createTime) }}</dd></div
-        >
-      </dl>
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="计划与说明"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="计划信息" subtitle="排查对象、执行安排与周期配置" />
+            <dl class="hidden-hazard-plan-detail__grid">
+              <div
+                ><dt>排查类型</dt><dd>{{ detail.inspectionTypeName }}</dd></div
+              >
+              <div
+                ><dt>执行人</dt
+                ><dd>{{ detail.executorEmployeeName }} · {{ detail.executorEmployeeNo }}</dd></div
+              >
+              <div
+                ><dt>检查单位</dt><dd>{{ detail.inspectionOrganizationName }}</dd></div
+              >
+              <div
+                ><dt>被检查单位</dt><dd>{{ detail.inspectedOrganizationName }}</dd></div
+              >
+              <div
+                ><dt>计划开始</dt><dd>{{ formatDate(detail.plannedStartAt) }}</dd></div
+              >
+              <div
+                ><dt>计划结束</dt><dd>{{ formatDate(detail.plannedEndAt) }}</dd></div
+              >
+              <div
+                ><dt>任务时限</dt><dd>{{ deadlineText }}</dd></div
+              >
+              <div
+                ><dt>循环周期</dt><dd>{{ cycleText }}</dd></div
+              >
+              <div
+                ><dt>创建人</dt><dd>{{ detail.createBy || '系统' }}</dd></div
+              >
+              <div
+                ><dt>创建时间</dt><dd>{{ formatDate(detail.createTime) }}</dd></div
+              >
+            </dl>
 
-      <ArtSectionTitle
-        title="排查明细"
-        :subtitle="`共 ${detail.items.length} 条，任务生成时保留内容快照`"
-      />
-      <ol class="hidden-hazard-plan-detail__items">
-        <li v-for="item in detail.items" :key="item.id">
-          <span>{{ item.sort }}</span>
-          <div
-            ><strong>{{ item.standardName }}</strong
-            ><small>{{ item.standardCode }}</small></div
-          >
-          <div
-            ><strong>{{ item.inspectionContent }}</strong
-            ><small>{{ item.itemCode }}</small></div
-          >
-        </li>
-      </ol>
-
-      <ArtSectionTitle title="计划说明与附件" subtitle="计划范围、执行要求和支持材料" />
-      <div class="hidden-hazard-plan-detail__notes">
-        <p>{{ detail.inspectionDescription || '暂无排查说明' }}</p>
-        <small>附件 {{ detail.attachmentUrls.length }} 个</small>
-      </div>
+            <ArtSectionTitle title="计划说明与附件" subtitle="计划范围、执行要求和支持材料" />
+            <div class="hidden-hazard-plan-detail__notes">
+              <p>{{ detail.inspectionDescription || '暂无排查说明' }}</p>
+              <small>附件 {{ detail.attachmentUrls.length }} 个</small>
+            </div></div
+          ></ElTabPane
+        >
+        <ElTabPane name="section-1" label="排查明细"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle
+              title="排查明细"
+              :subtitle="`共 ${detail.items.length} 条，任务生成时保留内容快照`"
+            />
+            <ol class="hidden-hazard-plan-detail__items">
+              <li v-for="item in detail.items" :key="item.id">
+                <span>{{ item.sort }}</span>
+                <div
+                  ><strong>{{ item.standardName }}</strong
+                  ><small>{{ item.standardCode }}</small></div
+                >
+                <div
+                  ><strong>{{ item.inspectionContent }}</strong
+                  ><small>{{ item.itemCode }}</small></div
+                >
+              </li>
+            </ol>
+          </div></ElTabPane
+        ></ElTabs
+      >
     </div>
   </ArtDrawer>
 </template>
@@ -92,6 +110,7 @@
   export interface HiddenHazardPlanDetailOpenData {
     row: SmisHiddenHazardInspectionPlan
   }
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<HiddenHazardPlanDetailOpenData>>()
   const detail = shallowRef<SmisHiddenHazardInspectionPlanDetail | null>(null)
   const loading = ref(false)

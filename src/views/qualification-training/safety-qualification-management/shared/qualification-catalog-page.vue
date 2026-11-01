@@ -38,8 +38,7 @@
           </template>
           <ArtTableQuery
             ref="tableRef"
-            :model-value="searchQuery"
-            @update:model-value="replaceReactiveModel(searchQuery, $event)"
+            v-model="searchQuery"
             class="qualification-catalog-page__table min-h-0 min-w-0"
             :api-fn="fetchTableData"
             :search-items="searchItems"
@@ -60,15 +59,18 @@
       </div>
       <QualificationCatalogDialog ref="dialogRef" @success="refresh" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
@@ -79,7 +81,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -105,6 +107,10 @@
     type QualificationCatalogDialogOpenData
   } from './qualification-catalog-dialog.vue'
   import { qualificationCatalogConfig } from './qualification-catalog-meta'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_qualification_catalog',
+    '资质目录'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -124,7 +130,6 @@
   const navigatorTitle = computed(() =>
     isPermittedOperationItem.value ? '作业类别与准操项目' : config.value.title
   )
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
@@ -151,7 +156,7 @@
     loading: false,
     error: null
   })
-  const searchQuery = reactive<Omit<SmisQualificationCatalogSearchParams, 'catalogType'>>({})
+  const searchQuery = ref<Omit<SmisQualificationCatalogSearchParams, 'catalogType'>>({})
   const selectedNode = computed(() =>
     tree.selectedKey === ALL_KEY
       ? null
@@ -242,15 +247,27 @@
     {
       permission: config.value.permissions.delete,
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个${config.value.title}吗？存在下级或证件引用时将无法删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteQualificationCatalog(
-          props.catalogType,
-          selectedRows.map((row) => String(row.id))
-        )
-        tree.selectedKey = ALL_KEY
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.itemName ?? '资质目录')
+          })),
+          permission: config.value.permissions.delete,
+          remove: async () => {
+            await deleteQualificationCatalog(
+              props.catalogType,
+              selectedRows.map((row) => String(row.id))
+            )
+          },
+          onDeleted: async () => {
+            tree.selectedKey = ALL_KEY
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -272,7 +289,7 @@
           SmisQualificationCatalog,
           SmisQualificationCatalogSearchParams
         >(fetchQualificationCatalogList, {
-          ...searchQuery,
+          ...searchQuery.value,
           ...selectedCatalogFilters.value,
           catalogType: props.catalogType,
           purpose: 'export'
@@ -382,13 +399,22 @@
     }
   }
   const handleDelete = async (row: SmisQualificationCatalog): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除${config.value.title}“${row.itemName}”吗？`)
-      await deleteQualificationCatalog(props.catalogType, [row.id])
-      await refresh()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.itemName ?? '资质目录')
+        }
+      ],
+      permission: config.value.permissions.delete,
+      confirmMessage: `确定删除${config.value.title}“${row.itemName}”吗？`,
+      remove: async () => {
+        await deleteQualificationCatalog(props.catalogType, [row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await refresh()
+      }
+    })
   }
   const handleTreeSelect = (key: string): void => {
     tree.selectedKey = key

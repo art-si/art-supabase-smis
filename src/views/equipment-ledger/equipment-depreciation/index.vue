@@ -35,10 +35,14 @@
     />
 
     <EquipmentDepreciationDialog ref="dialogRef" @success="refreshTable" />
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </div>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -52,7 +56,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -72,6 +76,10 @@
   import EquipmentDepreciationDialog, {
     type EquipmentDepreciationDialogOpenData
   } from './modules/equipment-depreciation-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_equipment_depreciation',
+    '折旧方案'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -87,8 +95,6 @@
   interface DialogExpose {
     handleOpen: (data: EquipmentDepreciationDialogOpenData) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -145,14 +151,26 @@
     {
       permission: 'SmisEquipmentDepreciation:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个折旧方法吗？`,
       onClick: async ({ selectedRows, api }) => {
         const ids = selectedRows
           .map((row) => row.id)
           .filter((id): id is string => typeof id === 'string')
-        await deleteEquipmentDepreciations(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.depreciationName ?? '折旧方案')
+          })),
+          permission: 'SmisEquipmentDepreciation:Delete',
+          remove: async () => {
+            await deleteEquipmentDepreciations(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -258,9 +276,22 @@
             permission="SmisEquipmentDepreciation:Delete"
             type="delete"
             onClick={async () => {
-              await confirmDelete(`确定删除折旧方法“${row.depreciationName}”吗？`)
-              await deleteEquipmentDepreciations([row.id])
-              await refreshTable()
+              await deleteRecords({
+                resources: [
+                  {
+                    id: String(row.id ?? ''),
+                    label: String(row.depreciationName ?? '折旧方案')
+                  }
+                ],
+                permission: 'SmisEquipmentDepreciation:Delete',
+                confirmMessage: `确定删除折旧方法“${row.depreciationName}”吗？`,
+                remove: async () => {
+                  await deleteEquipmentDepreciations([row.id ?? ''])
+                },
+                onDeleted: async () => {
+                  await refreshTable()
+                }
+              })
             }}
           />
         </BusinessTableRowActions>

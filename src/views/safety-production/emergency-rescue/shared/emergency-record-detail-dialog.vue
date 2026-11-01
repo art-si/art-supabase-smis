@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div v-if="detail" class="emergency-record-detail">
       <header class="emergency-record-detail__hero">
         <span aria-hidden="true">
@@ -36,115 +44,155 @@
       </header>
 
       <template v-if="rescuePlan">
-        <ArtSectionCard title="预案信息" subtitle="版本、适用范围与状态">
-          <ArtDescriptions :data="rescuePlan" :items="rescueBasicItems" :columns="3" />
-        </ArtSectionCard>
-        <ArtSectionCard title="评审与预警" subtitle="按最新评审时间和周期提前 7 天预警">
-          <ArtDescriptions :data="rescuePlan" :items="rescueReviewItems" :columns="3" />
-          <ElAlert
-            v-if="rescuePlan.reviewRequiredAfterDrill"
-            class="emergency-record-detail__alert"
-            type="warning"
-            show-icon
-            :closable="false"
-            title="最新演练晚于当前评审时间，请完成本次演练后的预案评审。"
-          />
-        </ArtSectionCard>
-        <ArtSectionCard title="预案说明" subtitle="适用场景、响应范围与演练要点">
-          <p class="emergency-record-detail__description">{{ rescuePlan.description || '—' }}</p>
-        </ArtSectionCard>
-        <ArtSectionCard
-          title="预案附件"
-          :empty="!rescuePlan.planAttachmentUrls.length"
-          empty-title="暂无预案附件"
-          empty-description="上传预案文件后可在此查看。"
-        >
-          <ArtUploadFile
-            :model-value="rescuePlan.planAttachmentUrls"
-            multiple
-            readonly
-            :show-tip="false"
-          />
-        </ArtSectionCard>
-        <ArtSectionCard
-          title="备案表附件"
-          :empty="!rescuePlan.filingAttachmentUrls.length"
-          empty-title="暂无备案表附件"
-          empty-description="上传备案表后可在此查看。"
-        >
-          <ArtUploadFile
-            :model-value="rescuePlan.filingAttachmentUrls"
-            multiple
-            readonly
-            :show-tip="false"
-          />
-        </ArtSectionCard>
+        <ElTabs v-model="activeDetailTab"
+          ><ElTabPane name="section-0" label="预案与范围"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="预案信息" subtitle="版本、适用范围与状态">
+                <ArtDescriptions :data="rescuePlan" :items="rescueBasicItems" :columns="3" />
+              </ArtSectionCard>
+              <ArtSectionCard title="预案说明" subtitle="适用场景、响应范围与演练要点">
+                <p class="emergency-record-detail__description">{{
+                  rescuePlan.description || '—'
+                }}</p>
+              </ArtSectionCard></div
+            ></ElTabPane
+          >
+          <ElTabPane name="section-1" label="评审与预警"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="评审与预警" subtitle="按最新评审时间和周期提前 7 天预警">
+                <ArtDescriptions :data="rescuePlan" :items="rescueReviewItems" :columns="3" />
+                <ElAlert
+                  v-if="rescuePlan.reviewRequiredAfterDrill"
+                  class="emergency-record-detail__alert"
+                  type="warning"
+                  show-icon
+                  :closable="false"
+                  title="最新演练晚于当前评审时间，请完成本次演练后的预案评审。"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-2" label="预案与备案附件"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard
+                title="预案附件"
+                :empty="!rescuePlan.planAttachmentUrls.length"
+                empty-title="暂无预案附件"
+                empty-description="上传预案文件后可在此查看。"
+              >
+                <ArtUploadFile
+                  :model-value="rescuePlan.planAttachmentUrls"
+                  multiple
+                  readonly
+                  :show-tip="false"
+                />
+              </ArtSectionCard>
+              <ArtSectionCard
+                title="备案表附件"
+                :empty="!rescuePlan.filingAttachmentUrls.length"
+                empty-title="暂无备案表附件"
+                empty-description="上传备案表后可在此查看。"
+              >
+                <ArtUploadFile
+                  :model-value="rescuePlan.filingAttachmentUrls"
+                  multiple
+                  readonly
+                  :show-tip="false"
+                /> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </template>
 
       <template v-else-if="drillPlan">
-        <ArtSectionCard title="计划信息" subtitle="计划来源、演练单位与执行安排">
-          <ArtDescriptions :data="drillPlan" :items="drillBasicItems" :columns="3" />
-        </ArtSectionCard>
-        <ArtSectionCard title="演练内容" subtitle="科目、目的与参训范围">
-          <ArtDescriptions :data="drillPlan" :items="drillContentItems" :columns="2" />
-        </ArtSectionCard>
-        <ArtSectionCard title="兑现与预警" subtitle="完成日前 3 天开始检查正式演练记录">
-          <ArtDescriptions :data="drillPlan" :items="drillDeliveryItems" :columns="3" />
-          <ElAlert
-            v-if="drillPlan.warningStatus === 'warning'"
-            class="emergency-record-detail__alert"
-            type="warning"
-            show-icon
-            :closable="false"
-            :title="drillWarningMessage"
-          />
-        </ArtSectionCard>
-        <ArtSectionCard
-          title="计划附件"
-          :empty="!drillPlan.attachmentUrls.length"
-          empty-title="暂无计划附件"
-          empty-description="上传演练计划文件后可在此查看。"
-        >
-          <ArtUploadFile
-            :model-value="drillPlan.attachmentUrls"
-            multiple
-            readonly
-            :show-tip="false"
-          />
-        </ArtSectionCard>
+        <ElTabs v-model="activeDetailTab"
+          ><ElTabPane name="section-0" label="计划与内容"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="计划信息" subtitle="计划来源、演练单位与执行安排">
+                <ArtDescriptions :data="drillPlan" :items="drillBasicItems" :columns="3" />
+              </ArtSectionCard>
+              <ArtSectionCard title="演练内容" subtitle="科目、目的与参训范围">
+                <ArtDescriptions
+                  :data="drillPlan"
+                  :items="drillContentItems"
+                  :columns="2"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-1" label="兑现与资料"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="兑现与预警" subtitle="完成日前 3 天开始检查正式演练记录">
+                <ArtDescriptions :data="drillPlan" :items="drillDeliveryItems" :columns="3" />
+                <ElAlert
+                  v-if="drillPlan.warningStatus === 'warning'"
+                  class="emergency-record-detail__alert"
+                  type="warning"
+                  show-icon
+                  :closable="false"
+                  :title="drillWarningMessage"
+                />
+              </ArtSectionCard>
+              <ArtSectionCard
+                title="计划附件"
+                :empty="!drillPlan.attachmentUrls.length"
+                empty-title="暂无计划附件"
+                empty-description="上传演练计划文件后可在此查看。"
+              >
+                <ArtUploadFile
+                  :model-value="drillPlan.attachmentUrls"
+                  multiple
+                  readonly
+                  :show-tip="false"
+                /> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </template>
 
       <template v-else-if="drillRecord">
-        <ArtSectionCard title="演练信息" subtitle="计划来源、演练单位与实际执行时间">
-          <ArtDescriptions :data="drillRecord" :items="recordBasicItems" :columns="3" />
-        </ArtSectionCard>
-        <ArtSectionCard title="演练内容" subtitle="科目、目的、队伍与投入物资">
-          <ArtDescriptions :data="drillRecord" :items="recordContentItems" :columns="2" />
-        </ArtSectionCard>
-        <ArtSectionCard title="过程与评价" subtitle="演练过程、总结、效果评价与改进留痕">
-          <ArtDescriptions :data="drillRecord" :items="recordReviewItems" :columns="1" />
-        </ArtSectionCard>
-        <ArtSectionCard
-          title="演练照片"
-          :empty="!drillRecord.imageUrls.length"
-          empty-title="暂无演练照片"
-          empty-description="上传现场照片后可在此查看演练影像。"
-        >
-          <ArtUploadImage :model-value="drillRecord.imageUrls" multiple readonly :size="104" />
-        </ArtSectionCard>
-        <ArtSectionCard
-          title="记录附件"
-          :empty="!drillRecord.attachmentUrls.length"
-          empty-title="暂无记录附件"
-          empty-description="上传演练记录文件后可在此查看。"
-        >
-          <ArtUploadFile
-            :model-value="drillRecord.attachmentUrls"
-            multiple
-            readonly
-            :show-tip="false"
-          />
-        </ArtSectionCard>
+        <ElTabs v-model="activeDetailTab"
+          ><ElTabPane name="section-0" label="演练与内容"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="演练信息" subtitle="计划来源、演练单位与实际执行时间">
+                <ArtDescriptions :data="drillRecord" :items="recordBasicItems" :columns="3" />
+              </ArtSectionCard>
+              <ArtSectionCard title="演练内容" subtitle="科目、目的、队伍与投入物资">
+                <ArtDescriptions
+                  :data="drillRecord"
+                  :items="recordContentItems"
+                  :columns="2"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-1" label="过程与评价"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard title="过程与评价" subtitle="演练过程、总结、效果评价与改进留痕">
+                <ArtDescriptions
+                  :data="drillRecord"
+                  :items="recordReviewItems"
+                  :columns="1"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-2" label="影像与附件"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionCard
+                title="演练照片"
+                :empty="!drillRecord.imageUrls.length"
+                empty-title="暂无演练照片"
+                empty-description="上传现场照片后可在此查看演练影像。"
+              >
+                <ArtUploadImage
+                  :model-value="drillRecord.imageUrls"
+                  multiple
+                  readonly
+                  :size="104"
+                />
+              </ArtSectionCard>
+              <ArtSectionCard
+                title="记录附件"
+                :empty="!drillRecord.attachmentUrls.length"
+                empty-title="暂无记录附件"
+                empty-description="上传演练记录文件后可在此查看。"
+              >
+                <ArtUploadFile
+                  :model-value="drillRecord.attachmentUrls"
+                  multiple
+                  readonly
+                  :show-tip="false"
+                /> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </template>
     </div>
   </ArtDialog>
@@ -176,6 +224,7 @@
     | { kind: 'drill'; row: SmisEmergencyDrillPlan }
     | { kind: 'record'; row: SmisEmergencyDrillRecord }
 
+  const activeDetailTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<EmergencyRecordDetailOpenData>>()
   const detail = shallowRef<
     SmisEmergencyRescuePlan | SmisEmergencyDrillPlan | SmisEmergencyDrillRecord
@@ -467,7 +516,9 @@
 <style scoped lang="scss">
   .emergency-record-detail {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+    min-width: 0;
 
     &__hero {
       display: grid;

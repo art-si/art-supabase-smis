@@ -1,5 +1,12 @@
 <template>
-  <ArtDrawer ref="drawerRef">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+  >
     <div class="risk-information-detail">
       <div class="risk-information-detail__identity">
         <span aria-hidden="true"><ArtSvgIcon icon="ri:shield-flash-line" /></span>
@@ -13,73 +20,87 @@
         </span>
       </div>
 
-      <ArtSectionTitle title="风险辨识" subtitle="辨识单元、场所设备与事故后果" />
-      <dl class="risk-information-detail__grid">
-        <div
-          ><dt>辨识单位</dt><dd>{{ current?.organizationNames || '—' }}</dd></div
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="风险辨识"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="风险辨识" subtitle="辨识单元、场所设备与事故后果" />
+            <dl class="risk-information-detail__grid">
+              <div
+                ><dt>辨识单位</dt><dd>{{ current?.organizationNames || '—' }}</dd></div
+              >
+              <div
+                ><dt>场所</dt><dd>{{ current?.siteName || '—' }}</dd></div
+              >
+              <div
+                ><dt>设备设施</dt><dd>{{ current?.equipmentFacility || '—' }}</dd></div
+              >
+              <div
+                ><dt>特种设备</dt><dd>{{ current?.isSpecialEquipment ? '是' : '否' }}</dd></div
+              >
+              <div
+                ><dt>作业活动</dt><dd>{{ current?.activityNames || '—' }}</dd></div
+              >
+              <div
+                ><dt>事故类型</dt><dd>{{ accidentTypeText }}</dd></div
+              >
+            </dl>
+            <div class="risk-information-detail__narrative">
+              <strong>危险有害因素</strong><p>{{ current?.hazardFactor || '—' }}</p>
+              <strong>可能后果</strong><p>{{ current?.consequence || '未填写可能后果' }}</p>
+            </div>
+          </div></ElTabPane
         >
-        <div
-          ><dt>场所</dt><dd>{{ current?.siteName || '—' }}</dd></div
+        <ElTabPane name="section-1" label="风险评价"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="风险评价" subtitle="评价方法、分值与风险等级" />
+            <div class="risk-information-detail__assessment">
+              <article
+                ><span>评价方法</span
+                ><strong>{{ current?.methodCode || '待评价' }}</strong></article
+              >
+              <article
+                ><span>评分明细</span><strong>{{ assessmentDetail }}</strong></article
+              >
+              <article
+                ><span>风险值</span><strong>{{ current?.riskScore ?? '—' }}</strong></article
+              >
+              <article
+                ><span>风险等级</span
+                ><strong>{{ current?.riskLevelName || '待评价' }}</strong></article
+              >
+            </div>
+          </div></ElTabPane
         >
-        <div
-          ><dt>设备设施</dt><dd>{{ current?.equipmentFacility || '—' }}</dd></div
-        >
-        <div
-          ><dt>特种设备</dt><dd>{{ current?.isSpecialEquipment ? '是' : '否' }}</dd></div
-        >
-        <div
-          ><dt>作业活动</dt><dd>{{ current?.activityNames || '—' }}</dd></div
-        >
-        <div
-          ><dt>事故类型</dt><dd>{{ accidentTypeText }}</dd></div
-        >
-      </dl>
-      <div class="risk-information-detail__narrative">
-        <strong>危险有害因素</strong><p>{{ current?.hazardFactor || '—' }}</p>
-        <strong>可能后果</strong><p>{{ current?.consequence || '未填写可能后果' }}</p>
-      </div>
-
-      <ArtSectionTitle title="风险评价" subtitle="评价方法、分值与风险等级" />
-      <div class="risk-information-detail__assessment">
-        <article
-          ><span>评价方法</span><strong>{{ current?.methodCode || '待评价' }}</strong></article
-        >
-        <article
-          ><span>评分明细</span><strong>{{ assessmentDetail }}</strong></article
-        >
-        <article
-          ><span>风险值</span><strong>{{ current?.riskScore ?? '—' }}</strong></article
-        >
-        <article
-          ><span>风险等级</span><strong>{{ current?.riskLevelName || '待评价' }}</strong></article
-        >
-      </div>
-
-      <ArtSectionTitle
-        title="管控措施"
-        :subtitle="`共 ${current?.measureCount || 0} 项措施，覆盖 ${current?.linkedPositionCount || 0} 个岗位`"
-      />
-      <div v-if="current?.measures?.length" class="risk-information-detail__measures">
-        <article v-for="measure in current.measures" :key="measure.id">
-          <header>
-            <span>{{ measure.category }}</span>
-            <small>{{ measure.controlLevel }} · {{ measure.frequency }}</small>
-          </header>
-          <p>{{ measure.content }}</p>
-          <dl>
-            <div
-              ><dt>责任岗位</dt><dd>{{ measure.positions }}</dd></div
-            >
-            <div
-              ><dt>标准依据</dt><dd>{{ measure.standardBasis || '—' }}</dd></div
-            >
-            <div
-              ><dt>失效形式</dt><dd>{{ measure.failureMode || '—' }}</dd></div
-            >
-          </dl>
-        </article>
-      </div>
-      <ArtEmptyState v-else title="暂无管控措施" description="请先在风险评价与管控中配置措施。" />
+        <ElTabPane name="section-2" label="防控与执行"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle
+              title="管控措施"
+              :subtitle="`共 ${current?.measureCount || 0} 项措施，覆盖 ${current?.linkedPositionCount || 0} 个岗位`" />
+            <div v-if="current?.measures?.length" class="risk-information-detail__measures">
+              <article v-for="measure in current.measures" :key="measure.id">
+                <header>
+                  <span>{{ measure.category }}</span>
+                  <small>{{ measure.controlLevel }} · {{ measure.frequency }}</small>
+                </header>
+                <p>{{ measure.content }}</p>
+                <dl>
+                  <div
+                    ><dt>责任岗位</dt><dd>{{ measure.positions }}</dd></div
+                  >
+                  <div
+                    ><dt>标准依据</dt><dd>{{ measure.standardBasis || '—' }}</dd></div
+                  >
+                  <div
+                    ><dt>失效形式</dt><dd>{{ measure.failureMode || '—' }}</dd></div
+                  >
+                </dl>
+              </article>
+            </div>
+            <ArtEmptyState
+              v-else
+              title="暂无管控措施"
+              description="请先在风险评价与管控中配置措施。" /></div></ElTabPane
+      ></ElTabs>
     </div>
   </ArtDrawer>
 </template>
@@ -100,6 +121,7 @@
 
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<RiskControlDetailOpenData>>()
   const current = shallowRef<SmisRiskControlInformationRecord>()
   const riskLevelStyle = computed<CSSProperties>(() => ({

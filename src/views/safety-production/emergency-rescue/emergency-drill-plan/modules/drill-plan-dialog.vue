@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identity'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="drill-plan-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:calendar-check-line" /></template>
@@ -7,16 +15,14 @@
         ><p>计划编号按月自动生成；演练级别随演练单位自动判定，预警状态由系统计算。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #sourcePlanId>
           <ElSelect
@@ -128,8 +134,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -194,6 +198,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identity')
   const dialogRef = ref<ArtDialogExpose<DrillPlanDialogOpenData>>()
   const recordTenantId = ref<string>()
   const formRef = ref<FormExpose>()
@@ -230,7 +235,7 @@
     traineeIds: [],
     remark: ''
   })
-  const form = reactive<FormModel>(initial())
+  const form = ref<FormModel>(initial())
   const orgProps = { label: 'organizationName', children: 'children' }
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const flatOrganizations = computed(
@@ -238,7 +243,7 @@
   )
   const derivedPlanLevel = computed<SmisEmergencyPlanLevel>(() => {
     const current = flatOrganizations.value.find(
-      (item) => item.id === form.applicableOrganizationId
+      (item) => item.id === form.value.applicableOrganizationId
     )
     if (!current || current.organizationType === 'company') return 'company'
     if (current.organizationType === 'division') return 'operation_area'
@@ -254,7 +259,7 @@
     dictOptions('commonBoolean').map((item) => ({ ...item, value: item.value === 'true' }))
   )
   const items = computed<FormItem[]>(() => [
-    { label: '计划识别', key: 'identity', type: 'divider', span: 24 },
+    { label: '预案与责任', key: 'identity', type: 'tab', span: 24 },
     {
       label: '计划编号',
       key: 'planNo',
@@ -272,13 +277,13 @@
       props: { maxlength: 160, placeholder: '请输入演练计划名称' }
     },
     { label: '应急救援预案', key: 'sourcePlanId', type: 'text', span: 24 },
-    { label: '组织与责任', key: 'organization', type: 'divider', span: 24 },
+
     { label: '编制单位', key: 'compilationOrganizationId', type: 'text' },
     { label: '演练单位', key: 'applicableOrganizationId', type: 'text' },
     { label: '演练负责人', key: 'responsibleEmployeeId', type: 'text' },
     { label: '演练级别', key: 'planLevel', type: 'text' },
     { label: '预警状态', key: 'warningStatus', type: 'text' },
-    { label: '计划安排', key: 'schedule', type: 'divider', span: 24 },
+    { label: '计划安排', key: 'schedule', type: 'tab', span: 24 },
     {
       label: '演练形式',
       key: 'drillForm',
@@ -331,7 +336,7 @@
       span: 24,
       props: { rows: 3, maxlength: 1000, showWordLimit: true, resize: 'none' }
     },
-    { label: '参训与附件', key: 'people', type: 'divider', span: 24 },
+    { label: '参训与资料', key: 'people', type: 'tab', span: 24 },
     { label: '参训人员', key: 'traineeIds', type: 'text', span: 24 },
     { label: '计划附件', key: 'attachmentUrls', type: 'text', span: 24 },
     {
@@ -353,12 +358,12 @@
   const handleSourceChange = (id: string) => {
     const source = rescuePlans.value.find((item) => item.id === id)
     if (!source) return
-    form.planCategory = source.planCategory
-    if (!form.compilationOrganizationId)
-      form.compilationOrganizationId = source.applicableOrganizationId
-    if (!form.applicableOrganizationId)
-      form.applicableOrganizationId = source.applicableOrganizationId
-    if (!form.drillName) form.drillName = `${source.planName}演练`
+    form.value.planCategory = source.planCategory
+    if (!form.value.compilationOrganizationId)
+      form.value.compilationOrganizationId = source.applicableOrganizationId
+    if (!form.value.applicableOrganizationId)
+      form.value.applicableOrganizationId = source.applicableOrganizationId
+    if (!form.value.drillName) form.value.drillName = `${source.planName}演练`
   }
   const toEmployee = (row: SmisEmergencyDrillPlan): EmployeeIntegrationItem[] =>
     row.responsibleEmployeeId
@@ -382,14 +387,14 @@
       submitting.value = true
       await saveEmergencyDrillPlan(
         {
-          ...toRaw(form),
-          drillForm: form.drillForm as SmisEmergencyDrillForm,
-          planCategory: form.planCategory as SmisEmergencyPlanCategory,
-          responsibleEmployeeId: form.responsibleEmployeeId || null
+          ...toRaw(form.value),
+          drillForm: form.value.drillForm as SmisEmergencyDrillForm,
+          planCategory: form.value.planCategory as SmisEmergencyPlanCategory,
+          responsibleEmployeeId: form.value.responsibleEmployeeId || null
         },
         submit
       )
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       dialogRef.value?.handleClose(true)
     } catch {
       /* 表单或服务端会给出明确提示 */
@@ -399,14 +404,14 @@
   }
   const handleOpen = async (data: DrillPlanDialogOpenData) => {
     recordTenantId.value = data.row?.trainees[0]?.tenantId
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     organizations.value = data.organizations
     responsibleSelection.value = []
     traineeSelection.value = []
     currentWarningStatus.value = data.row?.warningStatus ?? 'normal'
     if (data.row) {
       const row = data.row
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: row.id,
         planNo: row.planNo,
         drillName: row.drillName,
@@ -428,7 +433,7 @@
       })
       responsibleSelection.value = toEmployee(row)
       traineeSelection.value = row.trainees as EmployeeIntegrationItem[]
-    } else if (data.presetSourcePlanId) form.sourcePlanId = data.presetSourcePlanId
+    } else if (data.presetSourcePlanId) form.value.sourcePlanId = data.presetSourcePlanId
     await nextTick()
     formRef.value?.clearValidate()
     await dialogRef.value?.handleOpen(data, {

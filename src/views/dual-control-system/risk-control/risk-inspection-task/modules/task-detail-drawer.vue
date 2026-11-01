@@ -1,5 +1,14 @@
 <template>
-  <ArtDrawer ref="drawerRef" :loading="loading" loading-text="正在加载任务详情…">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+    :loading="loading"
+    loading-text="正在加载任务详情…"
+  >
     <ArtAsyncState
       v-if="loadError"
       :error="loadError"
@@ -20,116 +29,135 @@
         />
       </div>
 
-      <ArtSectionTitle title="任务计划" subtitle="风险对象、管控责任与执行时限" />
-      <dl class="task-detail-drawer__plan-grid">
-        <div>
-          <dt>风险点类型</dt>
-          <dd><ArtDictDisplay dict-code="smisRiskPointType" :value="detail.riskPointType" /></dd>
-        </div>
-        <div>
-          <dt>风险等级</dt>
-          <dd>
-            <span
-              class="task-detail-drawer__risk"
-              :style="{ '--risk-color': detail.riskLevelColor }"
-            >
-              {{ detail.riskLevelName || '待评价' }}
-            </span>
-          </dd>
-        </div>
-        <div>
-          <dt>管控层级</dt>
-          <dd><ArtDictDisplay dict-code="smisRiskControlLevel" :value="detail.controlLevel" /></dd>
-        </div>
-        <div>
-          <dt>管控责任人</dt>
-          <dd>{{ detail.responsibleEmployeeName }} · {{ detail.responsibleEmployeeNo }}</dd>
-        </div>
-        <div>
-          <dt>当前接收人</dt>
-          <dd>{{ detail.assigneeEmployeeName }} · {{ detail.assigneeEmployeeNo }}</dd>
-        </div>
-        <div>
-          <dt>实际执行人</dt>
-          <dd>{{ detail.actualExecutorEmployeeName || '尚未执行' }}</dd>
-        </div>
-        <div>
-          <dt>计划开始</dt>
-          <dd>{{ formatDate(detail.plannedStartAt) }}</dd>
-        </div>
-        <div>
-          <dt>计划完成</dt>
-          <dd>{{ formatDate(detail.plannedEndAt) }}</dd>
-        </div>
-        <div>
-          <dt>实际开始</dt>
-          <dd>{{ formatDate(detail.actualStartAt) }}</dd>
-        </div>
-        <div>
-          <dt>完成时间</dt>
-          <dd>{{ formatDate(detail.completedAt) }}</dd>
-        </div>
-      </dl>
-
-      <ArtSectionTitle
-        title="巡查项目"
-        :subtitle="`共 ${detail.items.length} 项，异常 ${abnormalCount} 项`"
-      />
-      <ul v-if="detail.items.length" class="task-detail-drawer__inspection-list">
-        <li v-for="(item, index) in detail.items" :key="item.id" :data-result="item.result">
-          <span class="task-detail-drawer__item-index">{{ index + 1 }}</span>
-          <div class="task-detail-drawer__item-identity">
-            <strong>{{ item.hazardSource || '关联风险项已删除' }}</strong>
-            <small>{{ item.hazardNo || '历史快照' }}</small>
-          </div>
-          <div class="task-detail-drawer__item-content">
-            <small>排查内容 / 控制措施</small>
-            <p>{{ item.inspectionContent || '暂无排查内容' }}</p>
-          </div>
-          <div class="task-detail-drawer__item-result">
-            <ArtDictDisplay
-              dict-code="smisRiskInspectionResult"
-              :value="item.result"
-              display="tag"
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="任务计划"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="任务计划" subtitle="风险对象、管控责任与执行时限" />
+            <dl class="task-detail-drawer__plan-grid">
+              <div>
+                <dt>风险点类型</dt>
+                <dd
+                  ><ArtDictDisplay dict-code="smisRiskPointType" :value="detail.riskPointType"
+                /></dd>
+              </div>
+              <div>
+                <dt>风险等级</dt>
+                <dd>
+                  <span
+                    class="task-detail-drawer__risk"
+                    :style="{ '--risk-color': detail.riskLevelColor }"
+                  >
+                    {{ detail.riskLevelName || '待评价' }}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>管控层级</dt>
+                <dd
+                  ><ArtDictDisplay dict-code="smisRiskControlLevel" :value="detail.controlLevel"
+                /></dd>
+              </div>
+              <div>
+                <dt>管控责任人</dt>
+                <dd>{{ detail.responsibleEmployeeName }} · {{ detail.responsibleEmployeeNo }}</dd>
+              </div>
+              <div>
+                <dt>当前接收人</dt>
+                <dd>{{ detail.assigneeEmployeeName }} · {{ detail.assigneeEmployeeNo }}</dd>
+              </div>
+              <div>
+                <dt>实际执行人</dt>
+                <dd>{{ detail.actualExecutorEmployeeName || '尚未执行' }}</dd>
+              </div>
+              <div>
+                <dt>计划开始</dt>
+                <dd>{{ formatDate(detail.plannedStartAt) }}</dd>
+              </div>
+              <div>
+                <dt>计划完成</dt>
+                <dd>{{ formatDate(detail.plannedEndAt) }}</dd>
+              </div>
+              <div>
+                <dt>实际开始</dt>
+                <dd>{{ formatDate(detail.actualStartAt) }}</dd>
+              </div>
+              <div>
+                <dt>完成时间</dt>
+                <dd>{{ formatDate(detail.completedAt) }}</dd>
+              </div>
+            </dl>
+          </div></ElTabPane
+        >
+        <ElTabPane name="section-1" label="执行情况"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle
+              title="巡查项目"
+              :subtitle="`共 ${detail.items.length} 项，异常 ${abnormalCount} 项`"
             />
-            <small>{{ item.remark || '暂无执行备注' }}</small>
-          </div>
-        </li>
-      </ul>
-      <ArtEmptyState
-        v-else
-        title="暂无巡查项目"
-        description="为任务配置巡查项目后，可在此查看执行要求。"
-        size="compact"
-        :visual-size="64"
-      />
+            <ul v-if="detail.items.length" class="task-detail-drawer__inspection-list">
+              <li v-for="(item, index) in detail.items" :key="item.id" :data-result="item.result">
+                <span class="task-detail-drawer__item-index">{{ index + 1 }}</span>
+                <div class="task-detail-drawer__item-identity">
+                  <strong>{{ item.hazardSource || '关联风险项已删除' }}</strong>
+                  <small>{{ item.hazardNo || '历史快照' }}</small>
+                </div>
+                <div class="task-detail-drawer__item-content">
+                  <small>排查内容 / 控制措施</small>
+                  <p>{{ item.inspectionContent || '暂无排查内容' }}</p>
+                </div>
+                <div class="task-detail-drawer__item-result">
+                  <ArtDictDisplay
+                    dict-code="smisRiskInspectionResult"
+                    :value="item.result"
+                    display="tag"
+                  />
+                  <small>{{ item.remark || '暂无执行备注' }}</small>
+                </div>
+              </li>
+            </ul>
+            <ArtEmptyState
+              v-else
+              title="暂无巡查项目"
+              description="为任务配置巡查项目后，可在此查看执行要求。"
+              size="compact"
+              :visual-size="64"
+            /> </div
+        ></ElTabPane>
+        <ElTabPane name="section-2" label="执行记录"
+          ><div class="space-y-4 min-w-0"
+            ><ArtSectionTitle title="执行记录" subtitle="任务生成、转交、进度保存与完成事件" />
+            <ElTimeline class="task-detail-drawer__timeline">
+              <ElTimelineItem
+                v-for="event in [...detail.events].reverse()"
+                :key="event.id"
+                :timestamp="formatDate(event.eventAt)"
+                placement="top"
+              >
+                <div class="task-detail-drawer__event"
+                  ><strong>{{ eventLabel(event.eventType) }}</strong
+                  ><p>{{ event.eventContent || '系统记录' }}</p
+                  ><small>{{ event.operatorName || '系统' }}</small></div
+                >
+              </ElTimelineItem>
+            </ElTimeline>
 
-      <ArtSectionTitle title="执行记录" subtitle="任务生成、转交、进度保存与完成事件" />
-      <ElTimeline class="task-detail-drawer__timeline">
-        <ElTimelineItem
-          v-for="event in [...detail.events].reverse()"
-          :key="event.id"
-          :timestamp="formatDate(event.eventAt)"
-          placement="top"
-        >
-          <div class="task-detail-drawer__event"
-            ><strong>{{ eventLabel(event.eventType) }}</strong
-            ><p>{{ event.eventContent || '系统记录' }}</p
-            ><small>{{ event.operatorName || '系统' }}</small></div
-          >
-        </ElTimelineItem>
-      </ElTimeline>
-
-      <div
-        v-if="detail.executionSummary || detail.transferReason || detail.cancellationReason"
-        class="task-detail-drawer__notes"
+            <div
+              v-if="detail.executionSummary || detail.transferReason || detail.cancellationReason"
+              class="task-detail-drawer__notes"
+            >
+              <p v-if="detail.executionSummary"
+                ><strong>执行总结</strong>{{ detail.executionSummary }}</p
+              >
+              <p v-if="detail.transferReason"
+                ><strong>最近转交原因</strong>{{ detail.transferReason }}</p
+              >
+              <p v-if="detail.cancellationReason"
+                ><strong>取消原因</strong>{{ detail.cancellationReason }}</p
+              >
+            </div></div
+          ></ElTabPane
+        ></ElTabs
       >
-        <p v-if="detail.executionSummary"><strong>执行总结</strong>{{ detail.executionSummary }}</p>
-        <p v-if="detail.transferReason"><strong>最近转交原因</strong>{{ detail.transferReason }}</p>
-        <p v-if="detail.cancellationReason"
-          ><strong>取消原因</strong>{{ detail.cancellationReason }}</p
-        >
-      </div>
     </div>
   </ArtDrawer>
 </template>
@@ -154,6 +182,7 @@
   export interface TaskDetailDrawerOpenData {
     row: SmisRiskInspectionTask
   }
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<TaskDetailDrawerOpenData>>()
   const { detail, loading, loadError, openDetail, loadDetail, retryLoad } =
     useDetailRecord<SmisRiskInspectionTaskDetail>(

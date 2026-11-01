@@ -63,10 +63,14 @@
 
       <ViolationCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -80,7 +84,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -103,6 +107,10 @@
   import ViolationCategoryDialog, {
     type ViolationCategoryDialogOpenData
   } from './modules/violation-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_violation_category',
+    '违章类别'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -129,8 +137,6 @@
     loading: boolean
     error: string | null
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
@@ -197,13 +203,25 @@
     {
       permission: 'SmisViolationCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个违章分类吗？存在未选中的下级分类或关联标准时将无法删除。`,
       onClick: async ({ selectedRows, api }) => {
         const ids = selectedRows.flatMap((row) => (row.id ? [String(row.id)] : []))
         if (ids.includes(tree.selectedKey)) tree.selectedKey = ALL_KEY
-        await deleteViolationCategories(ids)
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '违章类别')
+          })),
+          permission: 'SmisViolationCategory:Delete',
+          remove: async () => {
+            await deleteViolationCategories(ids)
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -350,14 +368,24 @@
   const handleSaveSuccess = (): void => void tableQueryRef.value?.getData()
   const handleDelete = async (row: SmisViolationCategory): Promise<void> => {
     if (!row.id) return
-    try {
-      await confirmDelete(`确定删除违章分类“${row.categoryName}”吗？`)
-      await deleteViolationCategories([row.id])
-      if (tree.selectedKey === row.id) tree.selectedKey = ALL_KEY
-      await tableQueryRef.value?.getData()
-    } catch {
-      /* 用户取消 */
-    }
+
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.categoryName ?? '违章类别')
+        }
+      ],
+      permission: 'SmisViolationCategory:Delete',
+      confirmMessage: `确定删除违章分类“${row.categoryName}”吗？`,
+      remove: async () => {
+        await deleteViolationCategories([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        if (tree.selectedKey === row.id) tree.selectedKey = ALL_KEY
+        await tableQueryRef.value?.getData()
+      }
+    })
   }
 
   onMounted(() => void userStore.ensureDictLoaded('commonEnabledStatus'))

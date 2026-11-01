@@ -72,6 +72,12 @@ export async function deleteInspectionCategories(ids: string[], tenantId?: strin
         p_ids: ids,
         p_tenant_id: tenantId || null
       }),
-    { showMessage: true, breakReturn: true, message: '检验类别已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '检验类别已删除'
+    }
   )
 }

@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="risk-organization smis-category-navigator"
     title="组织部门"
     subtitle="数据来自系统管理 / 部门管理"
@@ -22,63 +21,63 @@
       />
     </template>
 
-    <div class="risk-organization__content">
-      <ElInput
-        v-model="keyword"
-        clearable
-        placeholder="搜索组织名称或编码"
-        aria-label="搜索组织名称或编码"
-      >
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <div class="risk-organization__summary">
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
-        <span
-          ><strong>组织结构</strong><small>{{ organizationCount }} 个有效节点</small></span
+    <template #toolbar>
+      <div class="risk-organization__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索组织名称或编码"
+          aria-label="搜索组织名称或编码"
         >
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
+
+        <div class="risk-organization__summary">
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
+          <span
+            ><strong>组织结构</strong><small>{{ organizationCount }} 个有效节点</small></span
+          >
+        </div>
       </div>
+    </template>
 
-      <ElScrollbar class="risk-organization__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="matchesOrganizationNodeKeyword"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ data: node }">
-            <div class="risk-organization__node smis-category-navigator__node">
-              <span aria-hidden="true"
-                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
-              /></span>
-              <span>
-                <strong :title="node.organizationName">{{ node.organizationName }}</strong>
-                <small :title="node.organizationCode">{{ node.organizationCode }}</small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="risk-organization__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="matchesOrganizationNodeKeyword"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="risk-organization__node smis-category-navigator__node">
+          <span aria-hidden="true"
+            ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
+          /></span>
+          <span>
+            <strong :title="node.organizationName">{{ node.organizationName }}</strong>
+            <small :title="node.organizationCode">{{ node.organizationCode }}</small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="risk-organization__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -141,13 +140,6 @@
 
     height: 100%;
 
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
-
     :deep(.art-section-card__body) {
       display: flex;
       flex-direction: column;
@@ -196,11 +188,6 @@
         font-size: 11px;
         color: var(--el-text-color-secondary);
       }
-    }
-
-    &__scrollbar {
-      flex: 1;
-      min-height: 0;
     }
 
     :deep(.el-tree) {

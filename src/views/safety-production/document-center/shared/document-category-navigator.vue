@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="document-category-navigator smis-category-navigator"
     title="文档分类"
     subtitle="树形结构由当前租户自定义维护"
@@ -42,81 +41,84 @@
       />
     </template>
 
-    <div class="document-category-navigator__content smis-category-navigator__content">
-      <ElInput v-model="keyword" clearable placeholder="搜索分类名称" aria-label="搜索文档分类名称">
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <button
-        type="button"
-        class="document-category-navigator__all smis-category-navigator__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:folder-open-line" /></span>
-        <span>
-          <strong>全部分类</strong>
-          <small>查看全部应知应会文档</small>
-        </span>
-        <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
-      </button>
-
-      <div
-        class="document-category-navigator__section-label smis-category-navigator__section-label"
-      >
-        <span>分类结构</span>
-        <small>{{ categoryCount }} 个节点</small>
-      </div>
-
-      <ElScrollbar
-        class="document-category-navigator__scrollbar smis-category-navigator__scrollbar"
-      >
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
+    <template #toolbar>
+      <div class="document-category-navigator__content smis-category-navigator__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索分类名称"
+          aria-label="搜索文档分类名称"
         >
-          <template #default="{ data: node }">
-            <div class="document-category-navigator__node smis-category-navigator__node">
-              <span
-                class="document-category-navigator__node-icon smis-category-navigator__node-icon"
-                :class="{ 'is-disabled': node.status === 'disabled' }"
-                aria-hidden="true"
-              >
-                <ArtSvgIcon :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:folder-line'" />
-              </span>
-              <span>
-                <strong :title="node.categoryName">{{ node.categoryName }}</strong>
-                <small>
-                  {{ node.documentCount || 0 }} 份文档
-                  <template v-if="node.status === 'disabled'"> · 已停用</template>
-                </small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="document-category-navigator__check smis-category-navigator__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
+
+        <button
+          type="button"
+          class="document-category-navigator__all smis-category-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
+        >
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:folder-open-line" /></span>
+          <span>
+            <strong>全部分类</strong>
+            <small>查看全部应知应会文档</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
+        </button>
+
+        <div
+          class="document-category-navigator__section-label smis-category-navigator__section-label"
+        >
+          <span>分类结构</span>
+          <small>{{ categoryCount }} 个节点</small>
+        </div>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="document-category-navigator__node smis-category-navigator__node">
+          <span
+            class="document-category-navigator__node-icon smis-category-navigator__node-icon"
+            :class="{ 'is-disabled': node.status === 'disabled' }"
+            aria-hidden="true"
+          >
+            <ArtSvgIcon :icon="node.children?.length ? 'ri:folder-3-line' : 'ri:folder-line'" />
+          </span>
+          <span>
+            <strong :title="node.categoryName">{{ node.categoryName }}</strong>
+            <small>
+              {{ node.documentCount || 0 }} 份文档
+              <template v-if="node.status === 'disabled'"> · 已停用</template>
+            </small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="document-category-navigator__check smis-category-navigator__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 

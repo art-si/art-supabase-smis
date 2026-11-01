@@ -38,10 +38,14 @@
 
       <SafetyRiskDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -59,7 +63,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -81,6 +85,7 @@
     type SmisSafetyRiskSearchParams
   } from '@smis/api'
   import SafetyRiskDialog, { type SafetyRiskDialogOpenData } from './modules/safety-risk-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_risk_item', '风险项')
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -97,8 +102,6 @@
   interface DialogExpose {
     handleOpen: (data: SafetyRiskDialogOpenData) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -478,11 +481,23 @@
     {
       permission: 'SmisDualControlSafetyRiskList:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条安全风险吗？已完成评价的数据将被保护。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteSafetyRisks((selectedRows as SmisSafetyRiskRecord[]).map((row) => row.id))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.hazardNo ?? '风险项')
+          })),
+          permission: 'SmisDualControlSafetyRiskList:Delete',
+          remove: async () => {
+            await deleteSafetyRisks((selectedRows as SmisSafetyRiskRecord[]).map((row) => row.id))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -492,13 +507,22 @@
       : tableQueryRef.value?.refreshUpdate())
   }
   const handleDelete = async (row: SmisSafetyRiskRecord): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除危险“${row.hazardNo}”吗？已完成评价的风险将保留。`)
-      await deleteSafetyRisks([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.hazardNo ?? '风险项')
+        }
+      ],
+      permission: 'SmisDualControlSafetyRiskList:Delete',
+      confirmMessage: `确定删除危险“${row.hazardNo}”吗？已完成评价的风险将保留。`,
+      remove: async () => {
+        await deleteSafetyRisks([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   onMounted(async () => {
     await Promise.all([

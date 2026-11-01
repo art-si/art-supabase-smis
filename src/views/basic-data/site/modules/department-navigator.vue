@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="site-department-navigator smis-category-navigator"
     title="部门导航"
     subtitle="数据来自系统管理 / 部门管理"
@@ -22,75 +21,77 @@
       />
     </template>
 
-    <div class="site-department-navigator__content smis-category-navigator__content">
-      <ElInput
-        v-model="keyword"
-        clearable
-        placeholder="搜索部门名称或编码"
-        aria-label="搜索部门名称或编码"
-      >
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <button
-        type="button"
-        class="site-department-navigator__all smis-category-navigator__all"
-        :class="{ 'is-current': selectedKey === ALL_KEY }"
-        @click="emit('select', ALL_KEY)"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
-        <span>
-          <strong>全部部门</strong>
-          <small>查看所有部门维护的场所</small>
-        </span>
-        <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
-      </button>
-
-      <div class="site-department-navigator__section-label smis-category-navigator__section-label">
-        <span>部门结构</span>
-        <small>{{ organizationCount }} 个有效节点</small>
-      </div>
-
-      <ElScrollbar class="site-department-navigator__scrollbar smis-category-navigator__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="data"
-          :props="treeProps"
-          :filter-node-method="matchesOrganizationNodeKeyword"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="id"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
+    <template #toolbar>
+      <div class="site-department-navigator__content smis-category-navigator__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          placeholder="搜索部门名称或编码"
+          aria-label="搜索部门名称或编码"
         >
-          <template #default="{ data: node }">
-            <div class="site-department-navigator__node smis-category-navigator__node">
-              <span aria-hidden="true"
-                ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
-              /></span>
-              <span>
-                <strong :title="node.organizationName">{{ node.organizationName }}</strong>
-                <small :title="node.organizationCode">{{ node.organizationCode }}</small>
-              </span>
-              <ArtSvgIcon
-                v-if="selectedKey === node.id"
-                class="site-department-navigator__check smis-category-navigator__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
-            />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
+
+        <button
+          type="button"
+          class="site-department-navigator__all smis-category-navigator__all"
+          :class="{ 'is-current': selectedKey === ALL_KEY }"
+          @click="emit('select', ALL_KEY)"
+        >
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:organization-chart" /></span>
+          <span>
+            <strong>全部部门</strong>
+            <small>查看所有部门维护的场所</small>
+          </span>
+          <ArtSvgIcon v-if="selectedKey === ALL_KEY" icon="ri:check-line" aria-hidden="true" />
+        </button>
+
+        <div
+          class="site-department-navigator__section-label smis-category-navigator__section-label"
+        >
+          <span>部门结构</span>
+          <small>{{ organizationCount }} 个有效节点</small>
+        </div>
+      </div>
+    </template>
+
+    <ElTree
+      ref="treeRef"
+      :data="data"
+      :props="treeProps"
+      :filter-node-method="matchesOrganizationNodeKeyword"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="id"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="site-department-navigator__node smis-category-navigator__node">
+          <span aria-hidden="true"
+            ><ArtSvgIcon :icon="getOrganizationTypeIcon(node.organizationType)"
+          /></span>
+          <span>
+            <strong :title="node.organizationName">{{ node.organizationName }}</strong>
+            <small :title="node.organizationCode">{{ node.organizationCode }}</small>
+          </span>
+          <ArtSvgIcon
+            v-if="selectedKey === node.id"
+            class="site-department-navigator__check smis-category-navigator__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -152,13 +153,6 @@
 <style scoped lang="scss">
   .site-department-navigator {
     --smis-category-node-min-height: 48px;
-
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
 
     &__all {
       strong {

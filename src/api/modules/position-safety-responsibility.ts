@@ -97,7 +97,13 @@ export async function editPositionSafetyResponsibility(
 export async function deletePositionSafetyResponsibilities(ids: string[]) {
   return await responseHandle(
     () => supabase.from(TABLE_NAME).delete({ count: 'exact' }).in('id', ids),
-    { showMessage: true, message: '隐患排查标准已删除' }
+    {
+      breakReturn: true,
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      message: '隐患排查标准已删除'
+    }
   )
 }
 

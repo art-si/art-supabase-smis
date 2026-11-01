@@ -111,6 +111,12 @@ export async function saveEquipmentCategory(params: SmisEquipmentCategorySavePay
 export async function deleteEquipmentCategories(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_equipment_categories_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '设备分类已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '设备分类已删除'
+    }
   )
 }

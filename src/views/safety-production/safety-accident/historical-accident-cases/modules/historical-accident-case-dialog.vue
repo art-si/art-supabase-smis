@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'identity'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="historical-case-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:book-open-line" /></template>
@@ -8,16 +16,14 @@
       </ArtEntitySummary>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #accidentOrganizationId>
           <AccidentOrganizationSelect
@@ -62,8 +68,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -113,6 +117,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('identity')
   const dialogRef = ref<ArtDialogExpose<HistoricalAccidentCaseDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const organizations = shallowRef<SmisTreeOrganization[]>([])
@@ -130,10 +135,10 @@
     imageUrls: [],
     attachmentUrls: []
   })
-  const form = reactive<HistoricalAccidentCaseForm>(initialForm())
+  const form = ref<HistoricalAccidentCaseForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
-    { label: '案例识别', key: 'identity', type: 'divider', span: 24 },
+    { label: '案例信息', key: 'identity', type: 'tab', span: 24 },
     {
       label: '事故名称',
       key: 'accidentName',
@@ -178,7 +183,7 @@
       options: dictOptions('smisAccidentCaseStatus'),
       props: { clearable: true, placeholder: '请选择案例状态' }
     },
-    { label: '案例内容', key: 'contentSection', type: 'divider', span: 24 },
+    { label: '案例内容', key: 'contentSection', type: 'tab', span: 24 },
     {
       label: '案例概述',
       key: 'summary',
@@ -220,20 +225,20 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveHistoricalAccidentCase({
-        id: form.id,
-        accidentName: form.accidentName.trim(),
-        accidentCategories: [...form.accidentCategories],
-        accidentLevel: form.accidentLevel as SmisAccidentLevel,
-        accidentOrganizationId: form.accidentOrganizationId || null,
-        occurrenceDate: form.occurrenceDate,
-        caseStatus: (form.caseStatus as SmisAccidentCaseStatus) || null,
-        applicableCompanyId: form.applicableCompanyId || null,
-        summary: normalizeNullableText(form.summary),
-        content: form.content.trim(),
-        imageUrls: [...form.imageUrls],
-        attachmentUrls: [...form.attachmentUrls]
+        id: form.value.id,
+        accidentName: form.value.accidentName.trim(),
+        accidentCategories: [...form.value.accidentCategories],
+        accidentLevel: form.value.accidentLevel as SmisAccidentLevel,
+        accidentOrganizationId: form.value.accidentOrganizationId || null,
+        occurrenceDate: form.value.occurrenceDate,
+        caseStatus: (form.value.caseStatus as SmisAccidentCaseStatus) || null,
+        applicableCompanyId: form.value.applicableCompanyId || null,
+        summary: normalizeNullableText(form.value.summary),
+        content: form.value.content.trim(),
+        imageUrls: [...form.value.imageUrls],
+        attachmentUrls: [...form.value.attachmentUrls]
       })
-      emit('success', form.id ? 'edit' : 'add')
+      emit('success', form.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '历史事故案例保存失败，请检查内容后重试')
@@ -241,11 +246,11 @@
     }
   }
   const handleOpen = async (data: HistoricalAccidentCaseDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     organizations.value = data.organizations
     if (data.row) {
       const row = cloneDeep(data.row)
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: row.id,
         accidentName: row.accidentName,
         accidentCategories: [...row.accidentCategories],
@@ -280,7 +285,7 @@
         }
       },
       onConfirm: handleSubmit,
-      onReset: () => Object.assign(form, initialForm())
+      onReset: () => Object.assign(form.value, initialForm())
     })
   }
 

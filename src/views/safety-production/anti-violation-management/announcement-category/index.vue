@@ -15,8 +15,7 @@
       ></BusinessWorkspaceHeader>
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="announcement-category-page__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -34,13 +33,16 @@
       />
       <AnnouncementCategoryDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
@@ -51,7 +53,7 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
@@ -70,6 +72,10 @@
   import AnnouncementCategoryDialog, {
     type AnnouncementCategoryDialogOpenData
   } from './modules/announcement-category-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_announcement_category',
+    '公告分类'
+  )
 
   defineOptions({ name: 'SmisAnnouncementCategory' })
   type TableParams = SmisAnnouncementCategorySearchParams &
@@ -77,12 +83,11 @@
   interface DialogExpose {
     handleOpen: (data: AnnouncementCategoryDialogOpenData) => Promise<void>
   }
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
-  const searchQuery = reactive<SmisAnnouncementCategorySearchParams>({})
+  const searchQuery = ref<SmisAnnouncementCategorySearchParams>({})
   const overview = reactive<SmisAnnouncementCategoryOverview>({
     total: 0,
     enabled: 0,
@@ -156,11 +161,23 @@
     {
       permission: 'SmisAnnouncementCategory:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个公告分类吗？已被公告使用的分类不能删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteAnnouncementCategories(selectedRows.map((row) => String(row.id)))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.categoryName ?? '公告分类')
+          })),
+          permission: 'SmisAnnouncementCategory:Delete',
+          remove: async () => {
+            await deleteAnnouncementCategories(selectedRows.map((row) => String(row.id)))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {
@@ -173,7 +190,7 @@
       exportApi: async ({ maxRows }) => ({
         data: (
           await fetchAnnouncementCategoryList({
-            ...searchQuery,
+            ...searchQuery.value,
             purpose: 'export',
             from: 0,
             to: maxRows - 1
@@ -232,13 +249,22 @@
     return { records: result.data, total: result.total }
   }
   const handleDelete = async (row: SmisAnnouncementCategory): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除公告分类“${row.categoryName}”吗？`)
-      await deleteAnnouncementCategories([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.categoryName ?? '公告分类')
+        }
+      ],
+      permission: 'SmisAnnouncementCategory:Delete',
+      confirmMessage: `确定删除公告分类“${row.categoryName}”吗？`,
+      remove: async () => {
+        await deleteAnnouncementCategories([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   const handleSaveSuccess = (): void => void tableQueryRef.value?.getData()
   onMounted(() => void userStore.ensureDictLoaded('commonEnabledStatus'))

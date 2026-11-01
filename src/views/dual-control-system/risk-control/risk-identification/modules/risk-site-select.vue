@@ -37,7 +37,6 @@
         </ElInput>
 
         <ArtSectionCard
-          :show-scrollbar="false"
           class="risk-site-select__panel"
           title="可选场所"
           :subtitle="`共 ${filteredSites.length} 个符合条件的场所`"
@@ -48,34 +47,32 @@
         >
           <template #empty-action><SmisDataSourceEmptyActions source="site" /></template>
 
-          <ElScrollbar class="risk-site-select__scrollbar">
-            <ul class="risk-site-select__list" aria-label="可选场所列表">
-              <li v-for="site in filteredSites" :key="site.id">
-                <button
-                  type="button"
-                  class="risk-site-select__option"
-                  :class="{ 'is-selected': draftValue === site.id }"
-                  :aria-pressed="draftValue === site.id"
-                  @click="draftValue = site.id"
-                >
-                  <span class="risk-site-select__option-marker" aria-hidden="true">
-                    <ArtSvgIcon
-                      :icon="draftValue === site.id ? 'ri:check-line' : 'ri:map-pin-line'"
-                    />
-                  </span>
-                  <span class="risk-site-select__option-copy">
-                    <strong>{{ site.siteName }}</strong>
-                    <small>{{ site.organizationName || '所属组织未维护' }}</small>
-                  </span>
-                  <ArtDictDisplay
-                    dict-code="smisSiteCategory"
-                    :value="site.categoryCode"
-                    display="tag"
+          <ul class="risk-site-select__list" aria-label="可选场所列表">
+            <li v-for="site in filteredSites" :key="site.id">
+              <button
+                type="button"
+                class="risk-site-select__option"
+                :class="{ 'is-selected': draftValue === site.id }"
+                :aria-pressed="draftValue === site.id"
+                @click="draftValue = site.id"
+              >
+                <span class="risk-site-select__option-marker" aria-hidden="true">
+                  <ArtSvgIcon
+                    :icon="draftValue === site.id ? 'ri:check-line' : 'ri:map-pin-line'"
                   />
-                </button>
-              </li>
-            </ul>
-          </ElScrollbar>
+                </span>
+                <span class="risk-site-select__option-copy">
+                  <strong>{{ site.siteName }}</strong>
+                  <small>{{ site.organizationName || '所属组织未维护' }}</small>
+                </span>
+                <ArtDictDisplay
+                  dict-code="smisSiteCategory"
+                  :value="site.categoryCode"
+                  display="tag"
+                />
+              </button>
+            </li>
+          </ul>
         </ArtSectionCard>
       </div>
     </ArtDialog>
@@ -232,11 +229,8 @@
       min-width: 0;
     }
 
-    &__panel {
-      padding: var(--art-space-4);
-    }
-
-    &__scrollbar {
+    &__panel :deep(.art-section-card__scrollbar) {
+      flex: none;
       height: min(420px, calc(100vh - 330px));
     }
 

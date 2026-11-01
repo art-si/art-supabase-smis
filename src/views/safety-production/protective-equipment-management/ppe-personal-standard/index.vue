@@ -71,8 +71,7 @@
 
             <ArtTableQuery
               ref="tableQueryRef"
-              :model-value="searchQuery"
-              @update:model-value="replaceReactiveModel(searchQuery, $event)"
+              v-model="searchQuery"
               class="smis-personal-standard__table"
               :api-fn="fetchTableData"
               :search-items="searchItems"
@@ -122,7 +121,6 @@
   import { toNameCodeOption } from '@/utils/form/option'
 
   import '../../../components/personal-standard-workspace.scss'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { useMediaQuery } from '@vueuse/core'
   import { ElAvatar, ElTag } from 'element-plus'
@@ -188,7 +186,7 @@
   const organizationError = ref<string | null>(null)
   const selectedOrganizationId = ref(ALL_KEY)
   const positionOptions = ref<SmisPpeScopeOption[]>([])
-  const searchQuery = reactive<SmisPpePersonalStandardSearchParams>({ onlyMissing: false })
+  const searchQuery = ref<SmisPpePersonalStandardSearchParams>({ onlyMissing: false })
   const overview = reactive<SmisPpePersonalStandardOverview>({
     employeeTotal: 0,
     generatedTotal: 0,
@@ -357,7 +355,7 @@
       ],
       exportApi: async ({ maxRows }) => {
         const result = await fetchPpePersonalStandardList({
-          ...searchQuery,
+          ...searchQuery.value,
           organizationIds: descendantIds.value,
           purpose: 'export',
           from: 0,

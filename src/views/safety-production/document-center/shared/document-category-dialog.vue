@@ -9,15 +9,12 @@
 
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #parentId>
           <ElTreeSelect
@@ -40,7 +37,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -79,7 +75,7 @@
     status: 'enabled',
     description: ''
   })
-  const form = reactive<SmisDocumentCategorySavePayload>(initial())
+  const form = ref<SmisDocumentCategorySavePayload>(initial())
   const items: FormItem[] = [
     {
       label: '分类名称',
@@ -133,10 +129,10 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveDocumentCategory({
-        ...toRaw(form),
-        parentId: form.parentId || null,
-        categoryName: form.categoryName.trim(),
-        description: normalizeNullableText(form.description)
+        ...toRaw(form.value),
+        parentId: form.value.parentId || null,
+        categoryName: form.value.categoryName.trim(),
+        description: normalizeNullableText(form.value.description)
       })
       emit('success')
       return true
@@ -147,10 +143,10 @@
   }
 
   const handleOpen = async (data: DocumentCategoryDialogOpenData): Promise<void> => {
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     categories.value = data.categories
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         parentId: data.row.parentId || null,
         categoryName: data.row.categoryName,
@@ -159,7 +155,7 @@
         description: data.row.description || ''
       })
     } else if (data.parentId) {
-      form.parentId = data.parentId
+      form.value.parentId = data.parentId
     }
     await nextTick()
     formRef.value?.clearValidate()

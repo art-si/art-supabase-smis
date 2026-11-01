@@ -15,8 +15,6 @@
       :span="8"
       :gutter="16"
       label-position="top"
-      :show-submit="false"
-      :show-reset="false"
     >
       <template #employeeId>
         <ArtEmployeeSelect

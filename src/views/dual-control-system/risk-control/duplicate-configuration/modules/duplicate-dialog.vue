@@ -10,23 +10,18 @@
       </ArtEntitySummary>
       <ArtForm
         ref="formRef"
-        :model-value="model"
-        @update:model-value="replaceReactiveModel(model, $event)"
+        v-model="model"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="20"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       />
     </div>
   </ArtDialog>
 </template>
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
@@ -78,7 +73,7 @@
     tagStyle: 'primary',
     status: 'enabled'
   })
-  const model = reactive(initial())
+  const model = ref(initial())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const statusOptions = computed(() =>
     dictOptions('commonEnabledDisabledVoidedStatus').filter((i) => i.value !== 'voided')
@@ -128,14 +123,14 @@
       label: '重复频次',
       key: 'repeatFrequency',
       type: 'number',
-      hidden: !model.repeatEnabled,
+      hidden: !model.value.repeatEnabled,
       props: { min: 1, max: 999, controlsPosition: 'right' }
     },
     {
       label: '频次单位',
       key: 'frequencyUnit',
       type: 'select',
-      hidden: !model.repeatEnabled,
+      hidden: !model.value.repeatEnabled,
       options: unitOptions.value,
       props: { clearable: false, placeholder: '请选择频次单位' }
     },
@@ -143,29 +138,29 @@
       label: '日历规则',
       key: 'calendarType',
       type: 'select',
-      hidden: !model.repeatEnabled,
+      hidden: !model.value.repeatEnabled,
       options: calendarOptions.value,
       props: {
         clearable: false,
         onChange: () => {
-          model.calendarDays = []
+          model.value.calendarDays = []
         }
       }
     },
     {
-      label: model.calendarType === 'week' ? '星期选择' : '日期选择',
+      label: model.value.calendarType === 'week' ? '星期选择' : '日期选择',
       key: 'calendarDays',
       type: 'checkboxGroup',
       span: 24,
-      hidden: !model.repeatEnabled || model.calendarType === 'none',
-      options: model.calendarType === 'week' ? weekOptions : monthOptions,
+      hidden: !model.value.repeatEnabled || model.value.calendarType === 'none',
+      options: model.value.calendarType === 'week' ? weekOptions : monthOptions,
       props: { optionType: 'button' }
     },
     {
       label: '截止时间',
       key: 'deadlineTime',
       type: 'timePicker',
-      hidden: !model.repeatEnabled,
+      hidden: !model.value.repeatEnabled,
       props: { format: 'HH:mm', valueFormat: 'HH:mm:ss', clearable: true, placeholder: '可选' }
     },
     {
@@ -179,9 +174,9 @@
       key: 'textColor',
       render: () =>
         h(ElColorPicker, {
-          modelValue: model.textColor,
+          modelValue: model.value.textColor,
           predefine: ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#475569'],
-          'onUpdate:modelValue': (v: string | null) => (model.textColor = v || '')
+          'onUpdate:modelValue': (v: string | null) => (model.value.textColor = v || '')
         })
     },
     {
@@ -206,21 +201,27 @@
     repeatFrequency: [
       {
         validator: (_r, _v, cb) =>
-          model.repeatEnabled && !model.repeatFrequency ? cb(new Error('请输入重复频次')) : cb(),
+          model.value.repeatEnabled && !model.value.repeatFrequency
+            ? cb(new Error('请输入重复频次'))
+            : cb(),
         trigger: 'change'
       }
     ],
     frequencyUnit: [
       {
         validator: (_r, _v, cb) =>
-          model.repeatEnabled && !model.frequencyUnit ? cb(new Error('请选择频次单位')) : cb(),
+          model.value.repeatEnabled && !model.value.frequencyUnit
+            ? cb(new Error('请选择频次单位'))
+            : cb(),
         trigger: 'change'
       }
     ],
     calendarDays: [
       {
         validator: (_r, _v, cb) =>
-          model.repeatEnabled && model.calendarType !== 'none' && !model.calendarDays.length
+          model.value.repeatEnabled &&
+          model.value.calendarType !== 'none' &&
+          !model.value.calendarDays.length
             ? cb(new Error('请选择日历日期'))
             : cb(),
         trigger: 'change'
@@ -228,25 +229,25 @@
     ]
   }
   watch(
-    () => model.repeatEnabled,
+    () => model.value.repeatEnabled,
     (enabled) => {
       if (!enabled) {
-        model.repeatFrequency = null
-        model.frequencyUnit = null
-        model.calendarType = 'none'
-        model.calendarDays = []
-        model.deadlineTime = null
+        model.value.repeatFrequency = null
+        model.value.frequencyUnit = null
+        model.value.calendarType = 'none'
+        model.value.calendarDays = []
+        model.value.deadlineTime = null
       }
     }
   )
   const buildSubmitPayload = (): SmisDuplicateConfigurationPayload => {
     const payload: SmisDuplicateConfigurationPayload = {
-      ...model,
-      contentItem: model.contentItem.trim(),
-      textColor: model.textColor || null
+      ...model.value,
+      contentItem: model.value.contentItem.trim(),
+      textColor: model.value.textColor || null
     }
 
-    if (!model.repeatEnabled) {
+    if (!model.value.repeatEnabled) {
       return {
         ...payload,
         repeatFrequency: null,
@@ -259,15 +260,15 @@
 
     return {
       ...payload,
-      calendarDays: model.calendarType === 'none' ? [] : [...model.calendarDays],
-      deadlineTime: model.deadlineTime || null
+      calendarDays: model.value.calendarType === 'none' ? [] : [...model.value.calendarDays],
+      deadlineTime: model.value.deadlineTime || null
     }
   }
   const submit = async () => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveDuplicateConfiguration(buildSubmitPayload())
-      emit('success', model.id ? 'edit' : 'add')
+      emit('success', model.value.id ? 'edit' : 'add')
       return true
     } catch (error) {
       notifyFriendlyError(error, '重复配置保存失败，请检查内容后重试')
@@ -276,9 +277,9 @@
   }
   const handleOpen = async (data: DuplicateDialogOpenData) => {
     menus.value = data.menus
-    Object.assign(model, initial(), { tenantId: data.tenantId })
+    Object.assign(model.value, initial(), { tenantId: data.tenantId })
     if (data.row)
-      Object.assign(model, {
+      Object.assign(model.value, {
         id: data.row.id,
         tenantId: data.row.tenantId,
         menuId: data.row.menuId,

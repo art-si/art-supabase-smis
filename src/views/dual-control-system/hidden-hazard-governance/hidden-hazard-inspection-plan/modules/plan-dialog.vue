@@ -1,5 +1,15 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl" :loading="loading" loading-text="正在加载计划详情…">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'base'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+    :loading="loading"
+    loading-text="正在加载计划详情…"
+  >
     <div class="hidden-hazard-plan-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:calendar-check-line" /></template>
@@ -7,6 +17,7 @@
         <p>提醒时间与提醒方式不在此维护；后续统一由消息提醒场景配置负责。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -14,8 +25,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #inspectionTypeId>
           <ElSelect
@@ -153,6 +162,7 @@
   }
 
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
+  const activeFormTab = ref('base')
   const dialogRef = ref<ArtDialogExpose<HiddenHazardPlanDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const loading = ref(false)
@@ -186,7 +196,7 @@
   }>({
     model: initial(),
     items: [
-      { label: '计划基础信息', key: 'base', type: 'divider', span: 24 },
+      { label: '计划信息', key: 'base', type: 'tab', span: 24 },
       {
         label: '计划名称',
         key: 'planName',
@@ -208,7 +218,7 @@
       },
       { label: '检查单位', key: 'inspectionOrganizationId', type: 'text' },
       { label: '被检查单位', key: 'inspectedOrganizationId', type: 'text' },
-      { label: '执行与周期', key: 'execution', type: 'divider', span: 24 },
+      { label: '执行与周期', key: 'execution', type: 'tab', span: 24 },
       { label: '执行人', key: 'executorEmployeeId', type: 'text', span: 24 },
       { label: '任务时限', key: 'taskDeadlineValue', type: 'text' },
       { label: '时限单位', key: 'taskDeadlineUnit', type: 'text' },
@@ -229,7 +239,7 @@
         span: 24,
         props: { rows: 3, maxlength: 2000, showWordLimit: true, resize: 'none' }
       },
-      { label: '排查明细', key: 'details', type: 'divider', span: 24 },
+      { label: '排查明细', key: 'details', type: 'tab', span: 24 },
       { label: '排查标准', key: 'inspectionItemIds', type: 'text', span: 24 },
       { label: '检查计划附件', key: 'attachmentUrls', type: 'text', span: 24 }
     ],

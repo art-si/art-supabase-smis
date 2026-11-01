@@ -79,10 +79,14 @@
         :print-permission="permissions.print"
       />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -96,7 +100,7 @@
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
   import { mapWithConcurrency } from '@/utils/async'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
@@ -127,6 +131,10 @@
   } from './special-operation-permit-dialog.vue'
   import SpecialOperationWorkflowDialog from './special-operation-workflow-dialog.vue'
   import SpecialOperationPermitDetailDialog from './special-operation-permit-detail-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_special_operation_permit',
+    '作业票'
+  )
 
   export interface SpecialOperationPagePermissions {
     view: string
@@ -168,8 +176,6 @@
       mode?: 'detail' | 'print'
     }) => Promise<void>
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { effectiveTenantId, revision, scopeLabel, isPlatformScope } = storeToRefs(tenantScopeStore)
@@ -361,6 +367,7 @@
     {
       permission: props.permissions.delete,
       type: 'delete',
+      confirm: false,
       disabled: ({ selectedRows }) =>
         selectedRows.some(
           (item) => !['draft', 'rejected'].includes((item as SmisSpecialOperationPermit).status)
@@ -368,12 +375,25 @@
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 张草稿或已拒绝作业票吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        for (const [tenantId, rows] of groupByTenant(selectedRows as SmisSpecialOperationPermit[]))
-          await deleteSpecialOperationPermits(
-            rows.map((row) => row.id),
-            tenantId
-          )
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.permitNo ?? '作业票')
+          })),
+          permission: props.permissions.delete,
+          remove: async () => {
+            for (const [tenantId, rows] of groupByTenant(
+              selectedRows as SmisSpecialOperationPermit[]
+            ))
+              await deleteSpecialOperationPermits(
+                rows.map((row) => row.id),
+                tenantId
+              )
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -407,13 +427,22 @@
     action: SmisSpecialOperationTransitionAction
   ) => void workflowDialogRef.value?.handleOpen({ row, action })
   const removeRow = async (row: SmisSpecialOperationPermit) => {
-    try {
-      await confirmDelete(`确定删除作业票“${row.permitNo}”吗？删除后无法恢复。`)
-      await deleteSpecialOperationPermits([row.id], row.tenantId)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.permitNo ?? '作业票')
+        }
+      ],
+      permission: props.permissions.delete,
+      confirmMessage: `确定删除作业票“${row.permitNo}”吗？删除后无法恢复。`,
+      remove: async () => {
+        await deleteSpecialOperationPermits([row.id ?? ''], row.tenantId)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   const moreActions = (row: SmisSpecialOperationPermit): ButtonMoreItem[] => [
     {

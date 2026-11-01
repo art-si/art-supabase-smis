@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="work-position-tree"
     title="适用岗位导航"
     subtitle="组织部门 / HR 岗位"
@@ -22,80 +21,80 @@
       />
     </template>
 
-    <div class="work-position-tree__content">
-      <ElInput
-        v-model="keyword"
-        clearable
-        class="work-position-tree__search"
-        placeholder="搜索组织或岗位"
-        aria-label="搜索组织或岗位"
-      >
-        <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
-      </ElInput>
-
-      <button
-        type="button"
-        class="work-position-tree__all"
-        :class="{ 'is-current': selectedKey === 'all' }"
-        @click="emit('select', 'all')"
-      >
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:layout-grid-line" /></span>
-        <span
-          ><strong>全部岗位</strong><small>{{ positionCount }} 个可用岗位</small></span
+    <template #toolbar>
+      <div class="work-position-tree__content">
+        <ElInput
+          v-model="keyword"
+          clearable
+          class="work-position-tree__search"
+          placeholder="搜索组织或岗位"
+          aria-label="搜索组织或岗位"
         >
-        <ArtSvgIcon v-if="selectedKey === 'all'" icon="ri:check-line" aria-hidden="true" />
-      </button>
+          <template #prefix><ArtSvgIcon icon="ri:search-line" /></template>
+        </ElInput>
 
-      <div class="work-position-tree__section-label">
-        <span>组织岗位</span>
-        <small>{{ positionCount }} 个岗位</small>
+        <button
+          type="button"
+          class="work-position-tree__all"
+          :class="{ 'is-current': selectedKey === 'all' }"
+          @click="emit('select', 'all')"
+        >
+          <span aria-hidden="true"><ArtSvgIcon icon="ri:layout-grid-line" /></span>
+          <span
+            ><strong>全部岗位</strong><small>{{ positionCount }} 个可用岗位</small></span
+          >
+          <ArtSvgIcon v-if="selectedKey === 'all'" icon="ri:check-line" aria-hidden="true" />
+        </button>
+
+        <div class="work-position-tree__section-label">
+          <span>组织岗位</span>
+          <small>{{ positionCount }} 个岗位</small>
+        </div>
       </div>
+    </template>
 
-      <ElScrollbar class="work-position-tree__scrollbar">
-        <ElTree
-          ref="treeRef"
-          :data="navigationData"
-          :props="treeProps"
-          :filter-node-method="filterNode"
-          :default-expanded-keys="defaultExpandedKeys"
-          node-key="key"
-          highlight-current
-          :expand-on-click-node="false"
-          @node-click="handleNodeClick"
-        >
-          <template #default="{ data: node }">
-            <div class="work-position-tree__node">
-              <span class="work-position-tree__node-icon" aria-hidden="true">
-                <ArtSvgIcon
-                  :icon="node.nodeType === 'position' ? 'ri:briefcase-4-line' : 'ri:node-tree'"
-                />
-              </span>
-              <span class="work-position-tree__node-copy">
-                <strong :title="node.label">{{ node.label }}</strong>
-                <small :title="node.description">{{ node.description }}</small>
-              </span>
-              <span v-if="node.nodeType === 'position'" class="work-position-tree__count">
-                {{ node.instructionCount || 0 }}
-              </span>
-              <ArtSvgIcon
-                v-else-if="selectedKey === node.key"
-                class="work-position-tree__check"
-                icon="ri:check-line"
-                aria-hidden="true"
-              />
-            </div>
-          </template>
-          <template #empty>
-            <ArtEmptyState
-              title="未找到匹配项"
-              description="请调整关键词或清空筛选条件。"
-              size="compact"
-              :visual-size="64"
+    <ElTree
+      ref="treeRef"
+      :data="navigationData"
+      :props="treeProps"
+      :filter-node-method="filterNode"
+      :default-expanded-keys="defaultExpandedKeys"
+      node-key="key"
+      highlight-current
+      :expand-on-click-node="false"
+      @node-click="handleNodeClick"
+    >
+      <template #default="{ data: node }">
+        <div class="work-position-tree__node">
+          <span class="work-position-tree__node-icon" aria-hidden="true">
+            <ArtSvgIcon
+              :icon="node.nodeType === 'position' ? 'ri:briefcase-4-line' : 'ri:node-tree'"
             />
-          </template>
-        </ElTree>
-      </ElScrollbar>
-    </div>
+          </span>
+          <span class="work-position-tree__node-copy">
+            <strong :title="node.label">{{ node.label }}</strong>
+            <small :title="node.description">{{ node.description }}</small>
+          </span>
+          <span v-if="node.nodeType === 'position'" class="work-position-tree__count">
+            {{ node.instructionCount || 0 }}
+          </span>
+          <ArtSvgIcon
+            v-else-if="selectedKey === node.key"
+            class="work-position-tree__check"
+            icon="ri:check-line"
+            aria-hidden="true"
+          />
+        </div>
+      </template>
+      <template #empty>
+        <ArtEmptyState
+          title="未找到匹配项"
+          description="请调整关键词或清空筛选条件。"
+          size="compact"
+          :visual-size="64"
+        />
+      </template>
+    </ElTree>
   </ArtSectionCard>
 </template>
 
@@ -166,13 +165,6 @@
 <style scoped lang="scss">
   .work-position-tree {
     height: 100%;
-
-    :deep(.art-section-card__body),
-    :deep(.art-async-state),
-    :deep(.art-async-state__content) {
-      height: 100%;
-      min-height: 0;
-    }
 
     :deep(.art-section-card__body) {
       display: flex;
@@ -270,11 +262,6 @@
     &__section-label small {
       font-size: 11px;
       color: var(--el-text-color-secondary);
-    }
-
-    &__scrollbar {
-      flex: 1;
-      min-height: 0;
     }
 
     :deep(.el-tree) {

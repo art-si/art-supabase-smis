@@ -7,7 +7,7 @@
   min-height: 0;
   overflow: hidden;
 
-  .art-section-card__body {
+  &:not(.is-scrollable) .art-section-card__body {
     display: flex;
     flex: 1;
     flex-direction: column;

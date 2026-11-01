@@ -16,8 +16,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         class="legal-compliance-records__table"
         :api-fn="fetchTableData"
         :search-items="searchItems"
@@ -34,11 +33,13 @@
     </div>
 
     <LegalComplianceEvaluationDialog ref="editorRef" @success="handleSaveSuccess" />
+    <MasterDataDeleteGuard ref="deleteEvaluationGuardRef" />
   </ArtDialog>
 </template>
 
 <script setup lang="tsx">
-  import { replaceReactiveModel } from '@/utils/form/model'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -49,7 +50,6 @@
   } from '@/components/core/tables/art-table-query/index.vue'
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtButtonMore, {
     type ButtonMoreItem
@@ -69,6 +69,9 @@
     type LegalComplianceEvaluationDialogOpenData
   } from './legal-compliance-evaluation-dialog.vue'
 
+  const { deleteGuardRef: deleteEvaluationGuardRef, deleteRecords: deleteEvaluationRecords } =
+    useRecordDeleteGuard('smis_legal_compliance_evaluation', '合规性评价')
+
   export interface LegalComplianceRecordsDialogOpenData {
     document: SmisDocumentRegister
   }
@@ -77,13 +80,11 @@
   }
   type TableParams = SmisLegalComplianceEvaluationSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
-
-  const { confirmDelete } = useArtFeedback()
   const dialogRef = ref<ArtDialogExpose<LegalComplianceRecordsDialogOpenData>>()
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const editorRef = ref<EditorExpose>()
   const document = shallowRef<SmisDocumentRegister>()
-  const searchQuery = reactive<SmisLegalComplianceEvaluationSearchParams>({ documentId: '' })
+  const searchQuery = ref<SmisLegalComplianceEvaluationSearchParams>({ documentId: '' })
   const searchItems: SearchFormItem[] = [
     {
       label: '评价内容',
@@ -97,8 +98,9 @@
     mode: LegalComplianceEvaluationDialogMode,
     row?: SmisLegalComplianceEvaluation
   ): void => {
-    if (!document.value) return
-    void editorRef.value?.handleOpen({ mode, documentId: document.value.id, row })
+    const currentDocument = document.value
+    if (!currentDocument) return
+    void editorRef.value?.handleOpen({ mode, documentId: currentDocument.id, row })
   }
   const headerActions: ArtTableQueryHeaderAction[] = [
     {
@@ -130,15 +132,28 @@
     {
       permission: 'SmisLegalRegulation:ComplianceDelete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 条合规性评价吗？`,
       onClick: async ({ selectedRows, api }) => {
-        if (!document.value) return
-        await deleteLegalComplianceEvaluations({
-          documentId: document.value.id,
-          ids: selectedRows.map((row) => String(row.id))
+        const currentDocument = document.value
+        if (!currentDocument) return
+        await deleteEvaluationRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.evaluationDate ?? '业务记录')
+          })),
+          permission: 'SmisLegalRegulation:ComplianceDelete',
+          remove: async () => {
+            await deleteLegalComplianceEvaluations({
+              documentId: currentDocument.id,
+              ids: selectedRows.map((row) => String(row.id))
+            })
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
         })
-        await api.refreshRemove()
       }
     }
   ]
@@ -191,21 +206,22 @@
   ]
   const fetchTableData = async (params: TableParams) => {
     const result = await fetchLegalComplianceEvaluationList({
-      documentId: searchQuery.documentId,
+      documentId: searchQuery.value.documentId,
       keyword: params.keyword,
       ...buildSupabasePageRange(params)
     })
     return { records: result.data, total: result.total }
   }
   const handleDelete = async (row: SmisLegalComplianceEvaluation): Promise<void> => {
-    if (!document.value) return
-    try {
-      await confirmDelete(`确定删除 ${formatDate(row.evaluationDate)} 的合规性评价吗？`)
-      await deleteLegalComplianceEvaluations({ documentId: document.value.id, ids: [row.id] })
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    const currentDocument = document.value
+    if (!currentDocument) return
+    await deleteEvaluationRecords({
+      resources: [{ id: row.id, label: formatDate(row.evaluationDate) }],
+      permission: 'SmisLegalRegulation:ComplianceDelete',
+      remove: () =>
+        deleteLegalComplianceEvaluations({ documentId: currentDocument.id, ids: [row.id ?? ''] }),
+      onDeleted: () => tableQueryRef.value?.refreshRemove() ?? Promise.resolve()
+    })
   }
   const handleMoreAction = async (
     item: ButtonMoreItem,
@@ -222,7 +238,7 @@
 
   const handleOpen = async (data: LegalComplianceRecordsDialogOpenData): Promise<void> => {
     document.value = data.document
-    Object.assign(searchQuery, { documentId: data.document.id, keyword: undefined })
+    Object.assign(searchQuery.value, { documentId: data.document.id, keyword: undefined })
     await dialogRef.value?.handleOpen(data, {
       title: '合规性评价记录',
       subtitle: '针对同一法律法规持续追加评价，历史记录独立保留',

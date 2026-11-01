@@ -1,16 +1,22 @@
 <template>
-  <ArtDialog ref="dialogRef" size="lg">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'controlSection'
+      }
+    "
+    ref="dialogRef"
+    size="lg"
+  >
     <ArtForm
+      v-model:active-tab="activeFormTab"
       ref="formRef"
-      :model-value="form"
-      @update:model-value="replaceReactiveModel(form, $event)"
+      v-model="form"
       :items="formItems"
       :rules="formRules"
       :span="12"
       :gutter="24"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
     >
       <template #context>
         <div class="risk-dialog__context">
@@ -38,8 +44,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
@@ -89,6 +93,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('controlSection')
   const dialogRef = ref<ArtDialogExpose<RiskControlDialogOpenData>>()
   const formRef = ref<DialogFormExpose>()
   const context = reactive({ organizationName: '', positionName: '', positionCode: '' })
@@ -108,12 +113,12 @@
     hazardLevel: 'general_d',
     isSpecialEquipment: false
   })
-  const form = reactive<PositionRiskControl>(createInitialForm())
+  const form = ref<PositionRiskControl>(createInitialForm())
 
   const primaryCategoryItems = computed(() => getDictMap.value.smisPrimaryHazardCategory ?? [])
   const secondaryCategoryItems = computed(() => getDictMap.value.smisSecondaryHazardCategory ?? [])
   const selectedPrimaryCategory = computed(() =>
-    findDictionaryItem(primaryCategoryItems.value, form.primaryHazardCategory)
+    findDictionaryItem(primaryCategoryItems.value, form.value.primaryHazardCategory)
   )
   const secondaryCategoryOptions = computed<FormItemOption[]>(() => {
     return getChildDictionaryItems(secondaryCategoryItems.value, selectedPrimaryCategory.value).map(
@@ -139,7 +144,7 @@
 
   const formItems = computed<FormItem[]>(() => [
     { label: '适用岗位', key: 'context', type: 'text', span: 24 },
-    { label: '危害与管控', key: 'controlSection', type: 'divider', span: 24 },
+    { label: '危害与管控', key: 'controlSection', type: 'tab', span: 24 },
     {
       label: '危害因素',
       key: 'hazardFactor',
@@ -180,7 +185,7 @@
       options: (getDictMap.value.smisControlLevel ?? []).map(toDictionaryOption),
       props: { placeholder: '请选择防控级别' }
     },
-    { label: '依据与失效', key: 'basisSection', type: 'divider', span: 24 },
+
     {
       label: '标准依据',
       key: 'standardBasis',
@@ -207,7 +212,7 @@
         placeholder: '描述措施缺失、失效或执行不到位时的表现'
       }
     },
-    { label: '隐患分类', key: 'categorySection', type: 'divider', span: 24 },
+    { label: '隐患分类', key: 'categorySection', type: 'tab', span: 24 },
     {
       label: '一级隐患类别',
       key: 'primaryHazardCategory',
@@ -216,7 +221,7 @@
       props: {
         placeholder: '请选择一级隐患类别',
         onChange: () => {
-          form.secondaryHazardCategory = ''
+          form.value.secondaryHazardCategory = ''
         }
       }
     },
@@ -226,8 +231,8 @@
       type: 'select',
       options: secondaryCategoryOptions.value,
       props: {
-        disabled: !form.primaryHazardCategory,
-        placeholder: form.primaryHazardCategory ? '请选择二级隐患类别' : '请先选择一级类别'
+        disabled: !form.value.primaryHazardCategory,
+        placeholder: form.value.primaryHazardCategory ? '请选择二级隐患类别' : '请先选择一级类别'
       }
     },
     {
@@ -246,30 +251,30 @@
   ])
 
   const resetForm = async (): Promise<void> => {
-    Object.assign(form, createInitialForm())
+    Object.assign(form.value, createInitialForm())
     Object.assign(context, { organizationName: '', positionName: '', positionCode: '' })
     await nextTick()
     formRef.value?.clearValidate()
   }
   const buildPayload = (): PositionRiskControlSavePayload => ({
-    organizationId: form.organizationId,
-    positionId: form.positionId,
-    hazardFactor: form.hazardFactor.trim(),
-    controlMeasure: form.controlMeasure.trim(),
-    controlMeasureCategory: form.controlMeasureCategory,
-    controlLevel: form.controlLevel,
-    standardBasis: form.standardBasis.trim(),
-    failureMode: form.failureMode.trim(),
-    primaryHazardCategory: form.primaryHazardCategory,
-    secondaryHazardCategory: form.secondaryHazardCategory,
-    hazardLevel: form.hazardLevel,
-    isSpecialEquipment: Boolean(form.isSpecialEquipment)
+    organizationId: form.value.organizationId,
+    positionId: form.value.positionId,
+    hazardFactor: form.value.hazardFactor.trim(),
+    controlMeasure: form.value.controlMeasure.trim(),
+    controlMeasureCategory: form.value.controlMeasureCategory,
+    controlLevel: form.value.controlLevel,
+    standardBasis: form.value.standardBasis.trim(),
+    failureMode: form.value.failureMode.trim(),
+    primaryHazardCategory: form.value.primaryHazardCategory,
+    secondaryHazardCategory: form.value.secondaryHazardCategory,
+    hazardLevel: form.value.hazardLevel,
+    isSpecialEquipment: Boolean(form.value.isSpecialEquipment)
   })
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      const type = form.id ? 'edit' : 'add'
-      if (type === 'edit') await editPositionRiskControl(form.id!, buildPayload())
+      const type = form.value.id ? 'edit' : 'add'
+      if (type === 'edit') await editPositionRiskControl(form.value.id!, buildPayload())
       else await addPositionRiskControl(buildPayload())
       emit('success', type)
       return true
@@ -281,7 +286,7 @@
   const handleOpen = async (data: RiskControlDialogOpenData): Promise<void> => {
     await resetForm()
     Object.assign(context, data)
-    Object.assign(form, {
+    Object.assign(form.value, {
       ...createInitialForm(),
       organizationId: data.organizationId,
       positionId: data.positionId,

@@ -37,10 +37,14 @@
 
       <OperationTypeDialog ref="dialogRef" @success="handleSaveSuccess" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -80,6 +84,10 @@
   import OperationTypeDialog, {
     type OperationTypeDialogOpenData
   } from './modules/operation-type-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_special_operation_type',
+    '作业类型'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -102,7 +110,7 @@
     headerActions: ComputedRef<ArtTableQueryHeaderAction[]>
   }
 
-  const { confirm, confirmDelete } = useArtFeedback()
+  const { confirm } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
@@ -258,11 +266,23 @@
     {
       permission: 'SmisSpecialOperationType:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个作业类型吗？存在检查项、危害因素或分析项的类型不会被删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteRows(selectedRows as SmisSpecialOperationType[])
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.typeName ?? '作业类型')
+          })),
+          permission: 'SmisSpecialOperationType:Delete',
+          remove: async () => {
+            await deleteRows(selectedRows as SmisSpecialOperationType[])
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -458,7 +478,7 @@
         confirmButtonText: '作废',
         confirmButtonType: 'warning'
       })
-      await voidSpecialOperationTypes([row.id], row.tenantId)
+      await voidSpecialOperationTypes([row.id ?? ''], row.tenantId)
       await tableQueryRef.value?.refreshUpdate()
     } catch {
       /* 用户取消 */
@@ -466,13 +486,22 @@
   }
 
   const handleDelete = async (row: SmisSpecialOperationType): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除作业类型“${row.typeName}”吗？存在下级配置时请改为作废。`)
-      await deleteSpecialOperationTypes([row.id], row.tenantId)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.typeName ?? '作业类型')
+        }
+      ],
+      permission: 'SmisSpecialOperationType:Delete',
+      confirmMessage: `确定删除作业类型“${row.typeName}”吗？存在下级配置时请改为作废。`,
+      remove: async () => {
+        await deleteSpecialOperationTypes([row.id ?? ''], row.tenantId)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

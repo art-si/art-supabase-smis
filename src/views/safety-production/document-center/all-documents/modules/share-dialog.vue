@@ -8,14 +8,11 @@
       </ArtEntitySummary>
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #userIds>
           <ArtUserSelect
@@ -33,7 +30,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -70,7 +66,7 @@
   const document = shallowRef<SmisDocument>()
   const userOptions = shallowRef<ArtUserSelectOption[]>([])
   const loadingUsers = ref(false)
-  const form = reactive<ShareForm>({ userIds: [], message: '' })
+  const form = ref<ShareForm>({ userIds: [], message: '' })
   const items: FormItem[] = [
     { label: '分享给', key: 'userIds', type: 'text', span: 24 },
     {
@@ -127,8 +123,8 @@
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await shareDocument({
         documentId: document.value.id,
-        userIds: [...form.userIds],
-        message: normalizeNullableText(form.message)
+        userIds: [...form.value.userIds],
+        message: normalizeNullableText(form.value.message)
       })
       emit('success')
       return true
@@ -140,7 +136,7 @@
 
   const handleOpen = async (data: ShareDialogOpenData): Promise<void> => {
     document.value = data.row
-    Object.assign(form, { userIds: [], message: '' })
+    Object.assign(form.value, { userIds: [], message: '' })
     userOptions.value = []
     await nextTick()
     formRef.value?.clearValidate()

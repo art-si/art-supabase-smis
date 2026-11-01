@@ -66,10 +66,14 @@
         @success="handleSaveSuccess"
       />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { toDictionaryOption } from '@/utils/form/option'
@@ -115,6 +119,10 @@
   import SpecialOperationCatalogDialog, {
     type SpecialOperationCatalogDialogOpenData
   } from './special-operation-catalog-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard(
+    'smis_special_operation_catalog_item',
+    '作业配置'
+  )
 
   const formatTableDateTime = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
@@ -157,7 +165,7 @@
     headerActions: ComputedRef<ArtTableQueryHeaderAction[]>
   }
 
-  const { confirm, confirmDelete } = useArtFeedback()
+  const { confirm } = useArtFeedback()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
@@ -353,11 +361,23 @@
     {
       permission: props.deletePermission,
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个${props.singular}吗？删除后无法恢复。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteRows(selectedRows as SmisSpecialOperationCatalogItem[])
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.itemName ?? '作业配置')
+          })),
+          permission: props.deletePermission,
+          remove: async () => {
+            await deleteRows(selectedRows as SmisSpecialOperationCatalogItem[])
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -610,7 +630,7 @@
         confirmButtonText: '作废',
         confirmButtonType: 'warning'
       })
-      await voidSpecialOperationCatalogItems(props.catalogKind, [row.id], row.tenantId)
+      await voidSpecialOperationCatalogItems(props.catalogKind, [row.id ?? ''], row.tenantId)
       await tableQueryRef.value?.refreshUpdate()
     } catch {
       /* 用户取消 */
@@ -618,13 +638,22 @@
   }
 
   const handleDelete = async (row: SmisSpecialOperationCatalogItem): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除${props.singular}“${row.itemName}”吗？删除后无法恢复。`)
-      await deleteSpecialOperationCatalogItems(props.catalogKind, [row.id], row.tenantId)
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.itemName ?? '作业配置')
+        }
+      ],
+      permission: props.deletePermission,
+      confirmMessage: `确定删除${props.singular}“${row.itemName}”吗？删除后无法恢复。`,
+      remove: async () => {
+        await deleteSpecialOperationCatalogItems(props.catalogKind, [row.id ?? ''], row.tenantId)
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
 
   onMounted(async () => {

@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'reportSection'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="inspection-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:shield-check-line" /></template>
@@ -14,6 +22,7 @@
       />
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="form.items"
@@ -21,8 +30,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #equipmentId>
           <ArtTableSingleSelect
@@ -164,6 +171,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
+  const activeFormTab = ref('reportSection')
   const dialogRef = ref<ArtDialogExpose<InspectionDeclarationDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const ocrPanelRef = ref<OcrPanelExpose>()
@@ -242,7 +250,7 @@
     model: formModel,
     images: images.value,
     items: computed(() => [
-      { label: '申报与报告', key: 'reportSection', type: 'divider', span: 24 },
+      { label: '申报与报告', key: 'reportSection', type: 'tab', span: 24 },
       {
         label: '检验报告编号',
         key: 'inspectionNo',
@@ -274,12 +282,12 @@
           placeholder: '请选择租户检验类别'
         }
       },
-      { label: '检验结果', key: 'resultSection', type: 'divider', span: 24 },
+      { label: '检验结果与资料', key: 'resultSection', type: 'tab', span: 24 },
       {
         label: '检验日期',
         key: 'inspectionDate',
         type: 'date',
-        props: { valueFormat: 'YYYY-MM-DD', clearable: false }
+        props: { valueFormat: 'YYYY-MM-DD', clearable: false, class: '!w-full' }
       },
       {
         label: '检验结论',
@@ -294,7 +302,7 @@
         key: 'nextDueDate',
         type: 'date',
         span: 12,
-        props: { valueFormat: 'YYYY-MM-DD' }
+        props: { valueFormat: 'YYYY-MM-DD', class: '!w-full' }
       },
       {
         label: '是否需要下次检验延期',
@@ -312,6 +320,7 @@
           : '选择“是”后方可维护延期日期。',
         props: {
           valueFormat: 'YYYY-MM-DD',
+          class: '!w-full',
           disabled: !formModel.needsExtension,
           clearable: formModel.needsExtension
         }
@@ -323,7 +332,7 @@
         options: reminderOptions.value,
         props: { clearable: false }
       },
-      { label: '图片与说明', key: 'evidenceSection', type: 'divider', span: 24 },
+
       { label: '检验图片', key: 'images', type: 'text', span: 24 },
       {
         label: '备注',

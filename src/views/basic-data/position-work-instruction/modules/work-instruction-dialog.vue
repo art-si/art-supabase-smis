@@ -2,15 +2,12 @@
   <ArtDialog ref="dialogRef" size="lg">
     <ArtForm
       ref="formRef"
-      :model-value="form"
-      @update:model-value="replaceReactiveModel(form, $event)"
+      v-model="form"
       :items="formItems"
       :rules="formRules"
       :span="12"
       :gutter="16"
       label-position="top"
-      :show-reset="false"
-      :show-submit="false"
     >
       <template #scopeKeys>
         <div class="work-instruction-dialog__scope-picker">
@@ -121,12 +118,10 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import dayjs from 'dayjs'
-  import { computed, nextTick, reactive, ref, toRaw } from 'vue'
+  import { computed, nextTick, ref, toRaw } from 'vue'
   import { storeToRefs } from 'pinia'
   import type { FormRules } from 'element-plus'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
@@ -193,7 +188,7 @@
     fileUrl: '',
     originalFileName: ''
   })
-  const form = reactive<WorkInstructionForm>(createInitialForm())
+  const form = ref<WorkInstructionForm>(createInitialForm())
   const leafNodeMap = computed(
     () =>
       new Map(
@@ -204,16 +199,16 @@
   )
   const fileTypeOptions = computed<FormItemOption[]>(() => {
     const options = (getDictMap.value.FILE_EXTENSION_LABEL_MAP ?? []).map(toDictionaryOption)
-    if (form.fileType && !options.some((item) => item.value === form.fileType)) {
-      return [{ label: form.fileType, value: form.fileType }, ...options]
+    if (form.value.fileType && !options.some((item) => item.value === form.value.fileType)) {
+      return [{ label: form.value.fileType, value: form.value.fileType }, ...options]
     }
     return options
   })
   const attachmentName = computed(
-    () => form.originalFileName.trim() || form.instructionName.trim() || '关联文件'
+    () => form.value.originalFileName.trim() || form.value.instructionName.trim() || '关联文件'
   )
   const attachmentTypeLabel = computed(
-    () => fileTypeOptions.value.find((item) => item.value === form.fileType)?.label || '文件'
+    () => fileTypeOptions.value.find((item) => item.value === form.value.fileType)?.label || '文件'
   )
 
   const formRules = computed<FormRules<WorkInstructionForm>>(() => ({
@@ -291,25 +286,25 @@
   const handleResourceConfirm = (resources: Resource[]): void => {
     const resource = resources[0]
     if (!resource) return
-    form.fileUrl = resource.url?.trim() || ''
-    form.originalFileName = resource.originName?.trim() || ''
-    form.fileType = getResourceExtension(resource) || form.fileType
-    form.uploadDate = dayjs().format('YYYY-MM-DD')
+    form.value.fileUrl = resource.url?.trim() || ''
+    form.value.originalFileName = resource.originName?.trim() || ''
+    form.value.fileType = getResourceExtension(resource) || form.value.fileType
+    form.value.uploadDate = dayjs().format('YYYY-MM-DD')
     resourcePickerValue.value = resource.url
     showLinkInput.value = false
   }
   const handleFileUrlInput = (): void => {
-    form.originalFileName = ''
+    form.value.originalFileName = ''
     resourcePickerValue.value = undefined
   }
   const removeAttachment = (): void => {
-    form.fileUrl = ''
-    form.originalFileName = ''
+    form.value.fileUrl = ''
+    form.value.originalFileName = ''
     resourcePickerValue.value = undefined
     showLinkInput.value = false
   }
   const resetForm = async (): Promise<void> => {
-    Object.assign(form, createInitialForm())
+    Object.assign(form.value, createInitialForm())
     selectedScopeNodes.value = []
     resourcePickerValue.value = undefined
     resourcePickerVisible.value = false
@@ -325,15 +320,15 @@
     return extension?.toLocaleLowerCase('en-US') || ''
   }
   const buildPayload = (): PositionWorkInstructionSavePayload => ({
-    id: form.id,
-    instructionName: form.instructionName.trim(),
-    fileNumber: form.fileNumber.trim(),
-    fileType: form.fileType.trim(),
-    uploadDate: form.uploadDate,
-    versionNo: form.versionNo.trim(),
-    fileUrl: form.fileUrl.trim(),
-    originalFileName: form.originalFileName.trim(),
-    scopes: form.scopeKeys
+    id: form.value.id,
+    instructionName: form.value.instructionName.trim(),
+    fileNumber: form.value.fileNumber.trim(),
+    fileType: form.value.fileType.trim(),
+    uploadDate: form.value.uploadDate,
+    versionNo: form.value.versionNo.trim(),
+    fileUrl: form.value.fileUrl.trim(),
+    originalFileName: form.value.originalFileName.trim(),
+    scopes: form.value.scopeKeys
       .map((key) => leafNodeMap.value.get(String(key)))
       .filter((node): node is WorkInstructionTreeNode => Boolean(node?.positionId))
       .map((node) => ({ organizationId: node.organizationId, positionId: node.positionId! }))
@@ -341,7 +336,7 @@
   const handleSubmit = async (): Promise<boolean> => {
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
-      const type = form.id ? 'edit' : 'add'
+      const type = form.value.id ? 'edit' : 'add'
       await savePositionWorkInstruction(buildPayload())
       emit('success', type)
       return true
@@ -355,7 +350,7 @@
     treeData.value = data.treeData
     if (data.row) {
       const row = structuredClone(toRaw(data.row))
-      Object.assign(form, {
+      Object.assign(form.value, {
         ...createInitialForm(),
         id: row.id,
         instructionName: row.instructionName,
@@ -367,10 +362,10 @@
         fileUrl: row.fileUrl || '',
         originalFileName: row.originalFileName || ''
       })
-      selectedScopeNodes.value = form.scopeKeys
+      selectedScopeNodes.value = form.value.scopeKeys
         .map((key) => leafNodeMap.value.get(String(key)))
         .filter((node): node is WorkInstructionTreeNode => Boolean(node))
-      resourcePickerValue.value = form.fileUrl || undefined
+      resourcePickerValue.value = form.value.fileUrl || undefined
     }
 
     await dialogRef.value?.handleOpen(data, {

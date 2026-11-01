@@ -386,10 +386,15 @@
         @success="handleShareSuccess"
       />
     </div>
+    <MasterDataDeleteGuard ref="deleteDocumentGuardRef" />
+    <MasterDataDeleteGuard ref="deleteCategoryGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+
   import BusinessTableRowActions from '@/components/business/business-table-row-actions/index.vue'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
@@ -398,7 +403,7 @@
   import { ElMessage, ElTag } from 'element-plus'
   import { useTable, type TableRequestOptions } from '@/hooks/core/useTable'
   import { useWorkspaceFocus } from '@/hooks/core/useWorkspaceFocus'
-  import { notifyFriendlyError, useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { useLazyComponent } from '@/hooks/core/useLazyComponent'
   import { useUserStore } from '@/store/modules/user'
   import type { ColumnOption } from '@/types'
@@ -438,6 +443,11 @@
   import type { DocumentCategoryDialogOpenData as CategoryDialogOpenData } from '../shared/document-category-dialog.vue'
   import type { ShareDialogOpenData } from './modules/share-dialog.vue'
 
+  const { deleteGuardRef: deleteDocumentGuardRef, deleteRecords: deleteDocumentRecords } =
+    useRecordDeleteGuard('smis_document', '文档')
+  const { deleteGuardRef: deleteCategoryGuardRef, deleteRecords: deleteCategoryRecords } =
+    useRecordDeleteGuard('smis_document_category', '文档分类')
+
   defineOptions({ name: 'SmisAllDocuments' })
   type TableParams = SmisDocumentSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
@@ -455,8 +465,6 @@
     status?: SmisDocumentStatus
   }
   type DocumentExportRow = Record<string, string | number | null | undefined>
-
-  const { confirmDelete } = useArtFeedback()
   const { focusMode, setFocusMode } = useWorkspaceFocus()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
@@ -883,42 +891,44 @@
       ElMessage.warning('仅草稿文档允许删除，已发布文档请编辑为作废或归档')
       return
     }
-    try {
-      await confirmDelete(`确定删除草稿文档“${row.title}”吗？关联版本与分享记录将一并删除。`)
-      await deleteDocuments([row.id])
-      await refreshRemove()
-      await loadCategories()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteDocumentRecords({
+      resources: [{ id: row.id, label: row.title }],
+      permission: 'SmisAllDocuments:Delete',
+      remove: () => deleteDocuments([row.id ?? '']),
+      onDeleted: async () => {
+        await refreshRemove()
+        await loadCategories()
+      }
+    })
   }
   const handleBatchDelete = async (): Promise<void> => {
-    const nonDraftCount = selectedRows.value.filter((row) => row.status !== 'draft').length
-    if (nonDraftCount > 0) {
-      ElMessage.warning(`所选文档中有 ${nonDraftCount} 份非草稿，请仅选择草稿后删除`)
+    const rows = [...selectedRows.value]
+    if (rows.some((row) => row.status !== 'draft')) {
+      ElMessage.warning('请仅选择草稿文档后删除')
       return
     }
-    try {
-      await confirmDelete(`确定删除选中的 ${selectedRows.value.length} 份草稿文档吗？`)
-      await deleteDocuments(selectedRows.value.map((row) => row.id))
-      await refreshRemove()
-      await loadCategories()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteDocumentRecords({
+      resources: rows.map((row) => ({ id: row.id, label: row.title })),
+      permission: 'SmisAllDocuments:Delete',
+      remove: () => deleteDocuments(rows.map((row) => row.id)),
+      onDeleted: async () => {
+        await refreshRemove()
+        await loadCategories()
+      }
+    })
   }
   const handleDeleteCategory = async (): Promise<void> => {
-    if (!selectedCategory.value) return
-    try {
-      await confirmDelete(
-        `确定删除分类“${selectedCategory.value.categoryName}”吗？仅无下级且无文档的分类允许删除。`
-      )
-      await deleteDocumentCategories([selectedCategory.value.id])
-      selectedCategoryId.value = selectedCategory.value.parentId || undefined
-      await Promise.all([loadCategories(), reloadByContext()])
-    } catch {
-      /* 用户取消或分类非空 */
-    }
+    const row = selectedCategory.value
+    if (!row) return
+    await deleteCategoryRecords({
+      resources: [{ id: row.id, label: row.categoryName }],
+      permission: 'SmisAllDocuments:CategoryDelete',
+      remove: () => deleteDocumentCategories([row.id ?? '']),
+      onDeleted: async () => {
+        selectedCategoryId.value = row.parentId || undefined
+        await Promise.all([loadCategories(), reloadByContext()])
+      }
+    })
   }
   const excelColumns: ExcelColumn<DocumentExportRow>[] = [
     { key: 'title', title: '文档标题' },

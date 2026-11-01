@@ -68,6 +68,12 @@ export async function saveViolationRecord(params: SmisViolationRecordSavePayload
 export async function deleteViolationRecords(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_violation_records_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '违章记录已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '违章记录已删除'
+    }
   )
 }

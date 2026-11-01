@@ -23,7 +23,7 @@
 
       <div class="hazard-workspace__grid">
         <ArtSectionCard
-          :show-scrollbar="false"
+          class="hazard-workspace__panel"
           title="作业 / 活动信息"
           subtitle="维护作业活动与必经作业步骤"
           :error="error"
@@ -45,44 +45,42 @@
             </ElButton>
           </template>
 
-          <ElScrollbar class="hazard-workspace__scrollbar">
-            <ol class="hazard-workspace__list" aria-label="作业活动列表">
-              <li v-for="(activity, index) in activities" :key="activity.id">
-                <article class="hazard-workspace__item">
-                  <span class="hazard-workspace__sequence" aria-hidden="true">
-                    {{ String(index + 1).padStart(2, '0') }}
-                  </span>
-                  <div class="hazard-workspace__item-copy">
-                    <div class="hazard-workspace__item-title">
-                      <strong>{{ activity.activityName }}</strong>
-                      <ElTag size="small" effect="plain"
-                        >关联 {{ activity.hazardCount }} 条危害</ElTag
-                      >
-                    </div>
-                    <p>{{ activity.workStep }}</p>
+          <ol class="hazard-workspace__list" aria-label="作业活动列表">
+            <li v-for="(activity, index) in activities" :key="activity.id">
+              <article class="hazard-workspace__item">
+                <span class="hazard-workspace__sequence" aria-hidden="true">
+                  {{ String(index + 1).padStart(2, '0') }}
+                </span>
+                <div class="hazard-workspace__item-copy">
+                  <div class="hazard-workspace__item-title">
+                    <strong>{{ activity.activityName }}</strong>
+                    <ElTag size="small" effect="plain"
+                      >关联 {{ activity.hazardCount }} 条危害</ElTag
+                    >
                   </div>
-                  <div class="hazard-workspace__row-actions">
-                    <ArtButtonTable
-                      type="edit"
-                      permission="SmisDualControlRiskIdentification:MaintainHazards"
-                      label="编辑作业活动"
-                      @click="openActivityEditor(activity)"
-                    />
-                    <ArtButtonTable
-                      type="delete"
-                      permission="SmisDualControlRiskIdentification:MaintainHazards"
-                      label="删除作业活动"
-                      @click="removeActivity(activity)"
-                    />
-                  </div>
-                </article>
-              </li>
-            </ol>
-          </ElScrollbar>
+                  <p>{{ activity.workStep }}</p>
+                </div>
+                <div class="hazard-workspace__row-actions">
+                  <ArtButtonTable
+                    type="edit"
+                    permission="SmisDualControlRiskIdentification:MaintainHazards"
+                    label="编辑作业活动"
+                    @click="openActivityEditor(activity)"
+                  />
+                  <ArtButtonTable
+                    type="delete"
+                    permission="SmisDualControlRiskIdentification:MaintainHazards"
+                    label="删除作业活动"
+                    @click="removeActivity(activity)"
+                  />
+                </div>
+              </article>
+            </li>
+          </ol>
         </ArtSectionCard>
 
         <ArtSectionCard
-          :show-scrollbar="false"
+          class="hazard-workspace__panel"
           title="危害因素"
           subtitle="维护因素类别、事故类型、后果及关联活动"
           :error="error"
@@ -104,62 +102,60 @@
             </ElButton>
           </template>
 
-          <ElScrollbar class="hazard-workspace__scrollbar">
-            <ul class="hazard-workspace__list" aria-label="危害因素列表">
-              <li v-for="hazard in hazards" :key="hazard.id">
-                <article class="hazard-workspace__item hazard-workspace__item--hazard">
-                  <span class="hazard-workspace__hazard-icon" aria-hidden="true">
-                    <ArtSvgIcon icon="ri:alert-line" />
-                  </span>
-                  <div class="hazard-workspace__item-copy">
-                    <div class="hazard-workspace__item-title">
-                      <strong>{{ hazard.hazardFactor }}</strong>
-                      <ElTag size="small" type="warning" effect="plain">
-                        {{ hazard.factorCategoryName || '类别未维护' }}
+          <ul class="hazard-workspace__list" aria-label="危害因素列表">
+            <li v-for="hazard in hazards" :key="hazard.id">
+              <article class="hazard-workspace__item hazard-workspace__item--hazard">
+                <span class="hazard-workspace__hazard-icon" aria-hidden="true">
+                  <ArtSvgIcon icon="ri:alert-line" />
+                </span>
+                <div class="hazard-workspace__item-copy">
+                  <div class="hazard-workspace__item-title">
+                    <strong>{{ hazard.hazardFactor }}</strong>
+                    <ElTag size="small" type="warning" effect="plain">
+                      {{ hazard.factorCategoryName || '类别未维护' }}
+                    </ElTag>
+                  </div>
+                  <p class="hazard-workspace__code">{{ hazard.hazardNo }}</p>
+                  <div class="hazard-workspace__meta">
+                    <span class="art-icon-label">
+                      <ArtSvgIcon icon="ri:links-line" />
+                      关联 {{ hazard.activityIds.length }} 项活动
+                    </span>
+                    <div class="hazard-workspace__tags">
+                      <ArtDictDisplay
+                        v-for="value in hazard.accidentTypes.slice(0, 2)"
+                        :key="value"
+                        dict-code="smisAccidentCategory"
+                        :value="value"
+                        display="tag"
+                      />
+                      <ElTag v-if="hazard.accidentTypes.length > 2" size="small" type="info">
+                        +{{ hazard.accidentTypes.length - 2 }}
                       </ElTag>
+                      <small v-if="!hazard.accidentTypes.length">事故类型未维护</small>
                     </div>
-                    <p class="hazard-workspace__code">{{ hazard.hazardNo }}</p>
-                    <div class="hazard-workspace__meta">
-                      <span class="art-icon-label">
-                        <ArtSvgIcon icon="ri:links-line" />
-                        关联 {{ hazard.activityIds.length }} 项活动
-                      </span>
-                      <div class="hazard-workspace__tags">
-                        <ArtDictDisplay
-                          v-for="value in hazard.accidentTypes.slice(0, 2)"
-                          :key="value"
-                          dict-code="smisAccidentCategory"
-                          :value="value"
-                          display="tag"
-                        />
-                        <ElTag v-if="hazard.accidentTypes.length > 2" size="small" type="info">
-                          +{{ hazard.accidentTypes.length - 2 }}
-                        </ElTag>
-                        <small v-if="!hazard.accidentTypes.length">事故类型未维护</small>
-                      </div>
-                    </div>
-                    <p v-if="hazard.consequence" class="hazard-workspace__consequence">
-                      后果及影响：{{ hazard.consequence }}
-                    </p>
                   </div>
-                  <div class="hazard-workspace__row-actions">
-                    <ArtButtonTable
-                      type="edit"
-                      permission="SmisDualControlRiskIdentification:MaintainHazards"
-                      label="编辑危害因素"
-                      @click="openHazardEditor(hazard)"
-                    />
-                    <ArtButtonTable
-                      type="delete"
-                      permission="SmisDualControlRiskIdentification:MaintainHazards"
-                      label="删除危害因素"
-                      @click="removeHazard(hazard)"
-                    />
-                  </div>
-                </article>
-              </li>
-            </ul>
-          </ElScrollbar>
+                  <p v-if="hazard.consequence" class="hazard-workspace__consequence">
+                    后果及影响：{{ hazard.consequence }}
+                  </p>
+                </div>
+                <div class="hazard-workspace__row-actions">
+                  <ArtButtonTable
+                    type="edit"
+                    permission="SmisDualControlRiskIdentification:MaintainHazards"
+                    label="编辑危害因素"
+                    @click="openHazardEditor(hazard)"
+                  />
+                  <ArtButtonTable
+                    type="delete"
+                    permission="SmisDualControlRiskIdentification:MaintainHazards"
+                    label="删除危害因素"
+                    @click="removeHazard(hazard)"
+                  />
+                </div>
+              </article>
+            </li>
+          </ul>
         </ArtSectionCard>
       </div>
     </div>
@@ -173,13 +169,10 @@
       </div>
       <ArtForm
         ref="activityFormRef"
-        :model-value="activityForm"
-        @update:model-value="replaceReactiveModel(activityForm, $event)"
+        v-model="activityForm"
         :items="[]"
         :rules="activityRules"
         custom-layout
-        :show-reset="false"
-        :show-submit="false"
         root-class="p-0! md:p-0!"
       >
         <ElFormItem label="作业活动" prop="activityName" required>
@@ -213,13 +206,10 @@
       </div>
       <ArtForm
         ref="hazardFormRef"
-        :model-value="hazardForm"
-        @update:model-value="replaceReactiveModel(hazardForm, $event)"
+        v-model="hazardForm"
         :items="[]"
         :rules="hazardRules"
         custom-layout
-        :show-reset="false"
-        :show-submit="false"
         root-class="p-0! md:p-0!"
       >
         <div class="hazard-editor__grid">
@@ -299,13 +289,16 @@
         </ElFormItem>
       </ArtForm>
     </div>
+    <MasterDataDeleteGuard ref="deleteActivityGuardRef" />
+    <MasterDataDeleteGuard ref="deleteHazardGuardRef" />
   </ArtDialog>
 </template>
 
 <script setup lang="ts">
-  import { toDictionaryOption } from '@/utils/form/option'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
 
-  import { replaceReactiveModel } from '@/utils/form/model'
+  import { toDictionaryOption } from '@/utils/form/option'
   import { normalizeNullableText } from '@/utils/form/normalize'
   import { Plus } from '@element-plus/icons-vue'
   import type { FormRules } from 'element-plus'
@@ -333,6 +326,10 @@
     type SmisRiskIdentificationOptions,
     type SmisRiskPoint
   } from '@smis/api'
+  const { deleteGuardRef: deleteActivityGuardRef, deleteRecords: deleteActivityRecords } =
+    useRecordDeleteGuard('smis_risk_activity', '作业活动')
+  const { deleteGuardRef: deleteHazardGuardRef, deleteRecords: deleteHazardRecords } =
+    useRecordDeleteGuard('smis_risk_item', '危害因素')
 
   export interface HazardWorkspaceDialogOpenData {
     riskPoint: SmisRiskPoint
@@ -364,7 +361,7 @@
   const hazardFormRef = ref<InstanceType<typeof ArtForm>>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmAction, confirmDelete } = useArtFeedback()
+  const { confirmAction } = useArtFeedback()
   const { hasAuth } = useAuth()
   const riskPoint = shallowRef<SmisRiskPoint>()
   const options = shallowRef<SmisRiskIdentificationOptions>({
@@ -377,8 +374,8 @@
   const hazards = shallowRef<SmisRiskHazard[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const activityForm = reactive<ActivityForm>({ activityName: '', workStep: '', sort: 0 })
-  const hazardForm = reactive<HazardForm>({
+  const activityForm = ref<ActivityForm>({ activityName: '', workStep: '', sort: 0 })
+  const hazardForm = ref<HazardForm>({
     hazardNo: '',
     hazardFactor: '',
     factorCategoryId: '',
@@ -428,10 +425,10 @@
     }
     try {
       await saveRiskActivity({
-        ...toRaw(activityForm),
+        ...toRaw(activityForm.value),
         riskPointId: riskPoint.value.id,
-        activityName: activityForm.activityName.trim(),
-        workStep: activityForm.workStep.trim()
+        activityName: activityForm.value.activityName.trim(),
+        workStep: activityForm.value.workStep.trim()
       })
     } catch (error) {
       notifyFriendlyError(error, '作业活动保存失败，请检查内容后重试')
@@ -442,7 +439,7 @@
     return true
   }
   const openActivityEditor = async (row?: SmisRiskActivity): Promise<void> => {
-    Object.assign(activityForm, {
+    Object.assign(activityForm.value, {
       id: row?.id,
       activityName: row?.activityName ?? '',
       workStep: row?.workStep ?? '',
@@ -457,14 +454,15 @@
     })
   }
   const removeActivity = async (row: SmisRiskActivity): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除作业活动“${row.activityName}”吗？其危害关联会同步解除。`)
-      await deleteRiskActivities([row.id])
-      await loadWorkspace()
-      emit('changed')
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteActivityRecords({
+      resources: [{ id: row.id, label: row.activityName }],
+      permission: 'SmisDualControlRiskIdentification:MaintainHazards',
+      remove: () => deleteRiskActivities([row.id ?? '']),
+      onDeleted: async () => {
+        await loadWorkspace()
+        emit('changed')
+      }
+    })
   }
   const submitHazard = async (): Promise<boolean> => {
     if (!riskPoint.value) {
@@ -479,14 +477,14 @@
     }
     try {
       await saveRiskHazard({
-        id: hazardForm.id,
+        id: hazardForm.value.id,
         riskPointId: riskPoint.value.id,
-        hazardFactor: hazardForm.hazardFactor.trim(),
-        factorCategoryId: hazardForm.factorCategoryId,
-        accidentTypes: [...hazardForm.accidentTypes],
-        consequence: normalizeNullableText(hazardForm.consequence),
-        activityIds: [...hazardForm.activityIds],
-        sort: hazardForm.sort
+        hazardFactor: hazardForm.value.hazardFactor.trim(),
+        factorCategoryId: hazardForm.value.factorCategoryId,
+        accidentTypes: [...hazardForm.value.accidentTypes],
+        consequence: normalizeNullableText(hazardForm.value.consequence),
+        activityIds: [...hazardForm.value.activityIds],
+        sort: hazardForm.value.sort
       })
     } catch (error) {
       notifyFriendlyError(error, '危害因素保存失败，请检查内容后重试')
@@ -497,7 +495,7 @@
     return true
   }
   const openHazardEditor = async (row?: SmisRiskHazard): Promise<void> => {
-    Object.assign(hazardForm, {
+    Object.assign(hazardForm.value, {
       id: row?.id,
       hazardNo: row?.hazardNo ?? '',
       hazardFactor: row?.hazardFactor ?? '',
@@ -517,25 +515,26 @@
     })
   }
   const removeHazard = async (row: SmisRiskHazard): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除危害因素“${row.hazardNo}”吗？已完成评价的危害因素不会被删除。`)
-      const deletedCount = await deleteRiskHazards([row.id])
-      if (!deletedCount) {
-        if (!hasAuth('SmisDualControlRiskIdentification:Void')) {
-          ElMessage.warning('该危害因素已进入评价流程，需要作废权限才能继续处理。')
-          return
+    await deleteHazardRecords({
+      resources: [{ id: row.id, label: row.hazardNo }],
+      permission: 'SmisDualControlRiskIdentification:MaintainHazards',
+      remove: async () => {
+        const deletedCount = await deleteRiskHazards([row.id ?? ''])
+        if (!deletedCount) {
+          if (!hasAuth('SmisDualControlRiskIdentification:Void'))
+            throw new Error('该危害因素已进入评价流程，请联系有作废权限的人员处理')
+          await confirmAction(
+            `危害因素“${row.hazardNo}”已有评价记录，无法物理删除。是否改为作废并保留审计链？`,
+            '作废危害因素'
+          )
+          await voidRiskItems([row.id ?? ''])
         }
-        await confirmAction(
-          `危害因素“${row.hazardNo}”已有评价记录，无法物理删除。是否改为作废并保留审计链？`,
-          '作废危害因素'
-        )
-        await voidRiskItems([row.id])
+      },
+      onDeleted: async () => {
+        await loadWorkspace()
+        emit('changed')
       }
-      await loadWorkspace()
-      emit('changed')
-    } catch {
-      /* 用户取消 */
-    }
+    })
   }
   const closeEditors = (): void => {
     activityDialogRef.value?.handleClose()
@@ -645,7 +644,8 @@
       min-width: 0;
     }
 
-    &__scrollbar {
+    &__panel :deep(.art-section-card__scrollbar) {
+      flex: none;
       height: min(450px, calc(100vh - 360px));
     }
 
@@ -819,7 +819,7 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
-      &__scrollbar {
+      &__panel :deep(.art-section-card__scrollbar) {
         height: 340px;
       }
     }

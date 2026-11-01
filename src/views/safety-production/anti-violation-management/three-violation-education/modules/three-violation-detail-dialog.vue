@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div v-if="record" class="three-violation-detail">
       <div class="three-violation-detail__summary">
         <ElAvatar :size="56" :src="record.avatarUrl || undefined">
@@ -28,13 +36,25 @@
       </div>
 
       <div class="three-violation-detail__sections">
-        <ArtSectionCard title="三违检查信息" subtitle="查看被检查人、问题事实和计划教育要求">
-          <ArtDescriptions :data="record" :items="inspectionItems" :columns="3" />
-        </ArtSectionCard>
-
-        <ArtSectionCard title="教育记录信息" subtitle="查看教育实施、考核结果和台账责任人">
-          <ArtDescriptions :data="record" :items="educationItems" :columns="3" />
-        </ArtSectionCard>
+        <ElTabs v-model="activeDetailTab"
+          ><ElTabPane name="section-0" label="违章与人员"
+            ><div class="space-y-4 min-w-0"
+              ><ArtSectionCard title="三违检查信息" subtitle="查看被检查人、问题事实和计划教育要求">
+                <ArtDescriptions
+                  :data="record"
+                  :items="inspectionItems"
+                  :columns="3"
+                /> </ArtSectionCard></div
+          ></ElTabPane>
+          <ElTabPane name="section-1" label="教育实施与结果"
+            ><div class="space-y-4 min-w-0"
+              ><ArtSectionCard title="教育记录信息" subtitle="查看教育实施、考核结果和台账责任人">
+                <ArtDescriptions
+                  :data="record"
+                  :items="educationItems"
+                  :columns="3"
+                /> </ArtSectionCard></div></ElTabPane
+        ></ElTabs>
       </div>
     </div>
   </ArtDialog>
@@ -54,6 +74,7 @@
   import type { SmisThreeViolationEducation } from '@smis/api'
   import { formatGender, printThreeViolationLedger } from './three-violation-ledger'
 
+  const activeDetailTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<SmisThreeViolationEducation>>()
   const record = shallowRef<SmisThreeViolationEducation>()
   const { hasAuth } = useAuth()

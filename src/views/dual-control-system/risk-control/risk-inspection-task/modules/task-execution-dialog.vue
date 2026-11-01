@@ -20,14 +20,11 @@
 
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="[]"
         :rules="rules"
         custom-layout
         scroll-to-error
-        :show-reset="false"
-        :show-submit="false"
         root-class="p-0! md:p-0!"
       >
         <ArtSectionTitle title="执行信息" subtitle="选择实际执行人并记录现场巡查总结" />
@@ -158,7 +155,6 @@
 
 <script setup lang="ts">
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -216,7 +212,7 @@
   const executorSelection = shallowRef<EmployeeIntegrationItem[]>([])
   const submitting = ref(false)
   const completeMode = ref(false)
-  const form = reactive<ExecutionForm>({
+  const form = ref<ExecutionForm>({
     actualExecutorEmployeeId: undefined,
     executionSummary: '',
     attachmentUrls: [],
@@ -233,7 +229,7 @@
     callback(value === 'pending' || !value ? new Error('请选择巡查结果') : undefined)
   }
   const completedCount = computed(
-    () => form.items.filter((item) => item.result !== 'pending').length
+    () => form.value.items.filter((item) => item.result !== 'pending').length
   )
   const formatDate = createDateTimeFormatter({ format: 'YYYY-MM-DD HH:mm' })
   const toEmployee = (value: SmisRiskInspectionTaskDetail): EmployeeIntegrationItem[] =>
@@ -249,10 +245,10 @@
         ]
       : []
   const initialize = (value: SmisRiskInspectionTaskDetail): void => {
-    form.actualExecutorEmployeeId = value.actualExecutorEmployeeId || value.assigneeEmployeeId
-    form.executionSummary = value.executionSummary || ''
-    form.attachmentUrls = [...value.attachmentUrls]
-    form.items = value.items.map((item) => ({
+    form.value.actualExecutorEmployeeId = value.actualExecutorEmployeeId || value.assigneeEmployeeId
+    form.value.executionSummary = value.executionSummary || ''
+    form.value.attachmentUrls = [...value.attachmentUrls]
+    form.value.items = value.items.map((item) => ({
       id: item.id,
       result: item.result,
       remark: item.remark || '',
@@ -285,10 +281,13 @@
     try {
       await saveRiskInspectionExecution({
         id: detail.value.id,
-        actualExecutorEmployeeId: form.actualExecutorEmployeeId!,
-        executionSummary: normalizeNullableText(form.executionSummary),
-        attachmentUrls: [...form.attachmentUrls],
-        items: form.items.map((item) => ({ ...item, remark: normalizeNullableText(item.remark) })),
+        actualExecutorEmployeeId: form.value.actualExecutorEmployeeId!,
+        executionSummary: normalizeNullableText(form.value.executionSummary),
+        attachmentUrls: [...form.value.attachmentUrls],
+        items: form.value.items.map((item) => ({
+          ...item,
+          remark: normalizeNullableText(item.remark)
+        })),
         complete
       })
       emit('success')

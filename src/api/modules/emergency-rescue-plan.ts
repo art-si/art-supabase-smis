@@ -59,7 +59,13 @@ export async function saveEmergencyRescuePlan(
 export async function deleteEmergencyRescuePlans(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_emergency_rescue_plans_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '应急预案已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '应急预案已删除'
+    }
   )
 }
 

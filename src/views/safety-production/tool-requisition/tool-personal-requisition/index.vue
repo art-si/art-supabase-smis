@@ -20,8 +20,7 @@
 
       <ArtTableQuery
         ref="tableQueryRef"
-        :model-value="searchQuery"
-        @update:model-value="replaceReactiveModel(searchQuery, $event)"
+        v-model="searchQuery"
         :api-fn="fetchTableData"
         :search-items="searchItems"
         :columns-factory="columnsFactory"
@@ -45,7 +44,6 @@
 </template>
 
 <script setup lang="tsx">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { withSupabaseTableRange } from '@/utils/supabase/pagination'
   import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
@@ -107,7 +105,7 @@
   const statisticsDialogRef = ref<SimpleDialogExpose>()
   const userStore = useUserStore()
   const { getUserInfo } = storeToRefs(userStore)
-  const searchQuery = reactive<SmisToolPersonalRequisitionSearchParams>({})
+  const searchQuery = ref<SmisToolPersonalRequisitionSearchParams>({})
   const organizationOptions = ref<SmisToolScopeOption[]>([])
   const autoConfirmDays = ref(3)
   const overview = reactive<SmisToolPersonalRequisitionOverview>({
@@ -306,7 +304,7 @@
       exportApi: async ({ maxRows }) => ({
         data: (
           await fetchToolPersonalRequisitionList({
-            ...searchQuery,
+            ...searchQuery.value,
             purpose: 'export',
             from: 0,
             to: maxRows - 1

@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'section-0'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="risk-control-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:git-merge-line" /></template>
@@ -8,147 +16,148 @@
       </ArtEntitySummary>
 
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="[]"
         :rules="rules"
         custom-layout
-        scroll-to-error
-        :show-reset="false"
-        :show-submit="false"
         root-class="p-0! md:p-0!"
       >
-        <ArtSectionTitle title="管控对象" subtitle="可选择已维护有效危险源的风险点" />
-        <div class="risk-control-dialog__grid">
-          <ElFormItem label="风险点" prop="riskPointId">
-            <ElSelect
-              v-model="form.riskPointId"
-              class="w-full"
-              filterable
-              placeholder="请选择风险点"
-              no-data-text="暂无已维护有效危险源的风险点"
-              :disabled="Boolean(row)"
-            >
-              <ElOption
-                v-for="item in options.riskPoints"
-                :key="item.id"
-                :label="`${item.pointName} · ${item.pointNo}`"
-                :value="item.id"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="管控开始时间" prop="controlStartAt">
-            <ElDatePicker
-              v-model="form.controlStartAt"
-              class="!w-full"
-              type="datetime"
-              value-format="YYYY-MM-DD HH:mm:ss"
-            />
-          </ElFormItem>
-          <ElFormItem label="管控状态" prop="status">
-            <ElSegmented v-model="form.status" :options="statusOptions" block />
-          </ElFormItem>
-          <ElFormItem class="risk-control-dialog__wide" label="管控说明">
-            <ElInput
-              v-model="form.controlDescription"
-              type="textarea"
-              :rows="3"
-              maxlength="2000"
-              show-word-limit
-              placeholder="说明总体管控要求、责任协同与升级规则"
-            />
-          </ElFormItem>
-        </div>
-
-        <ArtSectionTitle
-          title="管控层级"
-          subtitle="可多选；每个层级独立设置责任人、频率和管控要求"
-        />
-        <ElFormItem prop="assignments" class="risk-control-dialog__levels-field">
-          <ElCheckboxGroup
-            v-model="selectedLevels"
-            class="risk-control-dialog__level-picker"
-            @change="syncAssignments"
-          >
-            <ElCheckboxButton
-              v-for="item in controlLevelOptions"
-              :key="item.value"
-              :value="item.value"
-            >
-              {{ item.label }}
-            </ElCheckboxButton>
-          </ElCheckboxGroup>
-        </ElFormItem>
-
-        <div v-if="form.assignments.length" class="risk-control-dialog__assignments">
-          <section
-            v-for="(assignment, index) in form.assignments"
-            :key="assignment.controlLevel"
-            class="risk-control-dialog__assignment"
-          >
-            <header>
-              <span :data-level="assignment.controlLevel"
-                ><ArtSvgIcon icon="ri:shield-user-line"
-              /></span>
-              <div
-                ><strong>{{ controlLevelLabel.get(assignment.controlLevel) }}</strong
-                ><small>责任人、巡查频率与层级要求</small></div
-              >
-            </header>
-            <div class="risk-control-dialog__grid risk-control-dialog__grid--assignment">
-              <ElFormItem
-                label="管控责任人"
-                :prop="`assignments.${index}.responsibleEmployeeId`"
-                :rules="[{ required: true, message: '请选择管控责任人', trigger: 'change' }]"
-                required
-              >
-                <ArtEmployeeSelect
-                  v-model="assignment.responsibleEmployeeId"
-                  v-model:selected-data="assignment.employeeSelection"
-                  title="选择管控责任人"
-                  :subtitle="`${controlLevelLabel.get(assignment.controlLevel)}责任人来自当前租户员工花名册`"
-                />
-              </ElFormItem>
-              <ElFormItem
-                label="管控频率"
-                :prop="`assignments.${index}.duplicateConfigurationId`"
-                :rules="[{ required: true, message: '请选择管控频率', trigger: 'change' }]"
-                required
-              >
-                <ElSelect
-                  v-model="assignment.duplicateConfigurationId"
-                  class="w-full"
-                  filterable
-                  placeholder="选择重复配置"
-                >
-                  <ElOption
-                    v-for="item in options.duplicateConfigurations"
-                    :key="item.id"
-                    :label="item.displayLabel"
-                    :value="item.id"
+        <ElTabs v-model="activeFormTab"
+          ><ElTabPane name="section-0" label="管控对象" data-art-form-tab="section-0"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionTitle title="管控对象" subtitle="可选择已维护有效危险源的风险点" />
+              <div class="risk-control-dialog__grid">
+                <ElFormItem label="风险点" prop="riskPointId">
+                  <ElSelect
+                    v-model="form.riskPointId"
+                    class="w-full"
+                    filterable
+                    placeholder="请选择风险点"
+                    no-data-text="暂无已维护有效危险源的风险点"
+                    :disabled="Boolean(row)"
+                  >
+                    <ElOption
+                      v-for="item in options.riskPoints"
+                      :key="item.id"
+                      :label="`${item.pointName} · ${item.pointNo}`"
+                      :value="item.id"
+                    />
+                  </ElSelect>
+                </ElFormItem>
+                <ElFormItem label="管控开始时间" prop="controlStartAt">
+                  <ElDatePicker
+                    v-model="form.controlStartAt"
+                    class="!w-full"
+                    type="datetime"
+                    value-format="YYYY-MM-DD HH:mm:ss"
                   />
-                </ElSelect>
+                </ElFormItem>
+                <ElFormItem label="管控状态" prop="status">
+                  <ElSegmented v-model="form.status" :options="statusOptions" block />
+                </ElFormItem>
+                <ElFormItem class="risk-control-dialog__wide" label="管控说明">
+                  <ElInput
+                    v-model="form.controlDescription"
+                    type="textarea"
+                    :rows="3"
+                    maxlength="2000"
+                    show-word-limit
+                    placeholder="说明总体管控要求、责任协同与升级规则"
+                  />
+                </ElFormItem>
+              </div> </div
+          ></ElTabPane>
+          <ElTabPane name="section-1" label="层级与责任" data-art-form-tab="section-1"
+            ><div class="min-w-0 space-y-4"
+              ><ArtSectionTitle
+                title="管控层级"
+                subtitle="可多选；每个层级独立设置责任人、频率和管控要求" />
+              <ElFormItem prop="assignments" class="risk-control-dialog__levels-field">
+                <ElCheckboxGroup
+                  v-model="selectedLevels"
+                  class="risk-control-dialog__level-picker"
+                  @change="syncAssignments"
+                >
+                  <ElCheckboxButton
+                    v-for="item in controlLevelOptions"
+                    :key="item.value"
+                    :value="item.value"
+                  >
+                    {{ item.label }}
+                  </ElCheckboxButton>
+                </ElCheckboxGroup>
               </ElFormItem>
-              <ElFormItem class="risk-control-dialog__wide" label="层级管控要求">
-                <ElInput
-                  v-model="assignment.controlMeasure"
-                  type="textarea"
-                  :rows="2"
-                  maxlength="2000"
-                  show-word-limit
-                  placeholder="补充该层级的巡查重点、升级条件或协同要求"
-                />
-              </ElFormItem>
-            </div>
-          </section>
-        </div>
-        <ArtEmptyState
-          v-else
-          title="请至少选择一个管控层级"
-          description="选择层级后可继续配置责任人与排查周期。"
-          :visual-size="96"
-        />
+
+              <div v-if="form.assignments.length" class="risk-control-dialog__assignments">
+                <section
+                  v-for="(assignment, index) in form.assignments"
+                  :key="assignment.controlLevel"
+                  class="risk-control-dialog__assignment"
+                >
+                  <header>
+                    <span :data-level="assignment.controlLevel"
+                      ><ArtSvgIcon icon="ri:shield-user-line"
+                    /></span>
+                    <div
+                      ><strong>{{ controlLevelLabel.get(assignment.controlLevel) }}</strong
+                      ><small>责任人、巡查频率与层级要求</small></div
+                    >
+                  </header>
+                  <div class="risk-control-dialog__grid risk-control-dialog__grid--assignment">
+                    <ElFormItem
+                      label="管控责任人"
+                      :prop="`assignments.${index}.responsibleEmployeeId`"
+                      :rules="[{ required: true, message: '请选择管控责任人', trigger: 'change' }]"
+                      required
+                    >
+                      <ArtEmployeeSelect
+                        v-model="assignment.responsibleEmployeeId"
+                        v-model:selected-data="assignment.employeeSelection"
+                        title="选择管控责任人"
+                        :subtitle="`${controlLevelLabel.get(assignment.controlLevel)}责任人来自当前租户员工花名册`"
+                      />
+                    </ElFormItem>
+                    <ElFormItem
+                      label="管控频率"
+                      :prop="`assignments.${index}.duplicateConfigurationId`"
+                      :rules="[{ required: true, message: '请选择管控频率', trigger: 'change' }]"
+                      required
+                    >
+                      <ElSelect
+                        v-model="assignment.duplicateConfigurationId"
+                        class="w-full"
+                        filterable
+                        placeholder="选择重复配置"
+                      >
+                        <ElOption
+                          v-for="item in options.duplicateConfigurations"
+                          :key="item.id"
+                          :label="item.displayLabel"
+                          :value="item.id"
+                        />
+                      </ElSelect>
+                    </ElFormItem>
+                    <ElFormItem class="risk-control-dialog__wide" label="层级管控要求">
+                      <ElInput
+                        v-model="assignment.controlMeasure"
+                        type="textarea"
+                        :rows="2"
+                        maxlength="2000"
+                        show-word-limit
+                        placeholder="补充该层级的巡查重点、升级条件或协同要求"
+                      />
+                    </ElFormItem>
+                  </div>
+                </section>
+              </div>
+              <ArtEmptyState
+                v-else
+                title="请至少选择一个管控层级"
+                description="选择层级后可继续配置责任人与排查周期。"
+                :visual-size="96" /></div></ElTabPane
+        ></ElTabs>
       </ArtForm>
     </div>
 
@@ -167,7 +176,6 @@
 </template>
 
 <script setup lang="ts">
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { normalizeNullableText } from '@/utils/form/normalize'
   import dayjs from 'dayjs'
   import type { FormRules } from 'element-plus'
@@ -201,6 +209,7 @@
   }
 
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
+  const activeFormTab = ref('section-0')
   const dialogRef = ref<ArtDialogExpose<RiskControlPlanDialogOpenData>>()
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const row = shallowRef<SmisRiskControlPoint>()
@@ -229,7 +238,7 @@
     controlDescription: '',
     assignments: []
   })
-  const form = reactive<ControlForm>(initial())
+  const form = ref<ControlForm>(initial())
   const rules: FormRules<ControlForm> = {
     riskPointId: [{ required: true, message: '请选择风险点', trigger: 'change' }],
     controlStartAt: [{ required: true, message: '请选择管控开始时间', trigger: 'change' }],
@@ -253,8 +262,8 @@
     employeeSelection: []
   })
   const syncAssignments = (): void => {
-    const existing = new Map(form.assignments.map((item) => [item.controlLevel, item]))
-    form.assignments = selectedLevels.value.map(
+    const existing = new Map(form.value.assignments.map((item) => [item.controlLevel, item]))
+    form.value.assignments = selectedLevels.value.map(
       (level, index) => existing.get(level) ?? emptyAssignment(level, index + 1)
     )
   }
@@ -285,12 +294,12 @@
       await formRef.value?.validate()
       submitting.value = true
       await saveRiskControlPlan({
-        id: form.id,
-        riskPointId: form.riskPointId,
-        controlStartAt: dayjs(form.controlStartAt).toISOString(),
-        status: form.status,
-        controlDescription: normalizeNullableText(form.controlDescription),
-        assignments: form.assignments.map((item, index) => ({
+        id: form.value.id,
+        riskPointId: form.value.riskPointId,
+        controlStartAt: dayjs(form.value.controlStartAt).toISOString(),
+        status: form.value.status,
+        controlDescription: normalizeNullableText(form.value.controlDescription),
+        assignments: form.value.assignments.map((item, index) => ({
           controlLevel: item.controlLevel,
           responsibleEmployeeId: item.responsibleEmployeeId,
           duplicateConfigurationId: item.duplicateConfigurationId,
@@ -309,10 +318,10 @@
   const handleOpen = async (data: RiskControlPlanDialogOpenData): Promise<void> => {
     row.value = data.row
     options.value = data.options
-    Object.assign(form, initial())
+    Object.assign(form.value, initial())
     selectedLevels.value = []
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.planId || null,
         riskPointId: data.row.riskPointId,
         controlStartAt: dayjs(data.row.controlStartAt || undefined).format('YYYY-MM-DD HH:mm:ss'),

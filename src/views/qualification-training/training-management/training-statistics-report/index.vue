@@ -33,8 +33,7 @@
       <ElScrollbar class="training-report-page__scroll">
         <div class="training-report-page__body">
           <ArtSearchBar
-            :model-value="query"
-            @update:model-value="replaceReactiveModel(query, $event)"
+            v-model="query"
             :items="searchItems"
             :span="8"
             label-position="top"
@@ -166,8 +165,6 @@
 
 <script setup lang="tsx">
   import { createDateTimeFormatter } from '@/utils/ui/format'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import dayjs from 'dayjs'
   import { useAsyncState } from '@vueuse/core'
   import type { BarDataItem, LineDataItem, PieDataItem } from '@/types/component/chart'
@@ -234,7 +231,7 @@
     outstandingPlans: [],
     organizationOptions: []
   })
-  const query = reactive<ReportQuery>(initialQuery())
+  const query = ref<ReportQuery>(initialQuery())
   const request = useAsyncState(
     async (params: Parameters<typeof fetchSafetyTrainingReport>[0]) => {
       const result = await fetchSafetyTrainingReport(params, { showErrorMessage: false })
@@ -434,13 +431,13 @@
   }
   const loadData = async (): Promise<void> => {
     await request.executeImmediate({
-      startDate: query.dateRange?.[0],
-      endDate: query.dateRange?.[1],
-      organizationId: query.organizationId
+      startDate: query.value.dateRange?.[0],
+      endDate: query.value.dateRange?.[1],
+      organizationId: query.value.organizationId
     })
   }
   const resetQuery = (): void => {
-    Object.assign(query, initialQuery())
+    Object.assign(query.value, initialQuery())
     void loadData()
   }
   onMounted(async () => {

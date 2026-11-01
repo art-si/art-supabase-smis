@@ -80,6 +80,12 @@ export async function saveSites(params: SmisSiteBatchCreatePayload) {
 export async function deleteSites(ids: string[]) {
   return await responseHandle<number>(
     () => supabase.rpc('smis_delete_sites_secure', { p_ids: ids }),
-    { showMessage: true, breakReturn: true, message: '场所信息已删除' }
+    {
+      showReferenceFeedback: false,
+      showErrorMessage: false,
+      showMessage: true,
+      breakReturn: true,
+      message: '场所信息已删除'
+    }
   )
 }

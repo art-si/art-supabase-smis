@@ -1,0 +1,1 @@
+import{s as e}from"./toString-mrUreL90.js";import{P as t,z as n}from"./_baseIteratee-DkSpgNPG.js";import{n as r,r as i}from"./_baseFlatten-DIZGW7Yw.js";function a(e,t){return i(r(e,t,n),e+``)}function o(n){return e(n)&&t(n)}export{a as n,o as t};

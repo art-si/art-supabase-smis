@@ -1,6 +1,5 @@
 <template>
   <ArtSectionCard
-    :show-scrollbar="false"
     class="risk-map-property-panel"
     title="图形属性"
     :subtitle="model ? '调整图形后保存整张场景图' : '选择画布中的图形进行配置'"
@@ -9,8 +8,7 @@
     <template #actions>
       <div class="risk-map-property-panel__header-actions">
         <ElButton
-          v-if="model"
-          v-auth="'SmisDualControlRiskFourColorMap:Save'"
+          v-if="model && hasAuth('SmisDualControlRiskFourColorMap:Save')"
           text
           type="danger"
           @click="emit('delete-shape')"
@@ -18,8 +16,7 @@
           <ArtSvgIcon icon="ri:delete-bin-6-line" />删除图形
         </ElButton>
         <ElButton
-          v-if="scene"
-          v-auth="'SmisDualControlRiskFourColorMap:EditScene'"
+          v-if="scene && hasAuth('SmisDualControlRiskFourColorMap:EditScene')"
           text
           type="primary"
           @click="emit('edit-scene')"
@@ -30,113 +27,110 @@
       </div>
     </template>
 
-    <ElScrollbar class="risk-map-property-panel__scrollbar">
-      <template v-if="model">
-        <div class="risk-map-property-panel__selection-status">
-          <span><ArtSvgIcon icon="ri:cursor-line" /></span>
-          <div>
-            <small>当前选中图形</small>
-            <strong>{{ model.label || '未命名图形' }}</strong>
-          </div>
-          <ElTag size="small" effect="plain">可编辑</ElTag>
+    <template v-if="model">
+      <div class="risk-map-property-panel__selection-status">
+        <span><ArtSvgIcon icon="ri:cursor-line" /></span>
+        <div>
+          <small>当前选中图形</small>
+          <strong>{{ model.label || '未命名图形' }}</strong>
         </div>
-        <div class="risk-map-property-panel__section-label">图形与风险点</div>
-        <ArtForm
-          v-model="model"
-          :items="formItems"
-          :span="12"
-          :gutter="12"
-          label-position="top"
-          :show-reset="false"
-          :show-submit="false"
-        >
-          <template #riskPointId>
-            <ElSelect
-              v-model="model.riskPointId"
-              filterable
-              clearable
-              placeholder="选择关联风险点"
-              class="w-full"
-              @change="emit('risk-point-change', $event)"
-            >
-              <ElOption
-                v-for="point in riskPoints"
-                :key="point.id"
-                :label="`${point.pointName} · ${point.pointNo}`"
-                :value="point.id"
-              >
-                <div class="risk-map-property-panel__point-option">
-                  <span :style="{ backgroundColor: point.riskLevelColor || '#94A3B8' }"></span>
-                  <strong>{{ point.pointName }}</strong>
-                  <small>{{ point.pointNo }} · {{ point.siteName }}</small>
-                </div>
-              </ElOption>
-            </ElSelect>
-          </template>
-          <template #fillColor>
-            <div class="risk-map-property-panel__color-control">
-              <ElColorPicker v-model="model.fillColor" :predefine="riskColors" />
-              <code>{{ model.fillColor }}</code>
-            </div>
-          </template>
-          <template #fillOpacity>
-            <ElSlider
-              v-model="model.fillOpacity"
-              :min="0"
-              :max="1"
-              :step="0.05"
-              show-input
-              :show-input-controls="false"
-            />
-          </template>
-          <template #borderColor>
-            <div class="risk-map-property-panel__color-control">
-              <ElColorPicker v-model="model.borderColor" :predefine="riskColors" />
-              <code>{{ model.borderColor }}</code>
-            </div>
-          </template>
-          <template #borderOpacity>
-            <ElSlider
-              v-model="model.borderOpacity"
-              :min="0"
-              :max="1"
-              :step="0.05"
-              show-input
-              :show-input-controls="false"
-            />
-          </template>
-        </ArtForm>
-
-        <SceneSummary :scene="scene" @edit-scene="emit('edit-scene')" />
-      </template>
-
-      <div v-else class="risk-map-property-panel__empty-layout">
-        <SceneSummary
-          v-if="scene"
-          class="risk-map-property-panel__scene-context"
-          :scene="scene"
-          :show-action="false"
-          @edit-scene="emit('edit-scene')"
-        />
-        <ArtEmptyState
-          class="risk-map-property-panel__guide"
-          :title="scene ? '选择或添加一个图形' : '先选择一个场景'"
-          :description="
-            scene
-              ? '从画布点选图形后，可在这里统一配置位置、样式和关联风险点。'
-              : '从左侧场景树进入对应区域，再开始配置风险图。'
-          "
-          size="compact"
-          :visual-size="64"
-        >
-          <ol v-if="scene" aria-label="四色图配置步骤">
-            <li><span>1</span>添加或选择图形</li>
-            <li><span>2</span>拖拽定位并关联风险点</li>
-            <li><span>3</span>检查样式后保存场景</li>
-          </ol>
-        </ArtEmptyState>
+        <ElTag size="small" effect="plain">可编辑</ElTag>
       </div>
-    </ElScrollbar>
+      <div class="risk-map-property-panel__section-label">图形与风险点</div>
+      <ArtForm
+        v-model="model"
+        :items="formItems"
+        :span="12"
+        :gutter="12"
+        label-position="top"
+        root-class="px-0! pt-0!"
+      >
+        <template #riskPointId>
+          <ElSelect
+            v-model="model.riskPointId"
+            filterable
+            clearable
+            placeholder="选择关联风险点"
+            class="w-full"
+            @change="emit('risk-point-change', $event)"
+          >
+            <ElOption
+              v-for="point in riskPoints"
+              :key="point.id"
+              :label="`${point.pointName} · ${point.pointNo}`"
+              :value="point.id"
+            >
+              <div class="risk-map-property-panel__point-option">
+                <span :style="{ backgroundColor: point.riskLevelColor || '#94A3B8' }"></span>
+                <strong>{{ point.pointName }}</strong>
+                <small>{{ point.pointNo }} · {{ point.siteName }}</small>
+              </div>
+            </ElOption>
+          </ElSelect>
+        </template>
+        <template #fillColor>
+          <div class="risk-map-property-panel__color-control">
+            <ElColorPicker v-model="model.fillColor" :predefine="riskColors" />
+            <code>{{ model.fillColor }}</code>
+          </div>
+        </template>
+        <template #fillOpacity>
+          <ElSlider
+            v-model="model.fillOpacity"
+            :min="0"
+            :max="1"
+            :step="0.05"
+            show-input
+            :show-input-controls="false"
+          />
+        </template>
+        <template #borderColor>
+          <div class="risk-map-property-panel__color-control">
+            <ElColorPicker v-model="model.borderColor" :predefine="riskColors" />
+            <code>{{ model.borderColor }}</code>
+          </div>
+        </template>
+        <template #borderOpacity>
+          <ElSlider
+            v-model="model.borderOpacity"
+            :min="0"
+            :max="1"
+            :step="0.05"
+            show-input
+            :show-input-controls="false"
+          />
+        </template>
+      </ArtForm>
+
+      <SceneSummary :scene="scene" @edit-scene="emit('edit-scene')" />
+    </template>
+
+    <div v-else class="risk-map-property-panel__empty-layout">
+      <SceneSummary
+        v-if="scene"
+        class="risk-map-property-panel__scene-context"
+        :scene="scene"
+        :show-action="false"
+        @edit-scene="emit('edit-scene')"
+      />
+      <ArtEmptyState
+        class="risk-map-property-panel__guide"
+        :title="scene ? '选择或添加一个图形' : '先选择一个场景'"
+        :description="
+          scene
+            ? '从画布点选图形后，可在这里统一配置位置、样式和关联风险点。'
+            : '从左侧场景树进入对应区域，再开始配置风险图。'
+        "
+        size="compact"
+        :visual-size="64"
+      >
+        <ol v-if="scene" aria-label="四色图配置步骤">
+          <li><span>1</span>添加或选择图形</li>
+          <li><span>2</span>拖拽定位并关联风险点</li>
+          <li><span>3</span>检查样式后保存场景</li>
+        </ol>
+      </ArtEmptyState>
+    </div>
   </ArtSectionCard>
 </template>
 
@@ -146,10 +140,12 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
+  import { useAuth } from '@/hooks/core/useAuth'
   import type { SmisRiskMapPointOption, SmisRiskMapScene, SmisRiskMapShape } from '@smis/api'
   import SceneSummary from './risk-map-scene-summary.vue'
 
   defineOptions({ name: 'SmisRiskMapPropertyPanel' })
+  const { hasAuth } = useAuth()
 
   const props = defineProps<{
     scene?: SmisRiskMapScene
@@ -220,8 +216,7 @@
     display: flex;
     flex-direction: column;
 
-    &__scrollbar {
-      height: 100%;
+    :deep(.art-section-card__scrollbar) {
       min-height: 360px;
     }
 

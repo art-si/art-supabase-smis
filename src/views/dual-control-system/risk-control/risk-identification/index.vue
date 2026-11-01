@@ -40,10 +40,14 @@
       <RiskPointDialog ref="dialogRef" @success="handleSaveSuccess" />
       <HazardWorkspaceDialog ref="hazardDialogRef" @changed="handleHazardChanged" />
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import { normalizeNullableText } from '@/utils/form/normalize'
   import { ElImage, ElTag } from 'element-plus'
@@ -58,7 +62,7 @@
   import type { ButtonMoreItem } from '@/components/core/forms/art-button-more/index.vue'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -89,6 +93,7 @@
   import HazardWorkspaceDialog, {
     type HazardWorkspaceDialogOpenData
   } from './modules/hazard-workspace-dialog.vue'
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_risk_point', '风险点')
 
   defineOptions({ name: 'SmisDualControlRiskIdentification' })
 
@@ -112,8 +117,6 @@
     attachmentUrls?: string
     sort?: string | number
   }
-
-  const { confirmDelete } = useArtFeedback()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -565,11 +568,23 @@
     {
       permission: 'SmisDualControlRiskIdentification:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 个风险点吗？已完成定量评价的风险点不会被删除。`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteRiskPoints((selectedRows as SmisRiskPoint[]).map((row) => row.id))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.pointName ?? '风险点')
+          })),
+          permission: 'SmisDualControlRiskIdentification:Delete',
+          remove: async () => {
+            await deleteRiskPoints((selectedRows as SmisRiskPoint[]).map((row) => row.id))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     }
   ])
@@ -582,13 +597,22 @@
     void tableQueryRef.value?.refreshUpdate()
   }
   const handleDelete = async (row: SmisRiskPoint): Promise<void> => {
-    try {
-      await confirmDelete(`确定删除风险点“${row.pointName}”吗？已完成评价时系统会阻止删除。`)
-      await deleteRiskPoints([row.id])
-      await tableQueryRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消或业务约束阻止删除 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.pointName ?? '风险点')
+        }
+      ],
+      permission: 'SmisDualControlRiskIdentification:Delete',
+      confirmMessage: `确定删除风险点“${row.pointName}”吗？已完成评价时系统会阻止删除。`,
+      remove: async () => {
+        await deleteRiskPoints([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableQueryRef.value?.refreshRemove()
+      }
+    })
   }
   onMounted(async () => {
     await Promise.all([

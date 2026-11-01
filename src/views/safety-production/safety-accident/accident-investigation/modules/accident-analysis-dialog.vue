@@ -11,15 +11,12 @@
 
       <ArtForm
         ref="formRef"
-        :model-value="form"
-        @update:model-value="replaceReactiveModel(form, $event)"
+        v-model="form"
         :items="items"
         :rules="rules"
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #accidentReportId>
           <AccidentReportSelect
@@ -77,8 +74,6 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-
-  import { replaceReactiveModel } from '@/utils/form/model'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import type { FormRules } from 'element-plus'
@@ -136,7 +131,7 @@
     rectificationResponsibleEmployeeId: '',
     accidentLevel: ''
   })
-  const form = reactive<AccidentAnalysisForm>(initialForm())
+  const form = ref<AccidentAnalysisForm>(initialForm())
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
   const items = computed<FormItem[]>(() => [
     {
@@ -189,8 +184,8 @@
     accidentSelection,
     (rows) => {
       const selected = rows[0]
-      form.accidentNo = selected?.accidentNo || ''
-      if (selected) form.accidentLevel = selected.accidentLevel
+      form.value.accidentNo = selected?.accidentNo || ''
+      if (selected) form.value.accidentLevel = selected.accidentLevel
     },
     { deep: true }
   )
@@ -207,13 +202,13 @@
     try {
       if (!(await validateArtFormForSubmit(formRef.value))) return false
       await saveAccidentAnalysis({
-        id: form.id,
-        accidentReportId: form.accidentReportId,
-        hostEmployeeId: form.hostEmployeeId || null,
-        recorderEmployeeId: form.recorderEmployeeId || null,
-        rectificationResponsibleEmployeeId: form.rectificationResponsibleEmployeeId || null,
-        participantEmployeeIds: form.participantEmployeeIds,
-        accidentLevel: form.accidentLevel as SmisAccidentLevel
+        id: form.value.id,
+        accidentReportId: form.value.accidentReportId,
+        hostEmployeeId: form.value.hostEmployeeId || null,
+        recorderEmployeeId: form.value.recorderEmployeeId || null,
+        rectificationResponsibleEmployeeId: form.value.rectificationResponsibleEmployeeId || null,
+        participantEmployeeIds: form.value.participantEmployeeIds,
+        accidentLevel: form.value.accidentLevel as SmisAccidentLevel
       })
       emit('success')
       return true
@@ -223,10 +218,10 @@
     }
   }
   const handleOpen = async (data: AccidentAnalysisDialogOpenData): Promise<void> => {
-    Object.assign(form, initialForm())
+    Object.assign(form.value, initialForm())
     resetSelections()
     if (data.row) {
-      Object.assign(form, {
+      Object.assign(form.value, {
         id: data.row.id,
         accidentReportId: data.row.accidentReportId,
         accidentNo: data.row.accident.accidentNo,
@@ -258,7 +253,7 @@
       },
       onConfirm: handleSubmit,
       onReset: () => {
-        Object.assign(form, initialForm())
+        Object.assign(form.value, initialForm())
         resetSelections()
       }
     })

@@ -1,5 +1,14 @@
 <template>
-  <ArtDrawer ref="drawerRef" :loading="loading" loading-text="正在加载隐患详情…">
+  <ArtDrawer
+    @open="
+      () => {
+        activeDetailTab = 'section-0'
+      }
+    "
+    ref="drawerRef"
+    :loading="loading"
+    loading-text="正在加载隐患详情…"
+  >
     <div v-if="detail" class="hazard-governance-detail">
       <div class="hazard-governance-detail__identity">
         <span aria-hidden="true"><ArtSvgIcon icon="ri:shield-check-line" /></span>
@@ -15,155 +24,184 @@
         />
       </div>
 
-      <ArtSectionTitle title="隐患信息" subtitle="位置、级别、来源和上报责任" />
-      <dl class="hazard-governance-detail__grid">
-        <div
-          ><dt>隐患位置</dt><dd>{{ detail.location }}</dd></div
-        >
-        <div>
-          <dt>隐患级别</dt>
-          <dd>
-            <ArtDictDisplay dict-code="smisHazardLevel" :value="detail.hazardLevel" display="tag" />
-          </dd>
-        </div>
-        <div>
-          <dt>隐患来源</dt>
-          <dd>
-            <ArtDictDisplay
-              dict-code="smisHiddenHazardSourceType"
-              :value="detail.sourceType"
-              display="auto"
-            />
-          </dd>
-        </div>
-        <div
-          ><dt>来源编号</dt><dd>{{ detail.sourceRecordNo || '—' }}</dd></div
-        >
-        <div>
-          <dt>上报人</dt>
-          <dd>{{ detail.reporterEmployeeName }} · {{ detail.reporterEmployeeNo }}</dd>
-        </div>
-        <div
-          ><dt>上报时间</dt><dd>{{ formatDate(detail.reportedAt) }}</dd></div
-        >
-      </dl>
-      <div class="hazard-governance-detail__narrative">
-        <strong>隐患描述</strong>
-        <p>{{ detail.description }}</p>
-        <strong>整改建议</strong>
-        <p>{{ detail.rectificationSuggestion || '未填写整改建议' }}</p>
-      </div>
-      <EvidenceGallery title="隐患照片" :images="detail.imageUrls" />
-
-      <template v-if="detail.approvedAt || detail.status !== 'pending_approval'">
-        <ArtSectionTitle title="核准与整改" subtitle="核准结论、责任人、时限及整改证据" />
-        <dl class="hazard-governance-detail__grid">
-          <div>
-            <dt>核准结论</dt>
-            <dd>
-              <ArtDictDisplay
-                v-if="detail.approvalResult"
-                dict-code="smisHiddenHazardApprovalResult"
-                :value="detail.approvalResult"
-                display="auto"
-              />
-              <span v-else>—</span>
-            </dd>
-          </div>
-          <div>
-            <dt>核准人</dt>
-            <dd>{{ employeeText(detail.approverEmployeeName, detail.approverEmployeeNo) }}</dd>
-          </div>
-          <div
-            ><dt>核准时间</dt><dd>{{ formatDate(detail.approvedAt) }}</dd></div
-          >
-          <div
-            ><dt>整改时限</dt><dd>{{ formatDate(detail.rectificationDeadline) }}</dd></div
-          >
-          <div>
-            <dt>整改责任人</dt>
-            <dd>{{
-              employeeText(
-                detail.rectificationResponsibleEmployeeName,
-                detail.rectificationResponsibleEmployeeNo
-              )
-            }}</dd>
-          </div>
-          <div
-            ><dt>整改完成时间</dt><dd>{{ formatDate(detail.rectificationCompletedAt) }}</dd></div
-          >
-        </dl>
-        <div class="hazard-governance-detail__narrative">
-          <strong>{{ detail.approvalResult === 'close' ? '关闭原因' : '整改措施' }}</strong>
-          <p>{{
-            detail.approvalResult === 'close'
-              ? detail.closeReason || detail.approvalDescription || '—'
-              : detail.rectificationMeasures || '—'
-          }}</p>
-          <template v-if="detail.rectificationDescription">
-            <strong>整改完成说明</strong>
-            <p>{{ detail.rectificationDescription }}</p>
-          </template>
-        </div>
-        <EvidenceGallery title="整改照片" :images="detail.rectificationImageUrls" />
-      </template>
-
-      <template v-if="detail.acceptedAt || detail.acceptanceResult">
-        <ArtSectionTitle title="验收信息" subtitle="验收结论、验收说明与现场照片" />
-        <dl class="hazard-governance-detail__grid">
-          <div>
-            <dt>验收结论</dt>
-            <dd>
-              <ArtDictDisplay
-                v-if="detail.acceptanceResult"
-                dict-code="smisHiddenHazardAcceptanceResult"
-                :value="detail.acceptanceResult"
-                display="auto"
-              />
-              <span v-else>—</span>
-            </dd>
-          </div>
-          <div>
-            <dt>验收人</dt>
-            <dd>{{ employeeText(detail.acceptorEmployeeName, detail.acceptorEmployeeNo) }}</dd>
-          </div>
-          <div
-            ><dt>验收时间</dt><dd>{{ formatDate(detail.acceptedAt) }}</dd></div
-          >
-        </dl>
-        <div class="hazard-governance-detail__narrative">
-          <strong>验收说明</strong>
-          <p>{{ detail.acceptanceDescription || '—' }}</p>
-        </div>
-        <EvidenceGallery title="验收照片" :images="detail.acceptanceImageUrls" />
-      </template>
-
-      <ArtSectionTitle title="流转记录" subtitle="登记、核准、整改和验收全过程留痕" />
-      <ElTimeline class="hazard-governance-detail__timeline">
-        <ElTimelineItem
-          v-for="event in [...detail.events].reverse()"
-          :key="event.id"
-          :timestamp="formatDate(event.eventAt)"
-          placement="top"
-        >
-          <article class="hazard-governance-detail__event">
-            <strong>{{ event.eventTitle }}</strong>
-            <p>{{ event.eventContent || '系统记录' }}</p>
-            <small>{{ employeeText(event.operatorEmployeeName, event.operatorEmployeeNo) }}</small>
-            <div v-if="event.evidenceUrls.length" class="hazard-governance-detail__event-images">
-              <ElImage
-                v-for="(url, index) in event.evidenceUrls"
-                :key="event.id + '-' + url"
-                :src="url"
-                :preview-src-list="event.evidenceUrls"
-                :initial-index="index"
-                fit="cover"
-                :alt="event.eventTitle + '照片 ' + (index + 1)"
-              />
+      <ElTabs v-model="activeDetailTab"
+        ><ElTabPane name="section-0" label="隐患与证据"
+          ><div class="min-w-0 space-y-4"
+            ><ArtSectionTitle title="隐患信息" subtitle="位置、级别、来源和上报责任" />
+            <dl class="hazard-governance-detail__grid">
+              <div
+                ><dt>隐患位置</dt><dd>{{ detail.location }}</dd></div
+              >
+              <div>
+                <dt>隐患级别</dt>
+                <dd>
+                  <ArtDictDisplay
+                    dict-code="smisHazardLevel"
+                    :value="detail.hazardLevel"
+                    display="tag"
+                  />
+                </dd>
+              </div>
+              <div>
+                <dt>隐患来源</dt>
+                <dd>
+                  <ArtDictDisplay
+                    dict-code="smisHiddenHazardSourceType"
+                    :value="detail.sourceType"
+                    display="auto"
+                  />
+                </dd>
+              </div>
+              <div
+                ><dt>来源编号</dt><dd>{{ detail.sourceRecordNo || '—' }}</dd></div
+              >
+              <div>
+                <dt>上报人</dt>
+                <dd>{{ detail.reporterEmployeeName }} · {{ detail.reporterEmployeeNo }}</dd>
+              </div>
+              <div
+                ><dt>上报时间</dt><dd>{{ formatDate(detail.reportedAt) }}</dd></div
+              >
+            </dl>
+            <div class="hazard-governance-detail__narrative">
+              <strong>隐患描述</strong>
+              <p>{{ detail.description }}</p>
+              <strong>整改建议</strong>
+              <p>{{ detail.rectificationSuggestion || '未填写整改建议' }}</p>
             </div>
-          </article>
-        </ElTimelineItem>
-      </ElTimeline>
+            <EvidenceGallery title="隐患照片" :images="detail.imageUrls" /> </div
+        ></ElTabPane>
+        <ElTabPane
+          name="section-1"
+          label="核准与整改"
+          v-if="detail.approvedAt || detail.status !== 'pending_approval'"
+          ><div class="min-w-0 space-y-4"
+            ><template v-if="detail.approvedAt || detail.status !== 'pending_approval'">
+              <ArtSectionTitle title="核准与整改" subtitle="核准结论、责任人、时限及整改证据" />
+              <dl class="hazard-governance-detail__grid">
+                <div>
+                  <dt>核准结论</dt>
+                  <dd>
+                    <ArtDictDisplay
+                      v-if="detail.approvalResult"
+                      dict-code="smisHiddenHazardApprovalResult"
+                      :value="detail.approvalResult"
+                      display="auto"
+                    />
+                    <span v-else>—</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>核准人</dt>
+                  <dd>{{
+                    employeeText(detail.approverEmployeeName, detail.approverEmployeeNo)
+                  }}</dd>
+                </div>
+                <div
+                  ><dt>核准时间</dt><dd>{{ formatDate(detail.approvedAt) }}</dd></div
+                >
+                <div
+                  ><dt>整改时限</dt><dd>{{ formatDate(detail.rectificationDeadline) }}</dd></div
+                >
+                <div>
+                  <dt>整改责任人</dt>
+                  <dd>{{
+                    employeeText(
+                      detail.rectificationResponsibleEmployeeName,
+                      detail.rectificationResponsibleEmployeeNo
+                    )
+                  }}</dd>
+                </div>
+                <div
+                  ><dt>整改完成时间</dt
+                  ><dd>{{ formatDate(detail.rectificationCompletedAt) }}</dd></div
+                >
+              </dl>
+              <div class="hazard-governance-detail__narrative">
+                <strong>{{ detail.approvalResult === 'close' ? '关闭原因' : '整改措施' }}</strong>
+                <p>{{
+                  detail.approvalResult === 'close'
+                    ? detail.closeReason || detail.approvalDescription || '—'
+                    : detail.rectificationMeasures || '—'
+                }}</p>
+                <template v-if="detail.rectificationDescription">
+                  <strong>整改完成说明</strong>
+                  <p>{{ detail.rectificationDescription }}</p>
+                </template>
+              </div>
+              <EvidenceGallery title="整改照片" :images="detail.rectificationImageUrls" />
+            </template> </div
+        ></ElTabPane>
+        <ElTabPane
+          name="section-2"
+          label="验收信息"
+          v-if="detail.acceptedAt || detail.acceptanceResult"
+          ><div class="min-w-0 space-y-4"
+            ><template v-if="detail.acceptedAt || detail.acceptanceResult">
+              <ArtSectionTitle title="验收信息" subtitle="验收结论、验收说明与现场照片" />
+              <dl class="hazard-governance-detail__grid">
+                <div>
+                  <dt>验收结论</dt>
+                  <dd>
+                    <ArtDictDisplay
+                      v-if="detail.acceptanceResult"
+                      dict-code="smisHiddenHazardAcceptanceResult"
+                      :value="detail.acceptanceResult"
+                      display="auto"
+                    />
+                    <span v-else>—</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>验收人</dt>
+                  <dd>{{
+                    employeeText(detail.acceptorEmployeeName, detail.acceptorEmployeeNo)
+                  }}</dd>
+                </div>
+                <div
+                  ><dt>验收时间</dt><dd>{{ formatDate(detail.acceptedAt) }}</dd></div
+                >
+              </dl>
+              <div class="hazard-governance-detail__narrative">
+                <strong>验收说明</strong>
+                <p>{{ detail.acceptanceDescription || '—' }}</p>
+              </div>
+              <EvidenceGallery title="验收照片" :images="detail.acceptanceImageUrls" />
+            </template> </div
+        ></ElTabPane>
+        <ElTabPane name="section-3" label="流转记录"
+          ><div class="min-w-0 space-y-4"
+            ><ArtSectionTitle title="流转记录" subtitle="登记、核准、整改和验收全过程留痕" />
+            <ElTimeline class="hazard-governance-detail__timeline">
+              <ElTimelineItem
+                v-for="event in [...detail.events].reverse()"
+                :key="event.id"
+                :timestamp="formatDate(event.eventAt)"
+                placement="top"
+              >
+                <article class="hazard-governance-detail__event">
+                  <strong>{{ event.eventTitle }}</strong>
+                  <p>{{ event.eventContent || '系统记录' }}</p>
+                  <small>{{
+                    employeeText(event.operatorEmployeeName, event.operatorEmployeeNo)
+                  }}</small>
+                  <div
+                    v-if="event.evidenceUrls.length"
+                    class="hazard-governance-detail__event-images"
+                  >
+                    <ElImage
+                      v-for="(url, index) in event.evidenceUrls"
+                      :key="event.id + '-' + url"
+                      :src="url"
+                      :preview-src-list="event.evidenceUrls"
+                      :initial-index="index"
+                      fit="cover"
+                      :alt="event.eventTitle + '照片 ' + (index + 1)"
+                    />
+                  </div>
+                </article>
+              </ElTimelineItem> </ElTimeline></div></ElTabPane
+      ></ElTabs>
     </div>
   </ArtDrawer>
 </template>
@@ -216,6 +254,7 @@
       )}
     </section>
   )
+  const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<HazardDetailDrawerOpenData>>()
   const detail = shallowRef<SmisHiddenHazardGovernanceDetail | null>(null)
   const loading = ref(false)
@@ -253,6 +292,7 @@
 
   .hazard-governance-detail {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     min-width: 0;
 

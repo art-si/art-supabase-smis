@@ -77,14 +77,11 @@
         />
         <ArtForm
           ref="categoryFormRef"
-          :model-value="categoryForm"
-          @update:model-value="replaceReactiveModel(categoryForm, $event)"
+          v-model="categoryForm"
           :items="categoryItems"
           :rules="categoryRules"
           :span="24"
           label-position="top"
-          :show-reset="false"
-          :show-submit="false"
         />
         <template #footer="{ api }"
           ><ElButton @click="api.handleClose()">取消</ElButton
@@ -94,18 +91,24 @@
         >
       </ArtDialog>
 
-      <ArtDialog ref="questionDialogRef" size="xl">
+      <ArtDialog
+        @open="
+          () => {
+            activeFormTab = 'settingSection'
+          }
+        "
+        ref="questionDialogRef"
+        size="xl"
+      >
         <ArtForm
+          v-model:active-tab="activeFormTab"
           ref="questionFormRef"
-          :model-value="questionForm"
-          @update:model-value="replaceReactiveModel(questionForm, $event)"
+          v-model="questionForm"
           :items="questionItems"
           :rules="questionRules"
           :span="12"
           :gutter="24"
           label-position="top"
-          :show-reset="false"
-          :show-submit="false"
         >
           <template #options>
             <div class="grid gap-[10px]">
@@ -155,14 +158,19 @@
         >
       </ArtDialog>
     </div>
+    <MasterDataDeleteGuard ref="deleteGuardRef" />
+    <MasterDataDeleteGuard ref="deleteCategoryGuardRef" />
   </ArtPermissionGuard>
 </template>
 
 <script setup lang="tsx">
+  import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
+  import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+
   import { toDictionaryOption } from '@/utils/form/option'
 
   import { uniq } from 'lodash-es'
-  import { replaceReactiveModel } from '@/utils/form/model'
+
   import type { TableRequestOptions } from '@/hooks/core/useTable'
   import type { FormRules } from 'element-plus'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
@@ -175,7 +183,7 @@
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
   import TreeUtils from '@/utils/tree'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
@@ -209,16 +217,21 @@
     type QuestionCategoryTreeNode
   } from './modules/question-category-navigator.vue'
 
+  const { deleteGuardRef: deleteCategoryGuardRef, deleteRecords: deleteCategoryRecords } =
+    useRecordDeleteGuard('smis_question_category', '题库分类')
+
+  const { deleteGuardRef, deleteRecords } = useRecordDeleteGuard('smis_question', '题目')
+
   defineOptions({ name: 'SmisQuestionBankManagement' })
   type TableParams = SmisQuestionBankSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirmDelete } = useArtFeedback()
   const ALL_KEY = 'all'
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const tableRef = ref<ArtTableQueryExpose>()
   const categoryDialogRef = ref<ArtDialogExpose>()
+  const activeFormTab = ref('settingSection')
   const questionDialogRef = ref<ArtDialogExpose>()
   const categoryFormRef = ref<InstanceType<typeof ArtForm>>()
   const questionFormRef = ref<InstanceType<typeof ArtForm>>()
@@ -234,7 +247,7 @@
     multiple: 0,
     judgement: 0
   })
-  const categoryForm = reactive({
+  const categoryForm = ref({
     id: '',
     parentId: null as string | null,
     categoryName: '',
@@ -255,11 +268,11 @@
     defaultScore: 2,
     status: 'enabled'
   })
-  const questionForm = reactive<SmisQuestionPayload>(createQuestion())
+  const questionForm = ref<SmisQuestionPayload>(createQuestion())
   const singleAnswer = computed({
-    get: () => questionForm.correctAnswers[0] ?? '',
+    get: () => questionForm.value.correctAnswers[0] ?? '',
     set: (value: string) => {
-      questionForm.correctAnswers = value ? [value] : []
+      questionForm.value.correctAnswers = value ? [value] : []
     }
   })
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
@@ -272,41 +285,22 @@
         : left.sort - right.sort
     )
   )
-  const flattenCategories = (
-    nodes: QuestionCategoryTreeNode[],
-    depth = 0
-  ): Array<QuestionCategoryTreeNode & { depth: number }> =>
-    nodes.flatMap((node) => [
-      { ...node, depth },
-      ...flattenCategories(node.children ?? [], depth + 1)
-    ])
-  const categoryFlat = computed(() => flattenCategories(categoryTree.value))
   const categoryOptions = computed(() =>
-    categoryFlat.value
-      .filter((item) => item.status === 'enabled')
-      .map((item) => ({
-        label: `${'　'.repeat(item.depth)}${item.depth ? '└ ' : ''}${item.categoryName}`,
-        value: item.id
-      }))
+    treeUtils.mapTree(categoryTree.value, (item) => ({
+      label: item.categoryName,
+      value: item.id,
+      disabled: item.status !== 'enabled'
+    }))
   )
-  const categoryParentOptions = computed(() => {
-    const blockedIds = new Set<string>()
-    if (categoryForm.id) {
-      const current = treeUtils.findNode(
-        categoryTree.value,
-        categoryForm.id
-      ) as QuestionCategoryTreeNode | null
-      if (current) {
-        treeUtils.treeToList([current]).forEach((item) => blockedIds.add(item.id))
-      }
-    }
-    return categoryFlat.value
-      .filter((item) => !blockedIds.has(item.id))
-      .map((item) => ({
-        label: `${'　'.repeat(item.depth)}${item.depth ? '└ ' : ''}${item.categoryName}`,
+  const categoryParentOptions = computed(() =>
+    treeUtils.mapTree(
+      treeUtils.removeNode(categoryTree.value, categoryForm.value.id).tree,
+      (item) => ({
+        label: item.categoryName,
         value: item.id
-      }))
-  })
+      })
+    )
+  )
   const selectedCategoryKey = computed(() => searchQuery.value.categoryId ?? ALL_KEY)
   const metrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
@@ -369,9 +363,14 @@
     {
       label: '上级分类',
       key: 'parentId',
-      type: 'select',
+      type: 'treeSelect',
       options: categoryParentOptions.value,
-      props: { clearable: true, filterable: true, placeholder: '不选择则作为一级分类' }
+      props: {
+        clearable: true,
+        filterable: true,
+        checkStrictly: true,
+        placeholder: '不选择则作为一级分类'
+      }
     },
     {
       label: '启用状态',
@@ -396,12 +395,13 @@
     categoryName: [{ required: true, message: '请输入分类名称', trigger: 'blur' }]
   }
   const questionItems = computed<FormItem[]>(() => [
-    { label: '题目设置', key: 'settingSection', type: 'divider', span: 24 },
+    { label: '题目设置', key: 'settingSection', type: 'tab', span: 24 },
     {
       label: '所属分类',
       key: 'categoryId',
-      type: 'select',
-      props: { options: categoryOptions.value, filterable: true, placeholder: '选择题库分类' }
+      type: 'treeSelect',
+      options: categoryOptions.value,
+      props: { filterable: true, checkStrictly: true, placeholder: '选择题库分类' }
     },
     {
       label: '题目类型',
@@ -422,7 +422,7 @@
       type: 'segment',
       options: dictOptions('commonEnabledStatus')
     },
-    { label: '题目内容', key: 'contentSection', type: 'divider', span: 24 },
+    { label: '题目与答案', key: 'contentSection', type: 'tab', span: 24 },
     {
       label: '题目内容',
       key: 'stem',
@@ -430,7 +430,7 @@
       span: 24,
       props: { rows: 5, maxlength: 8000, showWordLimit: true }
     },
-    { label: '答案与解析', key: 'answerSection', type: 'divider', span: 24 },
+
     { label: '答案选项与正确答案', key: 'options', span: 24 },
     {
       label: '答案解析',
@@ -446,14 +446,14 @@
     stem: [{ required: true, message: '请输入题目内容', trigger: 'blur' }]
   }
   watch(
-    () => questionForm.questionType,
+    () => questionForm.value.questionType,
     (type) => {
       if (type === 'judgement') {
-        questionForm.options = [
+        questionForm.value.options = [
           { key: 'A', content: '正确' },
           { key: 'B', content: '错误' }
         ]
-        questionForm.correctAnswers = []
+        questionForm.value.correctAnswers = []
       }
     }
   )
@@ -466,7 +466,7 @@
     await tableRef.value?.refreshUpdate()
   }
   const openCategory = async (row?: SmisQuestionCategory, parentId?: string) => {
-    Object.assign(categoryForm, {
+    Object.assign(categoryForm.value, {
       id: row?.id ?? '',
       parentId: row?.parentId ?? parentId ?? null,
       categoryName: row?.categoryName ?? '',
@@ -482,7 +482,7 @@
     try {
       await categoryFormRef.value?.validate()
       submitting.value = true
-      await saveQuestionCategory({ ...categoryForm, id: categoryForm.id || undefined })
+      await saveQuestionCategory({ ...categoryForm.value, id: categoryForm.value.id || undefined })
       await categoryDialogRef.value?.handleClose(true)
       await tableRef.value?.refreshUpdate()
     } catch {
@@ -492,20 +492,19 @@
     }
   }
   const removeCategory = async (row: SmisQuestionCategory) => {
-    try {
-      await confirmDelete(
-        `确定删除分类“${row.categoryName}”吗？如分类下仍有题目或下级分类，系统将阻止删除以保护组卷数据。`
-      )
-      await deleteQuestionCategory(row.id)
-      if (searchQuery.value.categoryId === row.id) searchQuery.value.categoryId = undefined
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteCategoryRecords({
+      resources: [{ id: row.id, label: row.categoryName }],
+      permission: 'SmisQuestionBankManagement:ManageCategory',
+      remove: () => deleteQuestionCategory(row.id),
+      onDeleted: async () => {
+        if (searchQuery.value.categoryId === row.id) searchQuery.value.categoryId = undefined
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const openQuestion = async (row?: SmisQuestion, copy = false) => {
     Object.assign(
-      questionForm,
+      questionForm.value,
       createQuestion(),
       row
         ? {
@@ -523,38 +522,43 @@
     })
   }
   const addOption = () =>
-    questionForm.options.push({
-      key: String.fromCharCode(65 + questionForm.options.length),
+    questionForm.value.options.push({
+      key: String.fromCharCode(65 + questionForm.value.options.length),
       content: ''
     })
   const removeOption = (index: number) => {
-    const removed = questionForm.options[index]?.key
-    questionForm.options.splice(index, 1)
-    questionForm.options.forEach((item, i) => {
+    const removed = questionForm.value.options[index]?.key
+    questionForm.value.options.splice(index, 1)
+    questionForm.value.options.forEach((item, i) => {
       item.key = String.fromCharCode(65 + i)
     })
-    questionForm.correctAnswers = questionForm.correctAnswers.filter((key) => key !== removed)
+    questionForm.value.correctAnswers = questionForm.value.correctAnswers.filter(
+      (key) => key !== removed
+    )
   }
   const setCorrect = (key: string, checked: boolean) => {
-    questionForm.correctAnswers = checked
-      ? uniq([...questionForm.correctAnswers, key])
-      : questionForm.correctAnswers.filter((item) => item !== key)
+    questionForm.value.correctAnswers = checked
+      ? uniq([...questionForm.value.correctAnswers, key])
+      : questionForm.value.correctAnswers.filter((item) => item !== key)
   }
   const submitQuestion = async () => {
     try {
       await questionFormRef.value?.validate()
-      if (questionForm.options.some((item) => !item.content.trim())) {
+      if (questionForm.value.options.some((item) => !item.content.trim())) {
         ElMessage.warning('请完整填写全部答案选项')
         return
       }
-      if (!questionForm.correctAnswers.length) {
+      if (!questionForm.value.correctAnswers.length) {
         ElMessage.warning('请至少设置一个正确答案')
         return
       }
       submitting.value = true
       await saveQuestion({
-        ...questionForm,
-        options: questionForm.options.map((item) => ({ ...item, content: item.content.trim() }))
+        ...questionForm.value,
+        options: questionForm.value.options.map((item) => ({
+          ...item,
+          content: item.content.trim()
+        }))
       })
       await questionDialogRef.value?.handleClose(true)
       await tableRef.value?.refreshUpdate()
@@ -565,13 +569,22 @@
     }
   }
   const removeQuestion = async (row: SmisQuestion) => {
-    try {
-      await confirmDelete('确定删除该题目吗？')
-      await deleteQuestions([row.id])
-      await tableRef.value?.refreshRemove()
-    } catch {
-      /* 用户取消 */
-    }
+    await deleteRecords({
+      resources: [
+        {
+          id: String(row.id ?? ''),
+          label: String(row.stem ?? '题目')
+        }
+      ],
+      permission: 'SmisQuestionBankManagement:Delete',
+      confirmMessage: '确定删除该题目吗？',
+      remove: async () => {
+        await deleteQuestions([row.id ?? ''])
+      },
+      onDeleted: async () => {
+        await tableRef.value?.refreshRemove()
+      }
+    })
   }
   const moreActions = (row: SmisQuestion): ButtonMoreItem[] => [
     {
@@ -662,7 +675,7 @@
                 ? openQuestion(row, true)
                 : item.key === 'toggle'
                   ? toggleQuestions(
-                      [row.id],
+                      [row.id ?? ''],
                       row.status === 'enabled' ? 'disabled' : 'enabled'
                     ).then(() => tableRef.value?.refreshUpdate())
                   : removeQuestion(row)
@@ -682,11 +695,23 @@
     {
       permission: 'SmisQuestionBankManagement:Delete',
       type: 'delete',
+      confirm: false,
       content: ({ selectedCount }: ArtTableQueryHeaderActionContext) =>
         `确定删除选中的 ${selectedCount} 道题目吗？`,
       onClick: async ({ selectedRows, api }) => {
-        await deleteQuestions(selectedRows.map((row) => row.id as string))
-        await api.refreshRemove()
+        await deleteRecords({
+          resources: selectedRows.map((row) => ({
+            id: String(row.id ?? ''),
+            label: String(row.stem ?? '题目')
+          })),
+          permission: 'SmisQuestionBankManagement:Delete',
+          remove: async () => {
+            await deleteQuestions(selectedRows.map((row) => row.id as string))
+          },
+          onDeleted: async () => {
+            await api.refreshRemove()
+          }
+        })
       }
     },
     {

@@ -104,6 +104,7 @@
       prop: 'plannedMeasure',
       label: '计划防范措施',
       required: true,
+      headerTooltip: '每行填写可执行、可核验的防范措施，计划落实时间和责任人可按业务补充。',
       requiredMessage: ({ rowIndex }) => `第 ${rowIndex + 1} 行计划防范措施不能为空`,
       minWidth: 420,
       showOverflowTooltip: false,
@@ -172,11 +173,13 @@
     }
   ]
 
-  const validate = async (): Promise<ArtTableValidationResult> =>
-    (await tableRef.value?.validate()) ?? { valid: true, errors: [] }
+  const validate = async (options?: { focus?: boolean }): Promise<ArtTableValidationResult> =>
+    (await tableRef.value?.validate(options)) ?? { valid: true, errors: [] }
+  const validateField = async (prop: string): Promise<ArtTableValidationResult> =>
+    (await tableRef.value?.validateField(prop)) ?? { valid: true, errors: [] }
   const clearValidate = (): void => tableRef.value?.clearValidate()
 
-  defineExpose({ validate, clearValidate })
+  defineExpose({ validate, validateField, clearValidate })
 </script>
 
 <style scoped lang="scss">

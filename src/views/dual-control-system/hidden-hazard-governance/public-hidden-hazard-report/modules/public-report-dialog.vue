@@ -1,5 +1,13 @@
 <template>
-  <ArtDialog ref="dialogRef" size="xl">
+  <ArtDialog
+    @open="
+      () => {
+        activeFormTab = 'reporter'
+      }
+    "
+    ref="dialogRef"
+    size="xl"
+  >
     <div class="public-report-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:megaphone-line" /></template>
@@ -7,6 +15,7 @@
         <p>举报人信息用于核实线索；登记操作人由系统自动留痕，保存后状态为待核准。</p>
       </ArtEntitySummary>
       <ArtForm
+        v-model:active-tab="activeFormTab"
         ref="formRef"
         v-model="form.model"
         :items="formItems"
@@ -14,8 +23,6 @@
         :span="12"
         :gutter="24"
         label-position="top"
-        :show-reset="false"
-        :show-submit="false"
       >
         <template #hazardOrganizationId>
           <OrganizationTreeSelect
@@ -90,6 +97,7 @@
   const emit = defineEmits<{ success: [] }>()
   const userStore = useUserStore()
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
+  const activeFormTab = ref('reporter')
   const dialogRef = ref<ArtDialogExpose<PublicReportDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const options = reactive<{
@@ -134,7 +142,7 @@
     (getDictMap.value.smisHazardLevel ?? []).map(toDictionaryOption)
   )
   const formItems = computed<FormItem[]>(() => [
-    { label: '举报人信息', key: 'reporter', type: 'divider', span: 24 },
+    { label: '举报人信息', key: 'reporter', type: 'tab', span: 24 },
     {
       label: '姓名',
       key: 'publicReporterName',
@@ -164,7 +172,7 @@
       props: { maxlength: 100, placeholder: '可选填举报人所在单位' }
     },
     { label: '登记操作人', key: 'handlerName', type: 'input', span: 12, props: { readonly: true } },
-    { label: '隐患信息', key: 'hazard', type: 'divider', span: 24 },
+    { label: '隐患与证据', key: 'hazard', type: 'tab', span: 24 },
     { label: '隐患所属部门', key: 'hazardOrganizationId', type: 'text', span: 8 },
     { label: '场所', key: 'siteId', type: 'text', span: 8 },
     {
