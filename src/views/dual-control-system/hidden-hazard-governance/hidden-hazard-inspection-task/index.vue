@@ -409,7 +409,7 @@
           data: rows.map((row) => ({
             ...row,
             status:
-              statusOptions.value.find((item) => item.value === row.status)?.label || row.status,
+              statusOptions.value.find((item) => item.value === row.status)?.label || '未识别状态',
             plannedStartAt: dayjs(row.plannedStartAt).format('YYYY-MM-DD HH:mm'),
             plannedEndAt: dayjs(row.plannedEndAt).format('YYYY-MM-DD HH:mm')
           }))

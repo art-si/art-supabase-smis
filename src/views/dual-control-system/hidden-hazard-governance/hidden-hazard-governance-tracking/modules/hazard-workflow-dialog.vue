@@ -2,7 +2,11 @@
   <ArtDialog ref="dialogRef" size="lg">
     <div class="hazard-workflow-dialog">
       <div class="hazard-workflow-dialog__identity">
-        <span aria-hidden="true"><ArtSvgIcon :icon="modeConfig.icon" /></span>
+        <span
+          aria-hidden="true"
+          class="grid size-[46px] place-items-center [color:var(--theme-color)] [background:var(--default-box-color)] [border-radius:var(--el-border-radius-base)]"
+          ><ArtSvgIcon :icon="modeConfig.icon"
+        /></span>
         <div>
           <small>{{ modeConfig.eyebrow }}</small>
           <strong>{{ currentRow?.hazardNo }}</strong>
@@ -420,16 +424,6 @@
       margin-bottom: 18px;
       background: color-mix(in srgb, var(--theme-color) 7%, var(--default-box-color));
       border-left: 3px solid var(--theme-color);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__identity > span {
-      display: grid;
-      place-items: center;
-      width: 46px;
-      height: 46px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
       border-radius: var(--el-border-radius-base);
     }
 

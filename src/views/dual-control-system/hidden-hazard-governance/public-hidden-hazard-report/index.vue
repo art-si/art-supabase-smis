@@ -262,8 +262,9 @@
             .map((row) => ({
               ...row,
               status:
-                statusOptions.value.find((item) => item.value === row.status)?.label || row.status,
-              hazardLevel: levelLabels.value[row.hazardLevel] || row.hazardLevel,
+                statusOptions.value.find((item) => item.value === row.status)?.label ||
+                '未识别状态',
+              hazardLevel: levelLabels.value[row.hazardLevel] || '未识别等级',
               reportedAt: formatDate(row.reportedAt)
             }))
         }

@@ -201,9 +201,7 @@
   }
   const categorySummary = (row: SmisHistoricalAccidentCase): string =>
     row.accidentCategories
-      .map(
-        (value) => userStore.getDictLabelByValue('smisAccidentCategory', value) || value || '未设置'
-      )
+      .map((value) => userStore.getDictLabelByValue('smisAccidentCategory', value) || '未识别类别')
       .join('、') || '—'
   const columnsFactory = (): ColumnOption<SmisHistoricalAccidentCase>[] => [
     { type: 'selection', width: 48 },
@@ -355,15 +353,12 @@
             occurrenceDate: dayjs(row.occurrenceDate).format('YYYY-MM-DD'),
             accidentCategories: categorySummary(row),
             accidentLevel:
-              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) ||
-              row.accidentLevel ||
-              '未设置',
+              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) || '未识别等级',
             accidentOrganizationName: row.accidentOrganizationName || '',
             applicableCompanyName: row.applicableCompanyName || '',
             caseStatus:
               userStore.getDictLabelByValue('smisAccidentCaseStatus', row.caseStatus) ||
-              row.caseStatus ||
-              '未设置',
+              '未识别状态',
             summary: row.summary || '',
             content: row.content,
             createTime: row.createTime ? dayjs(row.createTime).format('YYYY-MM-DD HH:mm:ss') : ''

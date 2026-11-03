@@ -214,7 +214,7 @@
   }
   const categorySummary = (row: SmisAccidentReport): string =>
     row.accidentCategories
-      .map((value) => userStore.getDictLabelByValue('smisAccidentCategory', value) || value)
+      .map((value) => userStore.getDictLabelByValue('smisAccidentCategory', value) || '未识别类别')
       .join('、') || '—'
   const columnsFactory = (): ColumnOption<SmisAccidentReport>[] => [
     { type: 'selection', width: 48 },
@@ -397,8 +397,7 @@
             accidentCategories: categorySummary(row),
             operationAreaOrganizationName: row.operationAreaOrganizationName || '',
             accidentLevel:
-              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) ||
-              row.accidentLevel,
+              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) || '未识别等级',
             indirectEconomicLoss: Number(row.indirectEconomicLoss || 0),
             minorInjuryCount: row.minorInjuryCount,
             seriousInjuryCount: row.seriousInjuryCount,

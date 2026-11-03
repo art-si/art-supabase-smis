@@ -363,7 +363,7 @@
             declarantName: row.declarantNameSnapshot,
             departmentName: row.departmentNameSnapshot || '',
             injuryType:
-              userStore.getDictLabelByValue('smisWorkInjuryType', row.injuryType) || row.injuryType
+              userStore.getDictLabelByValue('smisWorkInjuryType', row.injuryType) || '未识别类型'
           }))
         }
       }

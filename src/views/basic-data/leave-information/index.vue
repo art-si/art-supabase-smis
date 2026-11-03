@@ -409,8 +409,7 @@
         isProxy: row.isProxy ? '是' : '否',
         proxyName: row.proxyEmployee?.employeeName || '',
         reason: row.reason,
-        status:
-          userStore.getDictItemByValue('hrLeaveRequestStatus', row.status)?.label || row.status
+        status: userStore.getDictLabelByValue('hrLeaveRequestStatus', row.status, '未识别状态')
       }))
     })
   }

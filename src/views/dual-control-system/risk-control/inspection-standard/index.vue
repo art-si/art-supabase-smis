@@ -466,7 +466,7 @@
             }
             effect="plain"
           >
-            {statusOptions.value.find((i) => i.value === row.status)?.label || row.status}
+            {statusOptions.value.find((i) => i.value === row.status)?.label || '未识别状态'}
           </ElTag>
         )
       },

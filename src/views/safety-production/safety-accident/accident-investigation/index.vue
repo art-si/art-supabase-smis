@@ -306,8 +306,7 @@
             accidentNo: row.accident.accidentNo,
             accidentName: row.accident.accidentName,
             accidentLevel:
-              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) ||
-              row.accidentLevel,
+              userStore.getDictLabelByValue('smisAccidentLevel', row.accidentLevel) || '未识别等级',
             hostName: employeeName(row.hostEmployee),
             participantNames: row.participants.map((employee) => employee.employeeName).join('、'),
             recorderName: employeeName(row.recorderEmployee),

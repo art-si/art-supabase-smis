@@ -549,7 +549,7 @@
           (row) => ({
             pointNo: row.pointNo,
             pointName: row.pointName,
-            riskType: riskTypeLabel.value.get(row.riskType) || row.riskType,
+            riskType: riskTypeLabel.value.get(row.riskType) || '未识别类型',
             siteName: row.siteName,
             organizationCodes: row.organizations.map((item) => item.organizationCode).join(','),
             equipmentName: row.equipmentName,

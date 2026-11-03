@@ -199,7 +199,7 @@
             <small>
               {row.organizationCode} ·{' '}
               {userStore.getDictLabelByValue('organizationType', row.organizationType) ||
-                row.organizationType}
+                '未识别组织类型'}
             </small>
           </div>
         </div>
@@ -320,7 +320,7 @@
             ...row,
             organizationType:
               userStore.getDictLabelByValue('organizationType', row.organizationType) ||
-              row.organizationType
+              '未识别组织类型'
           }))
         }
       }

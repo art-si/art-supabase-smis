@@ -331,7 +331,7 @@
                 )
                 .join('；'),
               statusLabel:
-                statusOptions.value.find((item) => item.value === row.status)?.label || row.status
+                statusOptions.value.find((item) => item.value === row.status)?.label || '未识别状态'
             }))
         }
       }

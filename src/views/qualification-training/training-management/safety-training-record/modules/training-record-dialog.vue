@@ -267,6 +267,8 @@
   import { createDateTimeFormatter } from '@/utils/ui/format'
 
   import { normalizeNullableText } from '@/utils/form/normalize'
+  import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
+  import { unref } from 'vue'
   import dayjs from 'dayjs'
   import {
     ElDatePicker,
@@ -289,7 +291,10 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import SmisDataSourceEmptyActions from '@smis/views/components/smis-data-source-empty-actions.vue'
   import { useDocumentNumberRule } from '@/hooks/core/useDocumentNumberRule'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { notifyFriendlyError, useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { useAuth } from '@/hooks/core/useAuth'
+  import { useTenantOperationGuard } from '@/hooks/core/useTenantOperationGuard'
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import { useUserStore } from '@/store/modules/user'
   import {
     saveSafetyTrainingRecord,
@@ -332,9 +337,12 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { confirm } = useArtFeedback()
+  const { hasAuth } = useAuth()
+  const captureOperation = useTenantOperationGuard()
   const { getDictMap } = storeToRefs(userStore)
   const activeFormTab = ref('sourceSection')
   const dialogRef = ref<ArtDialogExpose<TrainingRecordDialogOpenData>>()
+  const session = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const attendanceTableRef = ref<ArtTableExpose>()
   const planOptions = shallowRef<SmisSafetyTrainingPlanOption[]>([])
@@ -794,44 +802,80 @@
   })
   const handleSave = async (submit: boolean): Promise<void> => {
     if (submitting.value) return
+    const recordId = form.value.id
+    const permission = recordId ? 'SmisSafetyTrainingRecord:Edit' : 'SmisSafetyTrainingRecord:Add'
+    const operationCurrent = captureOperation()
+    const requestVersion = session.version.value
+    const isCurrentContext = () =>
+      operationCurrent() &&
+      session.isCurrent(requestVersion) &&
+      !readonly.value &&
+      form.value.id === recordId
+    const hasPermission = () =>
+      hasAuth(permission) && (!submit || hasAuth('SmisSafetyTrainingRecord:Submit'))
+    const isCurrent = () => isCurrentContext() && hasPermission()
+    if (!isCurrentContext()) return
+    if (!hasPermission()) {
+      ElMessage.error(`当前账号无权${submit ? '归档' : '保存'}该培训记录，请刷新权限后重试`)
+      return
+    }
+    submitting.value = true
+    let writing = false
     try {
-      await formRef.value?.validate()
+      if (!(await validateArtFormForSubmit(formRef.value))) return
+      if (!isCurrent()) return
       if (
         form.value.actualStartAt &&
         form.value.actualEndAt &&
         dayjs(form.value.actualEndAt).isBefore(dayjs(form.value.actualStartAt))
       ) {
         await formRef.value?.focusField('actualEndAt')
+        if (!isCurrent()) return
         ElMessage.warning('实际结束时间不能早于开始时间')
         return
       }
       if (submit) {
         const attendanceValidation = await attendanceTableRef.value?.validate({ focus: false })
+        if (!isCurrent()) return
         if (attendanceValidation && !attendanceValidation.valid) {
           activeFormTab.value = 'attendanceSection'
           await nextTick()
+          if (!isCurrent()) return
           if (attendanceValidation.firstError) {
             await attendanceTableRef.value?.validateField(attendanceValidation.firstError.prop)
+            if (!isCurrent()) return
             ElMessage.warning(attendanceValidation.firstError.message)
           }
           return
         }
       }
+      const preparedPayload = payload()
+      if (!isCurrent()) return
       if (submit) {
         await confirm('归档后记录将锁定，不能再编辑签到、成绩和归档材料。请确认内容已核对完整。', {
           title: '确认归档培训记录',
           confirmButtonText: '确认归档'
         })
       }
-      submitting.value = true
-      const type = form.value.id ? 'edit' : 'add'
-      await saveSafetyTrainingRecord(payload(), submit)
-      emit('success', type)
-      await dialogRef.value?.handleClose(true)
-    } catch {
-      // 表单校验或 API 层已提供明确反馈。
+      if (!isCurrent()) return
+      writing = true
+      await saveSafetyTrainingRecord(preparedPayload, submit, {
+        showMessage: false,
+        showErrorMessage: false
+      })
+      if (!isCurrent()) return
+      ElMessage.success(submit ? '培训记录已归档，计划已完成' : '培训记录草稿已保存')
+      emit('success', recordId ? 'edit' : 'add')
+      if (isCurrent()) await dialogRef.value?.handleClose(true)
+    } catch (error) {
+      if (error === 'cancel' || error === 'close') return
+      if (isCurrent())
+        notifyFriendlyError(
+          error,
+          writing ? '培训记录保存失败，请稍后重试' : '培训记录校验未完成，请稍后重试'
+        )
     } finally {
-      submitting.value = false
+      if (requestVersion === session.version.value) submitting.value = false
     }
   }
   const initialize = (data: TrainingRecordDialogOpenData): void => {
@@ -867,6 +911,8 @@
     }
   }
   const handleOpen = async (data: TrainingRecordDialogOpenData): Promise<void> => {
+    const requestVersion = session.invalidate()
+    submitting.value = false
     attendanceTableRef.value?.clearValidate()
     initialize(data)
     await dialogRef.value?.handleOpen(data, {
@@ -888,11 +934,24 @@
             'smisSafetyTrainingAssessmentMethod'
           ].map((code) => userStore.ensureDictLoaded(code))
         ])
+      },
+      onClose: (): void => {
+        session.invalidate()
+        submitting.value = false
+      },
+      onReset: (): void => {
+        session.invalidate()
+        submitting.value = false
       }
     })
     await nextTick()
-    formRef.value?.clearValidate()
+    if (session.isCurrent(requestVersion)) formRef.value?.clearValidate()
   }
+  onDeactivated(() => {
+    session.invalidate()
+    submitting.value = false
+    void dialogRef.value?.handleClose(true)
+  })
   defineExpose({ handleOpen })
 </script>
 

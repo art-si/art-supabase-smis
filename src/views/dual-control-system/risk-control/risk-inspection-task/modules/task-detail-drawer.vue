@@ -17,7 +17,10 @@
     />
     <div v-if="detail" class="task-detail-drawer">
       <div class="task-detail-drawer__status" :data-status="detail.status">
-        <span><ArtSvgIcon icon="ri:clipboard-line" /></span>
+        <span
+          class="grid size-[46px] place-items-center [color:var(--theme-color)] [background:var(--default-box-color)] [border-radius:var(--el-border-radius-base)]"
+          ><ArtSvgIcon icon="ri:clipboard-line"
+        /></span>
         <div
           ><small>任务编号</small><strong>{{ detail.taskNo }}</strong
           ><p>{{ detail.riskPointName }} · {{ detail.riskPointNo }}</p></div
@@ -234,16 +237,6 @@
     padding: 16px;
     background: color-mix(in srgb, var(--theme-color) 6%, var(--default-box-color));
     border-left: 3px solid var(--theme-color);
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .task-detail-drawer__status > span {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 46px;
-    color: var(--theme-color);
-    background: var(--default-box-color);
     border-radius: var(--el-border-radius-base);
   }
 

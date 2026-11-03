@@ -362,14 +362,14 @@
               ...row,
               plannedStartAt: dayjs(row.plannedStartAt).format('YYYY-MM-DD HH:mm'),
               plannedEndAt: dayjs(row.plannedEndAt).format('YYYY-MM-DD HH:mm'),
-              taskDeadline: `${row.taskDeadlineValue}${deadlineLabels.value[row.taskDeadlineUnit] || row.taskDeadlineUnit}`,
+              taskDeadline: `${row.taskDeadlineValue}${deadlineLabels.value[row.taskDeadlineUnit] || (row.taskDeadlineUnit ? '未识别时限单位' : '')}`,
               cycle:
                 row.cycleType === 'once'
                   ? '不循环'
-                  : `每${row.cycleInterval}${cycleLabels.value[row.cycleType] || row.cycleType}`,
+                  : `每${row.cycleInterval}${cycleLabels.value[row.cycleType] || '未识别周期'}`,
               attachmentCount: row.attachmentUrls.length,
               status:
-                statusOptions.value.find((item) => item.value === row.status)?.label || row.status
+                statusOptions.value.find((item) => item.value === row.status)?.label || '未识别状态'
             }))
         }
       }
@@ -468,7 +468,7 @@
       label: '任务时限',
       width: 104,
       formatter: (row) =>
-        `${row.taskDeadlineValue} ${deadlineLabels.value[row.taskDeadlineUnit] || row.taskDeadlineUnit}`
+        `${row.taskDeadlineValue} ${deadlineLabels.value[row.taskDeadlineUnit] || (row.taskDeadlineUnit ? '未识别时限单位' : '')}`
     },
     {
       prop: 'cycleType',
@@ -477,7 +477,7 @@
       formatter: (row) =>
         row.cycleType === 'once'
           ? '不循环'
-          : `每 ${row.cycleInterval} ${cycleLabels.value[row.cycleType] || row.cycleType}`
+          : `每 ${row.cycleInterval} ${cycleLabels.value[row.cycleType] || '未识别周期'}`
     },
     {
       prop: 'attachmentUrls',

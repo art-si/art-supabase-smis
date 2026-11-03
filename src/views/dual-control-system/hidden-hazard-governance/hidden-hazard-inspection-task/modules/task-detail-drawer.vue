@@ -11,7 +11,11 @@
   >
     <div v-if="detail" class="hidden-hazard-task-detail">
       <div class="hidden-hazard-task-detail__identity">
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:clipboard-line" /></span>
+        <span
+          aria-hidden="true"
+          class="grid size-[46px] place-items-center [color:var(--theme-color)] [background:var(--default-box-color)] [border-radius:var(--el-border-radius-base)]"
+          ><ArtSvgIcon icon="ri:clipboard-line"
+        /></span>
         <div
           ><small>任务编号</small><strong>{{ detail.taskNo }}</strong
           ><p>{{ detail.inspectionObject }} · {{ detail.sourcePlanName }}</p></div
@@ -195,16 +199,6 @@
       padding: 16px;
       background: color-mix(in srgb, var(--theme-color) 7%, var(--default-box-color));
       border-left: 3px solid var(--theme-color);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__identity > span {
-      display: grid;
-      place-items: center;
-      width: 46px;
-      height: 46px;
-      color: var(--theme-color);
-      background: var(--default-box-color);
       border-radius: var(--el-border-radius-base);
     }
 

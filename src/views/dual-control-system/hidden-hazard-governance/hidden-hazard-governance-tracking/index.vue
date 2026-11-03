@@ -379,9 +379,10 @@
             .map((row) => ({
               ...row,
               status:
-                statusOptions.value.find((item) => item.value === row.status)?.label || row.status,
-              hazardLevel: hazardLevelLabels.value[row.hazardLevel] || row.hazardLevel,
-              sourceType: sourceLabels.value[row.sourceType] || row.sourceType,
+                statusOptions.value.find((item) => item.value === row.status)?.label ||
+                '未识别状态',
+              hazardLevel: hazardLevelLabels.value[row.hazardLevel] || '未识别等级',
+              sourceType: sourceLabels.value[row.sourceType] || '未识别来源',
               reportedAt: formatDateTime(row.reportedAt),
               rectificationDeadline: formatDateTime(row.rectificationDeadline),
               rectificationCompletedAt: formatDateTime(row.rectificationCompletedAt),
@@ -480,7 +481,7 @@
       prop: 'sourceType',
       label: '隐患来源',
       width: 132,
-      formatter: (row) => sourceLabels.value[row.sourceType] || row.sourceType
+      formatter: (row) => sourceLabels.value[row.sourceType] || '未识别来源'
     },
     {
       prop: 'operation',

@@ -244,14 +244,14 @@
   const trendTotal = computed(() => trendValues.value.reduce((total, count) => total + count, 0))
   const levelChartData = computed<PieDataItem[]>(() =>
     state.data.levels.map((item) => ({
-      name: userStore.getDictLabelByValue('smisAccidentLevel', item.value) || item.value,
+      name: userStore.getDictLabelByValue('smisAccidentLevel', item.value) || '未识别等级',
       value: item.count
     }))
   )
   const visibleCategories = computed(() => state.data.categories.slice(0, 10))
   const categoryLabels = computed(() =>
     visibleCategories.value.map(
-      (item) => userStore.getDictLabelByValue('smisAccidentCategory', item.value) || item.value
+      (item) => userStore.getDictLabelByValue('smisAccidentCategory', item.value) || '未识别类别'
     )
   )
   const categoryValues = computed(() => visibleCategories.value.map((item) => item.count))

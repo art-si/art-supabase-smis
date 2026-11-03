@@ -345,7 +345,7 @@
   ]
 
   const categoryLabel = (value: SmisCertificateCategory): string =>
-    userStore.getDictLabelByValue('smisCertificateCategory', value) || value || '未维护'
+    userStore.getDictLabelByValue('smisCertificateCategory', value) || '未识别类别'
   const periodLabel = computed(() =>
     query.value.dateRange?.length === 2
       ? `${query.value.dateRange[0]} — ${query.value.dateRange[1]}`
@@ -443,9 +443,7 @@
   const educationLabels = computed(() =>
     state.data.educationDistribution.map(
       (item) =>
-        userStore.getDictLabelByValue('hrEducationLevel', item.educationLevel) ||
-        item.educationLevel ||
-        '未维护'
+        userStore.getDictLabelByValue('hrEducationLevel', item.educationLevel) || '未识别学历'
     )
   )
   const educationSeries = computed<BarDataItem[]>(() => [
@@ -547,8 +545,7 @@
       dimensionLabel: dimensionNames[item.dimension],
       valueLabel:
         userStore.getDictLabelByValue(dimensionDictionary[item.dimension], item.value) ||
-        item.value ||
-        '未维护'
+        '未识别类别'
     }))
   const safetyManagerTypeRows = computed(() => toDimensionRows(state.data.safetyManagerTypes))
   const registeredEngineerTypeRows = computed(() =>

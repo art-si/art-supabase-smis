@@ -121,7 +121,8 @@ export async function fetchSafetyTrainingRecordList(
 
 export async function saveSafetyTrainingRecord(
   params: SmisSafetyTrainingRecordSavePayload,
-  submit = false
+  submit = false,
+  feedback: ApiFeedbackOptions = {}
 ) {
   return await responseHandle<string>(
     () =>
@@ -131,7 +132,8 @@ export async function saveSafetyTrainingRecord(
         p_submit: submit
       }),
     {
-      showMessage: true,
+      showMessage: feedback.showMessage ?? true,
+      showErrorMessage: feedback.showErrorMessage ?? true,
       breakReturn: true,
       message: submit ? '培训记录已归档，计划已完成' : '培训记录草稿已保存'
     }

@@ -83,6 +83,7 @@
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import { notifyFriendlyError, useArtFeedback } from '@/hooks/core/useArtFeedback'
   import { useUserStore } from '@/store/modules/user'
+  import { getDictionaryDisplayLabel } from '@/utils/form/option'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
     ArtTableQueryExpose,
@@ -134,6 +135,12 @@
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const deleteReference = useMasterDataDeleteProcessingContext()
   const userStore = useUserStore()
+  // 计量单位兼容历史自由文本；已登记的单位仍优先使用字典名称。
+  const unitLabel = (unit: string): string =>
+    getDictionaryDisplayLabel(userStore.getDictDisplayItemByValue('smisMaterialUnit', unit), unit, {
+      emptyText: '',
+      unknownText: unit
+    })
   const { defaultWriteTenantId } = useTenantScopeFormPolicy()
   const { confirmAction } = useArtFeedback()
   const recordDialogRef = ref<RecordDialogExpose>()
@@ -291,11 +298,7 @@
   }
 
   const printRecord = (row: SmisToolIssuanceRecord): void => {
-    printIssuanceRecord(
-      row,
-      '工器具',
-      (value) => userStore.getDictLabelByValue('smisMaterialUnit', value) || value
-    )
+    printIssuanceRecord(row, '工器具', unitLabel)
   }
 
   const headerActions = computed<ArtTableQueryHeaderAction[]>(() => [
@@ -409,10 +412,7 @@
         ).data.map((row) => ({
           ...row,
           itemsText: row.items
-            .map(
-              (item) =>
-                `${item.materialName} ${item.issueQuantity}${userStore.getDictLabelByValue('smisMaterialUnit', item.unit) || item.unit}`
-            )
+            .map((item) => `${item.materialName} ${item.issueQuantity}${unitLabel(item.unit)}`)
             .join('；')
         }))
       })
@@ -458,10 +458,7 @@
       showOverflowTooltip: true,
       formatter: (row) =>
         row.items
-          .map(
-            (item) =>
-              `${item.materialName} × ${item.issueQuantity}${userStore.getDictLabelByValue('smisMaterialUnit', item.unit) || item.unit}`
-          )
+          .map((item) => `${item.materialName} × ${item.issueQuantity}${unitLabel(item.unit)}`)
           .join('；')
     },
     {

@@ -296,7 +296,7 @@
     state.data.details.map((row) => ({
       ...row,
       status:
-        userStore.getDictLabelByValue('smisRiskInspectionTaskStatus', row.status) || row.status,
+        userStore.getDictLabelByValue('smisRiskInspectionTaskStatus', row.status) || '未识别状态',
       frequency: frequencyLabel(row.frequencyUnit, row.repeatFrequency),
       plannedStartAt: formatDateTime(row.plannedStartAt),
       plannedEndAt: formatDateTime(row.plannedEndAt),

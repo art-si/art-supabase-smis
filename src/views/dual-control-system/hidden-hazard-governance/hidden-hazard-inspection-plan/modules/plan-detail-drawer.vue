@@ -11,7 +11,11 @@
   >
     <div v-if="detail" class="hidden-hazard-plan-detail">
       <div class="hidden-hazard-plan-detail__identity">
-        <span aria-hidden="true"><ArtSvgIcon icon="ri:calendar-check-line" /></span>
+        <span
+          aria-hidden="true"
+          class="grid size-[46px] place-items-center [color:var(--theme-color)] [background:var(--default-box-color)] [border-radius:var(--el-border-radius-base)]"
+          ><ArtSvgIcon icon="ri:calendar-check-line"
+        /></span>
         <div
           ><small>计划编号</small><strong>{{ detail.planNo }}</strong
           ><p>{{ detail.planName }}</p></div
@@ -168,16 +172,6 @@
       background: color-mix(in srgb, var(--theme-color) 7%, var(--default-box-color));
       border-left: 3px solid var(--theme-color);
       border-radius: var(--el-border-radius-base);
-
-      > span {
-        display: grid;
-        place-items: center;
-        width: 46px;
-        height: 46px;
-        color: var(--theme-color);
-        background: var(--default-box-color);
-        border-radius: var(--el-border-radius-base);
-      }
 
       small,
       strong,

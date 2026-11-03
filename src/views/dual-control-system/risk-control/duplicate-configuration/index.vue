@@ -203,7 +203,7 @@
     menus.value.find((i) => i.id === row.menuId)?.title || row.menu?.title || row.menuId
   const repeatRule = (row: SmisDuplicateConfiguration) =>
     row.repeatEnabled
-      ? `每 ${row.repeatFrequency || 1} ${unitOptions.value.find((i) => i.value === row.frequencyUnit)?.label || row.frequencyUnit || ''}`
+      ? `每 ${row.repeatFrequency || 1} ${unitOptions.value.find((i) => i.value === row.frequencyUnit)?.label || (row.frequencyUnit ? '未识别频率单位' : '')}`
       : '不重复'
   const calendarRule = (row: SmisDuplicateConfiguration) =>
     row.calendarType === 'week'
@@ -349,7 +349,7 @@
             }
             effect="plain"
           >
-            {statusOptions.value.find((i) => i.value === row.status)?.label || row.status}
+            {statusOptions.value.find((i) => i.value === row.status)?.label || '未识别状态'}
           </ElTag>
         )
       },

@@ -342,7 +342,7 @@
     state.data.attendanceStats.map((item) => ({
       name:
         userStore.getDictLabelByValue('smisSafetyTrainingAttendanceStatus', item.value) ||
-        item.value,
+        '未识别出勤状态',
       value: item.count
     }))
   )
@@ -353,7 +353,7 @@
     dimensionStats.value.map(
       (item) =>
         userStore.getDictLabelByValue(dimensionDict[activeDimension.value], item.value) ||
-        item.value
+        '未识别类别'
     )
   )
   const dimensionValues = computed<BarDataItem[]>(() => [

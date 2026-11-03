@@ -295,10 +295,7 @@
   const categoryValues = computed(() => categoryStats.value.map((item) => item.count))
   const sourceChartData = computed<PieDataItem[]>(() =>
     state.data.sourceStats.map((item) => ({
-      name:
-        userStore.getDictLabelByValue('smisHiddenHazardSourceType', item.value) ||
-        item.value ||
-        '—',
+      name: userStore.getDictLabelByValue('smisHiddenHazardSourceType', item.value) || '未识别来源',
       value: item.count
     }))
   )
@@ -407,15 +404,12 @@
     state.data.hazardDetails.map((row) => ({
       ...row,
       hazardLevel:
-        userStore.getDictLabelByValue('smisHazardLevel', row.hazardLevel) || row.hazardLevel || '—',
+        userStore.getDictLabelByValue('smisHazardLevel', row.hazardLevel) || '未识别等级',
       status:
         userStore.getDictLabelByValue('smisHiddenHazardGovernanceStatus', row.status) ||
-        row.status ||
-        '—',
+        '未识别状态',
       sourceType:
-        userStore.getDictLabelByValue('smisHiddenHazardSourceType', row.sourceType) ||
-        row.sourceType ||
-        '—',
+        userStore.getDictLabelByValue('smisHiddenHazardSourceType', row.sourceType) || '未识别来源',
       reportedAt: formatDateTime(row.reportedAt),
       rectificationDeadline: formatDateTime(row.rectificationDeadline),
       rectificationCompletedAt: formatDateTime(row.rectificationCompletedAt),

@@ -464,12 +464,12 @@
       const groupedRows: ReportExportRow[] = rows.value.map((row) => ({
         recordType: '执行分析',
         organizationName: row.organizationName,
-        planCategory: userStore.getDictDisplayLabelByValue(
+        planCategory: userStore.getDictLabelByValue(
           'smisEmergencyPlanCategory',
           row.planCategory,
           row.planCategory || '—'
         ),
-        planLevel: userStore.getDictDisplayLabelByValue(
+        planLevel: userStore.getDictLabelByValue(
           'smisEmergencyPlanLevel',
           row.planLevel,
           row.planLevel || '—'
@@ -488,12 +488,12 @@
       const outstandingRows: ReportExportRow[] = outstanding.value.map((row) => ({
         recordType: '未兑现计划',
         organizationName: row.organizationName,
-        planCategory: userStore.getDictDisplayLabelByValue(
+        planCategory: userStore.getDictLabelByValue(
           'smisEmergencyPlanCategory',
           row.planCategory,
           row.planCategory || '—'
         ),
-        planLevel: userStore.getDictDisplayLabelByValue(
+        planLevel: userStore.getDictLabelByValue(
           'smisEmergencyPlanLevel',
           row.planLevel,
           row.planLevel || '—'
