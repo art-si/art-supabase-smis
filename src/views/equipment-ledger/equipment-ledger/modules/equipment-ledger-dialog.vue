@@ -308,7 +308,11 @@
       label: field.unit ? `${field.label}（${field.unit}）` : field.label,
       key: `specialParameters.${field.key}`,
       type: field.type,
-      options: field.dictCode ? dictOptions(field.dictCode) : field.options,
+      options: field.dictCode
+        ? dictOptions(field.dictCode).filter(
+            (item) => !field.allowedValues || field.allowedValues.includes(String(item.value))
+          )
+        : undefined,
       props:
         field.type === 'number'
           ? {

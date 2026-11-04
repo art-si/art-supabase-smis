@@ -99,6 +99,7 @@
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
   import { useUserStore } from '@/store/modules/user'
+  import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
@@ -132,13 +133,9 @@
     major: 0,
     controlled: 0
   })
-  const controlLevelOptions: Array<{ label: string; value: SmisRiskControlLevel }> = [
-    { label: '公司级（厂级）', value: 'company' },
-    { label: '车间（部门级）', value: 'department' },
-    { label: '班组级', value: 'team' },
-    { label: '岗位级', value: 'position' }
-  ]
-  const controlLevelLabel = new Map(controlLevelOptions.map((item) => [item.value, item.label]))
+  const controlLevelOptions = useDictionaryOptions<SmisRiskControlLevel>('smisRiskControlLevel')
+  const controlLevelLabel = (value: SmisRiskControlLevel): string =>
+    controlLevelOptions.find((item) => item.value === value)?.label || value
   const evaluationRate = computed(() =>
     overview.total ? Math.round((overview.evaluated / overview.total) * 100) : 0
   )
@@ -327,8 +324,7 @@
       formatter: (row) => (
         <div class="risk-summary-page__responsibility">
           <span>
-            {row.controlLevels.map((item) => controlLevelLabel.get(item)).join('、') ||
-              '未配置层级'}
+            {row.controlLevels.map((item) => controlLevelLabel(item)).join('、') || '未配置层级'}
           </span>
           <strong>{row.responsibleNames || '待落实'}</strong>
           <small>{row.responsibleDepartments || '未关联责任部门'}</small>
@@ -368,7 +364,7 @@
           (row) => ({
             ...row,
             accidentTypes: row.accidentTypes.join('、'),
-            controlLevels: row.controlLevels.map((item) => controlLevelLabel.get(item)).join('、'),
+            controlLevels: row.controlLevels.map((item) => controlLevelLabel(item)).join('、'),
             identifiedAt: dayjs(row.identifiedAt).format('YYYY-MM-DD HH:mm')
           })
         )

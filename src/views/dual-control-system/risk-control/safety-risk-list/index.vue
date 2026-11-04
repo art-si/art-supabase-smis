@@ -65,6 +65,7 @@
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
 
   import { useUserStore } from '@/store/modules/user'
+  import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
   import ArtPermissionGuard from '@/components/core/feedback/art-permission-guard/index.vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -78,7 +79,6 @@
     fetchSafetyRiskList,
     fetchSafetyRiskOptions,
     type SmisRiskControlLevel,
-    type SmisRiskItemStatus,
     type SmisSafetyRiskOptions,
     type SmisSafetyRiskOverview,
     type SmisSafetyRiskRecord,
@@ -115,32 +115,14 @@
     major: 0,
     controlled: 0
   })
-  const fallbackControlLevels: Array<{ label: string; value: SmisRiskControlLevel }> = [
-    { label: '公司级（厂级）', value: 'company' },
-    { label: '车间（部门级）', value: 'department' },
-    { label: '班组级', value: 'team' },
-    { label: '岗位级', value: 'position' }
-  ]
-  const controlLevelOptions = computed(() => {
-    const dictionary = getDictMap.value.smisRiskControlLevel ?? []
-    return dictionary.length
-      ? dictionary.map((item) => ({
-          label: item.label || item.name,
-          value: item.value as SmisRiskControlLevel
-        }))
-      : fallbackControlLevels
-  })
+  const controlLevelOptions = useDictionaryOptions<SmisRiskControlLevel>('smisRiskControlLevel')
   const controlLevelLabel = computed(
-    () => new Map(controlLevelOptions.value.map((item) => [item.value, item.label]))
+    () => new Map(controlLevelOptions.map((item) => [item.value, item.label]))
   )
   const accidentTypeOptions = computed(() =>
     (getDictMap.value.smisAccidentCategory ?? []).map(toDictionaryOption)
   )
-  const statusOptions: Array<{ label: string; value: SmisRiskItemStatus }> = [
-    { label: '已辨识', value: 'identified' },
-    { label: '已评价', value: 'evaluated' },
-    { label: '已作废', value: 'voided' }
-  ]
+  const statusOptions = useDictionaryOptions('smisRiskItemStatus')
   const workspaceMetrics = computed<BusinessWorkspaceMetric[]>(() => [
     {
       label: '风险总数',
@@ -210,7 +192,7 @@
       label: '管控层级',
       key: 'controlLevel',
       type: 'select',
-      props: { options: controlLevelOptions.value, clearable: true, placeholder: '全部层级' }
+      props: { options: controlLevelOptions, clearable: true, placeholder: '全部层级' }
     },
     {
       label: '状态',

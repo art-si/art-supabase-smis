@@ -4,11 +4,6 @@ export type { SmisEquipmentProfileType } from '@smis/api/types'
 
 export type EquipmentProfileFieldType = 'input' | 'number' | 'date' | 'select'
 
-export interface EquipmentProfileOption {
-  label: string
-  value: string
-}
-
 export interface EquipmentProfileField {
   key: string
   label: string
@@ -16,7 +11,7 @@ export interface EquipmentProfileField {
   unit?: string
   placeholder?: string
   dictCode?: string
-  options?: EquipmentProfileOption[]
+  allowedValues?: readonly string[]
   precision?: number
 }
 
@@ -41,12 +36,6 @@ export const EQUIPMENT_PROFILE_OPTIONS: Array<{
   { label: '安全阀', value: 'safety_valve' },
   { label: '压力表', value: 'pressure_gauge' },
   { label: '气瓶', value: 'gas_cylinder' }
-]
-
-const registrationStatusOptions: EquipmentProfileOption[] = [
-  { label: '已注册', value: 'registered' },
-  { label: '注册中', value: 'registering' },
-  { label: '未注册', value: 'unregistered' }
 ]
 
 const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefinition> = {
@@ -107,7 +96,8 @@ const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefini
         key: 'pipelineCategory',
         label: '类别',
         type: 'select',
-        options: ['GC1', 'GC2', 'GC3', 'GD1', 'GD2'].map((value) => ({ label: value, value }))
+        dictCode: 'smisPipelineCategory',
+        allowedValues: ['GC1', 'GC2', 'GC3', 'GD1', 'GD2']
       },
       { key: 'workingMedium', label: '工作介质', type: 'input' },
       { key: 'designPressure', label: '设计压力', type: 'number', unit: 'MPa', precision: 3 },
@@ -127,7 +117,8 @@ const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefini
         key: 'machineryCategory',
         label: '起重机械类别',
         type: 'select',
-        options: [
+        dictCode: 'smisMachineryCategory',
+        allowedValues: [
           '电动单梁起重机',
           '冶金桥式起重机',
           '通用桥式起重机',
@@ -137,7 +128,7 @@ const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefini
           '通用门式起重机',
           '旧目录起重机',
           '其他起重机械'
-        ].map((value) => ({ label: value, value }))
+        ]
       },
       {
         key: 'mainHookLiftingSpeed',
@@ -192,13 +183,15 @@ const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefini
         key: 'elevatorCategory',
         label: '电梯类别',
         type: 'select',
-        options: ['客梯', '货梯', '客货两用梯'].map((value) => ({ label: value, value }))
+        dictCode: 'smisElevatorCategory',
+        allowedValues: ['客梯', '货梯', '客货两用梯']
       },
       {
         key: 'registrationStatus',
         label: '注册状态',
         type: 'select',
-        options: registrationStatusOptions
+        dictCode: 'smisEquipmentRegistrationStatus',
+        allowedValues: ['registered', 'registering', 'unregistered']
       },
       { key: 'emergencyPhone', label: '紧急电话', type: 'input' },
       { key: 'maintenanceExpiryDate', label: '维保有效期', type: 'date' }
@@ -215,7 +208,8 @@ const equipmentProfiles: Record<SmisEquipmentProfileType, EquipmentProfileDefini
         key: 'registrationStatus',
         label: '注册状态',
         type: 'select',
-        options: registrationStatusOptions
+        dictCode: 'smisEquipmentRegistrationStatus',
+        allowedValues: ['registered', 'registering', 'unregistered']
       }
     ]
   },

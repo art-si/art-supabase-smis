@@ -88,21 +88,12 @@
   const organizationProps = { label: 'organizationName', children: 'children' }
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const defaultRiskTypeOptions: Array<{ label: string; value: SmisRiskPointType }> = [
-    { label: '未选择', value: 'unset' },
-    { label: '部位场所', value: 'location' },
-    { label: '设备设施', value: 'equipment' },
-    { label: '作业活动', value: 'activity' }
-  ]
-  const riskTypeOptions = computed<Array<{ label: string; value: SmisRiskPointType }>>(() => {
-    const dictionary = getDictMap.value.smisRiskPointType ?? []
-    return dictionary.length
-      ? dictionary.map((item) => ({
-          label: item.label || item.name,
-          value: item.value as SmisRiskPointType
-        }))
-      : defaultRiskTypeOptions
-  })
+  const riskTypeOptions = computed<Array<{ label: string; value: SmisRiskPointType }>>(() =>
+    (getDictMap.value.smisRiskPointType ?? []).map((item) => ({
+      label: item.label || item.name,
+      value: item.value as SmisRiskPointType
+    }))
+  )
   const initial = (): RiskPointForm => ({
     pointName: '',
     riskType: 'unset',

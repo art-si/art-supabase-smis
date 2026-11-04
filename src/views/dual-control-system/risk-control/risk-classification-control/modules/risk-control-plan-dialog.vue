@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
   import { normalizeNullableText } from '@/utils/form/normalize'
+  import { useDictionaryOptions } from '@/hooks/core/useDictionaryOptions'
   import dayjs from 'dayjs'
   import type { FormRules } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
@@ -85,17 +86,10 @@
     duplicateConfigurations: []
   })
   const submitting = ref(false)
-  const controlLevelOptions: Array<{ label: string; value: SmisRiskControlLevel }> = [
-    { label: '公司级（厂级）', value: 'company' },
-    { label: '车间（部门级）', value: 'department' },
-    { label: '班组级', value: 'team' },
-    { label: '岗位级', value: 'position' }
-  ]
-  const controlLevelLabel = new Map(controlLevelOptions.map((item) => [item.value, item.label]))
-  const statusOptions = [
-    { label: '管控中', value: 'active' },
-    { label: '已停用', value: 'suspended' }
-  ]
+  const controlLevelOptions = useDictionaryOptions<SmisRiskControlLevel>('smisRiskControlLevel')
+  const controlLevelLabel = (value: SmisRiskControlLevel): string =>
+    controlLevelOptions.find((item) => item.value === value)?.label || value
+  const statusOptions = useDictionaryOptions('smisRiskControlStatus')
   const initial = (): ControlForm => ({
     id: null,
     riskPointId: '',
@@ -223,7 +217,7 @@
     ...form.value.assignments.flatMap((assignment, index): FormItem[] => [
       {
         key: 'assignmentSection' + assignment.controlLevel,
-        label: controlLevelLabel.get(assignment.controlLevel) || assignment.controlLevel,
+        label: controlLevelLabel(assignment.controlLevel),
         type: 'divider',
         span: 24,
         description: '责任人、巡查频率与层级要求'
@@ -238,8 +232,7 @@
         },
         props: {
           title: '选择管控责任人',
-          subtitle:
-            (controlLevelLabel.get(assignment.controlLevel) || '') + '责任人来自当前租户员工花名册',
+          subtitle: controlLevelLabel(assignment.controlLevel) + '责任人来自当前租户员工花名册',
           selectedData: assignment.employeeSelection,
           'onUpdate:selectedData': (value: EmployeeIntegrationItem[]) => {
             assignment.employeeSelection = value

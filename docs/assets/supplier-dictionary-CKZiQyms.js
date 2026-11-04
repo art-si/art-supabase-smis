@@ -1,0 +1,1 @@
+var e=[`supplierCategory`,`supplierType`,`enterpriseNature`,`supplierIndustry`],t=(e,t)=>(t??[]).filter(e=>!e.status||e.status===`1`).map(e=>({label:String(e.label||e.name||e.value||``),value:String(e.value??``)})),n=(e,n,r)=>t(e,r).find(e=>e.value===n)?.label||n||``;export{t as n,n as r,e as t};

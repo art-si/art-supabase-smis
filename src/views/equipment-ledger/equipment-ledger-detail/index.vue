@@ -374,8 +374,6 @@
         const value = row.specialParameters?.[field.key]
         if (field.dictCode)
           return value ? <ArtDictDisplay dictCode={field.dictCode} value={String(value)} /> : '--'
-        if (field.options)
-          return field.options.find((item) => item.value === value)?.label || value || '--'
         return value === undefined || value === null || value === '' ? '--' : String(value)
       }
     }))

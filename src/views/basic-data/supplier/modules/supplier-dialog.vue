@@ -318,6 +318,15 @@
           await Promise.all(
             SUPPLIER_DICTIONARY_CODES.map((code) => userStore.ensureDictLoaded(code))
           )
+          if (
+            SUPPLIER_DICTIONARY_CODES.some(
+              (code) => !getSupplierDictionaryOptions(code, getDictMap.value[code]).length
+            )
+          )
+            throw new Error('供应商分类字典未配置，请联系管理员维护后重试')
+        } catch (error) {
+          notifyFriendlyError(error, '供应商选项加载失败，请重新打开后重试')
+          await api.handleClose()
         } finally {
           api.setLoading(false)
         }

@@ -58,6 +58,7 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { useSupplierDelete } from '@/hooks/core/useSupplierDelete'
+  import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
   import { useUserStore } from '@/store/modules/user'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -406,7 +407,11 @@
     removeSuppliers([row], () => tableQueryRef.value?.refreshRemove())
 
   onMounted(async () => {
-    await Promise.all(SUPPLIER_DICTIONARY_CODES.map((code) => userStore.ensureDictLoaded(code)))
+    try {
+      await Promise.all(SUPPLIER_DICTIONARY_CODES.map((code) => userStore.ensureDictLoaded(code)))
+    } catch (error) {
+      notifyFriendlyError(error, '供应商分类字典加载失败，请刷新页面重试')
+    }
   })
 </script>
 

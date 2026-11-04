@@ -133,13 +133,9 @@
     active: 0,
     major: 0
   })
-  const controlLevelOptions: Array<{ label: string; value: SmisRiskControlLevel }> = [
-    { label: '公司级（厂级）', value: 'company' },
-    { label: '车间（部门级）', value: 'department' },
-    { label: '班组级', value: 'team' },
-    { label: '岗位级', value: 'position' }
-  ]
-  const controlLevelLabel = new Map(controlLevelOptions.map((item) => [item.value, item.label]))
+  const controlLevelOptions = useDictionaryOptions<SmisRiskControlLevel>('smisRiskControlLevel')
+  const controlLevelLabel = (value: SmisRiskControlLevel): string =>
+    controlLevelOptions.find((item) => item.value === value)?.label || value
   const riskTypeOptions = computed(() =>
     (getDictMap.value.smisRiskPointType ?? []).map(toDictionaryOption)
   )
@@ -325,7 +321,7 @@
         row.controlLevels.length ? (
           <div class="risk-control-page__tags">
             {row.controlLevels.map((item) => (
-              <ElTag effect="plain">{controlLevelLabel.get(item)}</ElTag>
+              <ElTag effect="plain">{controlLevelLabel(item)}</ElTag>
             ))}
           </div>
         ) : (
@@ -348,7 +344,7 @@
           {row.assignments.length ? (
             row.assignments.map((item) => (
               <span>
-                <b>{controlLevelLabel.get(item.controlLevel)}</b>
+                <b>{controlLevelLabel(item.controlLevel)}</b>
                 <small>{item.frequencyLabel}</small>
               </span>
             ))
@@ -498,7 +494,7 @@
             ...row,
             accidentTypes: row.accidentTypes.join('、'),
             controlLevels: row.assignments
-              .map((item) => controlLevelLabel.get(item.controlLevel))
+              .map((item) => controlLevelLabel(item.controlLevel))
               .join('|'),
             responsibleEmployees: row.assignments
               .map((item) => item.responsibleEmployeeNo || item.responsibleEmployeeName)
