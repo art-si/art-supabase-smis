@@ -81,11 +81,11 @@
 
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
-  const { getDictMap, getUserInfo } = storeToRefs(userStore)
-  const { effectiveTenantId } = useTenantScopeFormPolicy()
+  const { getDictMap } = storeToRefs(userStore)
+  const { defaultWriteTenantId } = useTenantScopeFormPolicy()
   const dialogRef = ref<ArtDialogExpose<StorageLocationDialogOpenData>>()
   const formRef = ref<FormExpose>()
-  const targetTenantId = ref(getUserInfo.value.tenantId || '')
+  const targetTenantId = ref(defaultWriteTenantId.value || '')
   const responsibleSelection = shallowRef<EmployeeIntegrationItem[]>([])
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const source = reactive<{ tree: SmisStorageLocation[] }>({ tree: [] })
@@ -289,7 +289,7 @@
 
   const resetForm = async (): Promise<void> => {
     Object.assign(form.model, initialForm())
-    targetTenantId.value = effectiveTenantId.value || getUserInfo.value.tenantId || ''
+    targetTenantId.value = defaultWriteTenantId.value || ''
     source.tree = []
     responsibleSelection.value = []
     await nextTick()
@@ -323,12 +323,7 @@
 
   const handleOpen = async (data: StorageLocationDialogOpenData): Promise<void> => {
     await resetForm()
-    targetTenantId.value =
-      data.row?.tenantId ||
-      data.tenantId ||
-      effectiveTenantId.value ||
-      getUserInfo.value.tenantId ||
-      ''
+    targetTenantId.value = data.row?.tenantId || data.tenantId || defaultWriteTenantId.value || ''
     source.tree = data.allTenants
       ? data.tree.filter((location) => location.tenantId === targetTenantId.value)
       : data.tree

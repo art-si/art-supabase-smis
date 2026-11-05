@@ -71,12 +71,12 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { effectiveTenantId } = useTenantScopeFormPolicy()
+  const { defaultWriteTenantId } = useTenantScopeFormPolicy()
   const dialogRef = ref<ArtDialogExpose<MaterialCategoryDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const sourceTree = ref<SmisMaterialCategory[]>([])
-  const targetTenantId = ref(effectiveTenantId.value || '')
+  const targetTenantId = ref(defaultWriteTenantId.value || '')
   const initialForm = (): MaterialCategoryForm => ({
     id: undefined,
     parentId: undefined,
@@ -192,7 +192,7 @@
   const resetForm = async (): Promise<void> => {
     Object.assign(form.model, initialForm())
     sourceTree.value = []
-    targetTenantId.value = effectiveTenantId.value || ''
+    targetTenantId.value = defaultWriteTenantId.value || ''
     await nextTick()
     formRef.value?.clearValidate()
   }
@@ -218,7 +218,7 @@
   }
   const handleOpen = async (data: MaterialCategoryDialogOpenData): Promise<void> => {
     await resetForm()
-    targetTenantId.value = data.row?.tenantId || data.tenantId || effectiveTenantId.value || ''
+    targetTenantId.value = data.row?.tenantId || data.tenantId || defaultWriteTenantId.value || ''
     sourceTree.value = data.allTenants
       ? data.tree.filter((item) => !item.tenantId || item.tenantId === targetTenantId.value)
       : data.tree

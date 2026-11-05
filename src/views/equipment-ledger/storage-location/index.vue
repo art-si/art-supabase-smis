@@ -96,6 +96,7 @@
     type MasterDataDeleteResource
   } from '@/components/business/master-data-delete-guard/index.vue'
   import { useUserStore } from '@/store/modules/user'
+  import { useTenantScopeFormPolicy } from '@/hooks/core/useTenantScopeFormPolicy'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
   import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
@@ -184,7 +185,8 @@
     storageReferenceMeta
   )
   const userStore = useUserStore()
-  const { getDictMap, getUserInfo } = storeToRefs(userStore)
+  const { defaultWriteTenantId } = useTenantScopeFormPolicy()
+  const { getDictMap } = storeToRefs(userStore)
   const { effectiveTenantId, isAllTenants, scopeLabel } = storeToRefs(useTenantScopeStore())
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const tableQueryRef = ref<ArtTableQueryExpose>()
@@ -249,8 +251,7 @@
 
   const openDialog = (row?: SmisStorageLocation): void => {
     const selected = selectedLocation.value
-    const targetTenantId =
-      row?.tenantId || effectiveTenantId.value || getUserInfo.value.tenantId || ''
+    const targetTenantId = row?.tenantId || selected?.tenantId || defaultWriteTenantId.value || ''
     const presetParentId = !row && selected?.tenantId === targetTenantId ? selected?.id : undefined
     void dialogRef.value?.handleOpen({
       row,

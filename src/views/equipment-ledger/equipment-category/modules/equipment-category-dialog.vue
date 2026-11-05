@@ -83,7 +83,7 @@
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
-  const { effectiveTenantId } = useTenantScopeFormPolicy()
+  const { defaultWriteTenantId } = useTenantScopeFormPolicy()
   const dialogRef = ref<ArtDialogExpose<EquipmentCategoryDialogOpenData>>()
   const formRef = ref<FormExpose>()
   const treeUtils = new TreeUtils({
@@ -96,7 +96,7 @@
     tree: SmisEquipmentCategory[]
     inspectionOptions: SmisEquipmentInspectionCategory[]
   }>({ tree: [], inspectionOptions: [] })
-  const targetTenantId = ref(effectiveTenantId.value || '')
+  const targetTenantId = ref(defaultWriteTenantId.value || '')
 
   const initialForm = (): EquipmentCategoryForm => ({
     id: undefined,
@@ -283,7 +283,7 @@
 
   const resetForm = async (): Promise<void> => {
     Object.assign(form.model, initialForm())
-    targetTenantId.value = effectiveTenantId.value || ''
+    targetTenantId.value = defaultWriteTenantId.value || ''
     Object.assign(source, { tree: [], inspectionOptions: [] })
     await nextTick()
     formRef.value?.clearValidate()
@@ -315,7 +315,7 @@
 
   const handleOpen = async (data: EquipmentCategoryDialogOpenData): Promise<void> => {
     await resetForm()
-    targetTenantId.value = data.row?.tenantId || data.tenantId || effectiveTenantId.value || ''
+    targetTenantId.value = data.row?.tenantId || data.tenantId || defaultWriteTenantId.value || ''
     Object.assign(source, {
       tree: data.allTenants
         ? data.tree.filter((item) => !item.tenantId || item.tenantId === targetTenantId.value)

@@ -87,6 +87,7 @@
 
   import { useUserStore } from '@/store/modules/user'
   import { useTenantScopeStore } from '@/store/modules/tenant-scope'
+  import { useTenantScopeFormPolicy } from '@/hooks/core/useTenantScopeFormPolicy'
   import TreeUtils from '@/utils/tree'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -143,8 +144,9 @@
     error: string | null
   }
   const userStore = useUserStore()
-  const { getDictMap, getUserInfo } = storeToRefs(userStore)
-  const { effectiveTenantId, isAllTenants } = storeToRefs(useTenantScopeStore())
+  const { defaultWriteTenantId } = useTenantScopeFormPolicy()
+  const { getDictMap } = storeToRefs(userStore)
+  const { isAllTenants } = storeToRefs(useTenantScopeStore())
   const treeUtils = new TreeUtils({ idKey: 'id', parentKey: 'parentId', childrenKey: 'children' })
   const tableQueryRef = ref<ArtTableQueryExpose>()
   const dialogRef = ref<DialogExpose>()
@@ -201,7 +203,7 @@
 
   const openDialog = (row?: SmisEquipmentCategory): void => {
     const targetTenantId =
-      row?.tenantId || effectiveTenantId.value || getUserInfo.value.tenantId || ''
+      row?.tenantId || selectedCategory.value?.tenantId || defaultWriteTenantId.value || ''
     void dialogRef.value?.handleOpen({
       row,
       tenantId: targetTenantId,
