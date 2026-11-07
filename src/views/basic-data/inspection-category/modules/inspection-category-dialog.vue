@@ -1,5 +1,5 @@
 <template>
-  <ArtDialog ref="dialogRef" size="md">
+  <ArtDialog ref="dialogRef" size="md" :confirm-disabled="!formRef?.readyToSubmit">
     <div class="inspection-category-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:filter-3-line" /></template>
@@ -58,18 +58,13 @@
     status: SmisInspectionCategoryStatus
   }
 
-  interface FormExpose {
-    validate: () => Promise<boolean>
-    clearValidate: () => void
-  }
-
   const emit = defineEmits<{ success: [type: 'add' | 'edit'] }>()
   const userStore = useUserStore()
   const tenantScopeStore = useTenantScopeStore()
   const { getDictMap, isPlatformSuper } = storeToRefs(userStore)
   const { tenantOptions } = storeToRefs(tenantScopeStore)
   const dialogRef = ref<ArtDialogExpose<InspectionCategoryDialogOpenData>>()
-  const formRef = ref<FormExpose>()
+  const formRef = ref<InstanceType<typeof ArtForm>>()
   const isNarrow = useMediaQuery('(max-width: 520px)')
   const fallbackTenantName = ref('当前租户')
   const isCreating = ref(true)
