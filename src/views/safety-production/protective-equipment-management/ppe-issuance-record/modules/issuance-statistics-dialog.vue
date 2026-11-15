@@ -55,6 +55,7 @@
     type SmisPpeIssuanceStatisticsRow,
     type SmisPpeScopeOption
   } from '@smis/api'
+  import '../../../shared/issuance-statistics-dialog.scss'
 
   interface FilterModel {
     dateRange: [string, string]
@@ -204,52 +205,3 @@
 
   defineExpose({ handleOpen })
 </script>
-
-<style scoped lang="scss">
-  .issuance-statistics {
-    &__filter-action {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin: -4px 0 16px;
-    }
-
-    &__summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    &__metric {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      padding: 12px 16px;
-      background: var(--art-gray-100);
-      border-radius: var(--el-border-radius-base);
-
-      span,
-      small {
-        color: var(--art-gray-700);
-      }
-
-      strong {
-        margin: 4px 0;
-        font-size: 24px;
-        font-variant-numeric: tabular-nums;
-        color: var(--art-gray-900);
-      }
-    }
-
-    @media (width <= 900px) {
-      &__summary {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      &__filter-action {
-        padding-bottom: 0;
-      }
-    }
-  }
-</style>
