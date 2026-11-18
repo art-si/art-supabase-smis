@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import type { SmisExamDetail, SmisExamQuestionSelection } from '@smis/api'
 
@@ -15,7 +15,6 @@ export const useExamSession = () => {
   const session = ref<SmisExamDetail>()
   const currentIndex = ref(0)
   const answers = reactive<Record<string, string[]>>({})
-  const singleAnswers = reactive<Record<string, string>>({})
   const nowTick = ref(Date.now())
 
   const { pause: pauseClock, resume: resumeClock } = useIntervalFn(
@@ -24,16 +23,6 @@ export const useExamSession = () => {
     },
     1000,
     { immediate: false }
-  )
-
-  watch(
-    singleAnswers,
-    (value) => {
-      Object.entries(value).forEach(([id, answer]) => {
-        answers[id] = answer ? [answer] : []
-      })
-    },
-    { deep: true }
   )
 
   const currentQuestion = computed<SmisExamQuestionSelection>(
@@ -59,10 +48,8 @@ export const useExamSession = () => {
     session.value = value
     currentIndex.value = 0
     Object.keys(answers).forEach((key) => delete answers[key])
-    Object.keys(singleAnswers).forEach((key) => delete singleAnswers[key])
     value?.questions.forEach((item) => {
       answers[item.id] = [...(item.answerValues ?? [])]
-      singleAnswers[item.id] = item.answerValues?.[0] ?? ''
     })
     nowTick.value = Date.now()
     if (value) resumeClock()
@@ -75,7 +62,6 @@ export const useExamSession = () => {
     session,
     currentIndex,
     answers,
-    singleAnswers,
     currentQuestion,
     answerProgress,
     remainingText,

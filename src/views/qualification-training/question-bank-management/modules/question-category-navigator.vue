@@ -4,6 +4,7 @@
     title="题库分类"
     subtitle="按培训主题分层组织题目"
     :loading="loading"
+    :loading-mode="data.length ? 'mask' : 'skeleton'"
     :error="error"
     :empty="!loading && !error && !data.length"
     empty-title="暂无题库分类"
@@ -51,6 +52,7 @@
           type="button"
           class="question-category-navigator__all smis-category-navigator__all"
           :class="{ 'is-current': selectedKey === ALL_KEY }"
+          :aria-pressed="selectedKey === ALL_KEY"
           @click="emit('select', ALL_KEY)"
         >
           <span aria-hidden="true"><ArtSvgIcon icon="ri:folder-open-line" /></span>
@@ -73,12 +75,14 @@
     <ElTree
       ref="treeRef"
       :data="data"
+      aria-label="题库分类树"
       :props="treeProps"
       :filter-node-method="filterNode"
       :default-expanded-keys="defaultExpandedKeys"
       node-key="id"
       highlight-current
       :expand-on-click-node="false"
+      @keydown.capture="handleSelectableTreeKeydown"
       @node-click="handleNodeClick"
     >
       <template #default="{ data: node }">
@@ -126,6 +130,7 @@
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisQuestionCategory } from '@smis/api'
   import '../../../components/category-navigator.scss'
 

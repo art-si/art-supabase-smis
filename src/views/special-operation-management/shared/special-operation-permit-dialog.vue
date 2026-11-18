@@ -114,14 +114,15 @@
         <div>
           <ElButton :disabled="submitting" @click="api.handleClose()">取消</ElButton>
           <ElButton
-            :disabled="!formRef?.readyToSubmit"
-            :loading="submitting && submitMode === 'draft'"
+            :disabled="submitting || !formRef?.readyToSubmit"
+            :loading="submitMode === 'draft'"
             @click="handleSave(false)"
             >保存草稿</ElButton
           >
           <ElButton
             type="primary"
-            :loading="submitting && submitMode === 'submit'"
+            :disabled="submitting"
+            :loading="submitMode === 'submit'"
             @click="handleSave(true)"
             >提交审批</ElButton
           >
@@ -209,8 +210,8 @@
   const blindPlateItemsRef = ref<InstanceType<typeof SpecialOperationBlindPlateItems>>()
   const aiPrecheckRef = ref<InstanceType<typeof SpecialOperationAiPrecheckPanel>>()
   const loading = ref(false)
-  const submitting = ref(false)
-  const submitMode = ref<'draft' | 'submit'>('draft')
+  const submitMode = ref<'draft' | 'submit'>()
+  const submitting = computed(() => submitMode.value !== undefined)
   const editingId = ref<string>()
   const sourcePermitNo = ref<string>()
   const tenantId = ref<string | null>(null)
@@ -884,39 +885,33 @@
   ])
 
   const handleSave = async (submit: boolean): Promise<void> => {
-    if (submit) {
-      const currentForm = formRef.value
-      if (!currentForm) return
-      const validation = currentForm.validate()
-      if (!validation) return
-      const valid = await validation.catch(() => false)
-      if (!valid) {
+    if (submitting.value) return
+    submitMode.value = submit ? 'submit' : 'draft'
+    try {
+      if (submit) {
+        const validation = formRef.value?.validate()
+        if (!validation || !(await validation.catch(() => false))) return
+        if (isBlindPlate.value) {
+          const tableValidation = await blindPlateItemsRef.value?.validate({ focus: false })
+          if (tableValidation && !tableValidation.valid) {
+            activePermitTab.value = 'section-1'
+            await nextTick()
+            if (tableValidation.firstError) {
+              await blindPlateItemsRef.value?.validateField(tableValidation.firstError.prop)
+              ElMessage.warning(tableValidation.firstError.message)
+            }
+            return
+          }
+        }
+      } else if (!form.value.operationTypeId) {
+        await formRef.value?.validateField('operationTypeId')
         return
       }
-      if (isBlindPlate.value) {
-        const tableValidation = await blindPlateItemsRef.value?.validate({ focus: false })
-        if (tableValidation && !tableValidation.valid) {
-          activePermitTab.value = 'section-1'
-          await nextTick()
-          if (tableValidation.firstError) {
-            await blindPlateItemsRef.value?.validateField(tableValidation.firstError.prop)
-            ElMessage.warning(tableValidation.firstError.message)
-          }
-          return
-        }
-      }
-    } else if (!form.value.operationTypeId) {
-      await formRef.value?.validateField('operationTypeId')
-      return
-    }
-    submitMode.value = submit ? 'submit' : 'draft'
-    submitting.value = true
-    try {
       await saveSpecialOperationPermit(editingId.value, buildPayload(), submit, tenantId.value)
       await dialogRef.value?.handleClose()
       emit('success')
     } finally {
-      submitting.value = false
+      submitMode.value = undefined
     }
   }
 

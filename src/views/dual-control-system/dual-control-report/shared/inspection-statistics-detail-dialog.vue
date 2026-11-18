@@ -20,7 +20,10 @@
         </div>
       </div>
 
-      <ElTabs v-model="activeTab" class="inspection-detail-dialog__tabs">
+      <ElTabs
+        v-model="activeTab"
+        class="inspection-detail-dialog__tabs art-card-xs art-overlay-tab-card"
+      >
         <ElTabPane
           :label="reportType === 'inspection_rate' ? '待排查明细' : '漏查明细'"
           name="tasks"

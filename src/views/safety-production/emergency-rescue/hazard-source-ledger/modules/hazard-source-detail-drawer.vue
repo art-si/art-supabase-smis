@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="危险源与责任"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionCard title="台账信息" subtitle="危险源识别、数量、地点与分级信息">

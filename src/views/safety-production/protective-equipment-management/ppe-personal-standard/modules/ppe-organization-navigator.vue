@@ -63,6 +63,7 @@
       highlight-current
       :expand-on-click-node="false"
       @node-click="handleNodeClick"
+      @keydown.capture="handleSelectableTreeKeydown"
     >
       <template #default="{ data: node }">
         <div
@@ -119,6 +120,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisPpeScopeOption } from '@smis/api'
 
   const ALL_KEY = 'all'

@@ -457,9 +457,9 @@
       }
     }
   )
-  const selectCategory = (key: string) => {
+  const selectCategory = async (key: string): Promise<void> => {
     searchQuery.value.categoryId = key === ALL_KEY ? undefined : key
-    void tableRef.value?.refreshUpdate()
+    await tableRef.value?.getData()
   }
   const refreshCategories = async () => {
     categoryLoading.value = true
@@ -497,8 +497,11 @@
       permission: 'SmisQuestionBankManagement:ManageCategory',
       remove: () => deleteQuestionCategory(row.id),
       onDeleted: async () => {
-        if (searchQuery.value.categoryId === row.id) searchQuery.value.categoryId = undefined
-        await tableRef.value?.refreshRemove()
+        if (searchQuery.value.categoryId === row.id) {
+          await selectCategory(ALL_KEY)
+        } else {
+          await tableRef.value?.refreshRemove()
+        }
       }
     })
   }

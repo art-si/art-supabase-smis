@@ -32,65 +32,33 @@
         />
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="任务计划"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle title="任务计划" subtitle="风险对象、管控责任与执行时限" />
-            <dl class="task-detail-drawer__plan-grid">
-              <div>
-                <dt>风险点类型</dt>
-                <dd
-                  ><ArtDictDisplay dict-code="smisRiskPointType" :value="detail.riskPointType"
-                /></dd>
-              </div>
-              <div>
-                <dt>风险等级</dt>
-                <dd>
-                  <span
-                    class="task-detail-drawer__risk"
-                    :style="{ '--risk-color': detail.riskLevelColor }"
-                  >
-                    {{ detail.riskLevelName || '待评价' }}
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt>管控层级</dt>
-                <dd
-                  ><ArtDictDisplay dict-code="smisRiskControlLevel" :value="detail.controlLevel"
-                /></dd>
-              </div>
-              <div>
-                <dt>管控责任人</dt>
-                <dd>{{ detail.responsibleEmployeeName }} · {{ detail.responsibleEmployeeNo }}</dd>
-              </div>
-              <div>
-                <dt>当前接收人</dt>
-                <dd>{{ detail.assigneeEmployeeName }} · {{ detail.assigneeEmployeeNo }}</dd>
-              </div>
-              <div>
-                <dt>实际执行人</dt>
-                <dd>{{ detail.actualExecutorEmployeeName || '尚未执行' }}</dd>
-              </div>
-              <div>
-                <dt>计划开始</dt>
-                <dd>{{ formatDate(detail.plannedStartAt) }}</dd>
-              </div>
-              <div>
-                <dt>计划完成</dt>
-                <dd>{{ formatDate(detail.plannedEndAt) }}</dd>
-              </div>
-              <div>
-                <dt>实际开始</dt>
-                <dd>{{ formatDate(detail.actualStartAt) }}</dd>
-              </div>
-              <div>
-                <dt>完成时间</dt>
-                <dd>{{ formatDate(detail.completedAt) }}</dd>
-              </div>
-            </dl>
-          </div></ElTabPane
-        >
+            <ArtDescriptions
+              :data="detail"
+              :items="planItems"
+              :columns="2"
+              :label-width="126"
+              empty-text=""
+            >
+              <template #item-riskPointType>
+                <ArtDictDisplay dict-code="smisRiskPointType" :value="detail.riskPointType" />
+              </template>
+              <template #item-riskLevelName>
+                <span
+                  class="task-detail-drawer__risk"
+                  :style="{ '--risk-color': detail.riskLevelColor }"
+                >
+                  {{ detail.riskLevelName || '待评价' }}
+                </span>
+              </template>
+              <template #item-controlLevel>
+                <ArtDictDisplay dict-code="smisRiskControlLevel" :value="detail.controlLevel" />
+              </template>
+            </ArtDescriptions> </div
+        ></ElTabPane>
         <ElTabPane name="section-1" label="执行情况"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle
@@ -167,6 +135,9 @@
 
 <script setup lang="ts">
   import { createDateTimeFormatter } from '@/utils/ui/format'
+  import { toNameCodeOption } from '@/utils/form/option'
+  import ArtDescriptions from '@/components/core/base/art-descriptions/index.vue'
+  import type { ArtDescriptionItem } from '@/components/core/base/art-descriptions/types'
   import ArtDrawer from '@/components/core/drawers/art-drawer/index.vue'
   import type { ArtDrawerExpose } from '@/components/core/drawers/art-drawer/types'
   import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
@@ -200,6 +171,40 @@
     emptyText: '—',
     invalidText: '—'
   })
+  const planItems: ArtDescriptionItem<SmisRiskInspectionTaskDetail>[] = [
+    { key: 'riskPointType', label: '风险点类型', field: 'riskPointType' },
+    { key: 'riskLevelName', label: '风险等级', field: 'riskLevelName' },
+    { key: 'controlLevel', label: '管控层级', field: 'controlLevel' },
+    {
+      key: 'responsibleEmployee',
+      label: '管控责任人',
+      value: (row) =>
+        toNameCodeOption({
+          id: row.responsibleEmployeeId ?? '',
+          name: row.responsibleEmployeeName,
+          code: row.responsibleEmployeeNo
+        }).label
+    },
+    {
+      key: 'assigneeEmployee',
+      label: '当前接收人',
+      value: (row) =>
+        toNameCodeOption({
+          id: row.assigneeEmployeeId ?? '',
+          name: row.assigneeEmployeeName,
+          code: row.assigneeEmployeeNo
+        }).label
+    },
+    {
+      key: 'actualExecutorEmployeeName',
+      label: '实际执行人',
+      value: (row) => row.actualExecutorEmployeeName || '尚未执行'
+    },
+    { key: 'plannedStartAt', label: '计划开始', value: (row) => formatDate(row.plannedStartAt) },
+    { key: 'plannedEndAt', label: '计划完成', value: (row) => formatDate(row.plannedEndAt) },
+    { key: 'actualStartAt', label: '实际开始', value: (row) => formatDate(row.actualStartAt) },
+    { key: 'completedAt', label: '完成时间', value: (row) => formatDate(row.completedAt) }
+  ]
   const eventLabels: Record<SmisRiskInspectionTaskEvent['eventType'], string> = {
     generated: '任务生成',
     transferred: '任务转交',
@@ -256,52 +261,6 @@
   .task-detail-drawer__status strong {
     margin: 2px 0;
     font-size: 16px;
-  }
-
-  .task-detail-drawer__plan-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: -8px 0 0;
-    overflow: hidden;
-    background: var(--default-box-color);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: var(--el-border-radius-base);
-  }
-
-  .task-detail-drawer__plan-grid > div {
-    display: grid;
-    grid-template-columns: 126px minmax(0, 1fr);
-    min-width: 0;
-    border-bottom: 1px solid var(--el-border-color-lighter);
-  }
-
-  .task-detail-drawer__plan-grid > div:nth-child(odd) {
-    border-right: 1px solid var(--el-border-color-lighter);
-  }
-
-  .task-detail-drawer__plan-grid > div:nth-last-child(-n + 2) {
-    border-bottom: 0;
-  }
-
-  .task-detail-drawer__plan-grid dt,
-  .task-detail-drawer__plan-grid dd {
-    min-width: 0;
-    padding: 11px 12px;
-    margin: 0;
-  }
-
-  .task-detail-drawer__plan-grid dt {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--el-text-color-secondary);
-    background: var(--el-fill-color-light);
-  }
-
-  .task-detail-drawer__plan-grid dd {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--el-text-color-regular);
-    white-space: nowrap;
   }
 
   .task-detail-drawer__risk {
@@ -367,9 +326,16 @@
 
   .task-detail-drawer__item-identity strong,
   .task-detail-drawer__item-identity small,
-  .task-detail-drawer__item-content small,
   .task-detail-drawer__item-content p,
   .task-detail-drawer__item-result small {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .task-detail-drawer__item-content small {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -430,18 +396,6 @@
   }
 
   @media (width <= 900px) {
-    .task-detail-drawer__plan-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .task-detail-drawer__plan-grid > div:nth-child(odd) {
-      border-right: 0;
-    }
-
-    .task-detail-drawer__plan-grid > div:nth-last-child(2) {
-      border-bottom: 1px solid var(--el-border-color-lighter);
-    }
-
     .task-detail-drawer__inspection-list > li {
       grid-template-columns: 34px minmax(0, 1fr);
     }

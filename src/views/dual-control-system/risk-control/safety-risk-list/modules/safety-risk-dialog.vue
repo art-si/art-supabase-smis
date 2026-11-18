@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
   import { toDictionaryOption } from '@/utils/form/option'
-  import { computed, onDeactivated, ref, shallowRef } from 'vue'
+  import { computed, onDeactivated, ref, shallowRef, unref } from 'vue'
   import { storeToRefs } from 'pinia'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -34,6 +34,7 @@
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import { useUserStore } from '@/store/modules/user'
   import {
     fetchRiskHazardWorkspace,
@@ -54,6 +55,7 @@
   const userStore = useUserStore()
   const { getDictMap } = storeToRefs(userStore)
   const dialogRef = ref<ArtDialogExpose<SafetyRiskDialogOpenData>>()
+  const activitySession = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const formRef = ref<InstanceType<typeof ArtForm>>()
   const row = shallowRef<SmisSafetyRiskRecord>()
   const options = shallowRef<SmisSafetyRiskOptions>({ riskPoints: [], hazardCategories: [] })
@@ -80,13 +82,15 @@
   }
 
   const loadActivities = async (riskPointId: string): Promise<void> => {
+    const requestVersion = activitySession.invalidate()
     activities.value = []
+    activityLoading.value = Boolean(riskPointId)
     if (!riskPointId) return
-    activityLoading.value = true
     try {
-      activities.value = (await fetchRiskHazardWorkspace(riskPointId)).activities
+      const workspace = await fetchRiskHazardWorkspace(riskPointId)
+      if (activitySession.isCurrent(requestVersion)) activities.value = workspace.activities
     } finally {
-      activityLoading.value = false
+      if (activitySession.isCurrent(requestVersion)) activityLoading.value = false
     }
   }
 
@@ -211,6 +215,9 @@
   }
 
   const handleOpen = async (data: SafetyRiskDialogOpenData): Promise<void> => {
+    activitySession.invalidate()
+    activities.value = []
+    activityLoading.value = false
     row.value = data.row
     options.value = data.options
     Object.assign(form.value, initial())

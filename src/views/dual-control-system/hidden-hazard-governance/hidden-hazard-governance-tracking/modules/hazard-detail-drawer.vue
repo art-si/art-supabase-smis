@@ -24,45 +24,34 @@
         />
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="隐患与证据"
           ><div class="min-w-0 space-y-4"
             ><ArtSectionTitle title="隐患信息" subtitle="位置、级别、来源和上报责任" />
-            <dl class="hazard-governance-detail__grid">
-              <div
-                ><dt>隐患位置</dt><dd>{{ detail.location }}</dd></div
-              >
-              <div>
-                <dt>隐患级别</dt>
-                <dd>
-                  <ArtDictDisplay
-                    dict-code="smisHazardLevel"
-                    :value="detail.hazardLevel"
-                    display="tag"
-                  />
-                </dd>
-              </div>
-              <div>
-                <dt>隐患来源</dt>
-                <dd>
-                  <ArtDictDisplay
-                    dict-code="smisHiddenHazardSourceType"
-                    :value="detail.sourceType"
-                    display="auto"
-                  />
-                </dd>
-              </div>
-              <div
-                ><dt>来源编号</dt><dd>{{ detail.sourceRecordNo || '—' }}</dd></div
-              >
-              <div>
-                <dt>上报人</dt>
-                <dd>{{ detail.reporterEmployeeName }} · {{ detail.reporterEmployeeNo }}</dd>
-              </div>
-              <div
-                ><dt>上报时间</dt><dd>{{ formatDate(detail.reportedAt) }}</dd></div
-              >
-            </dl>
+            <ArtDescriptions
+              class="hazard-governance-detail__grid"
+              :data="detail"
+              :items="informationItems"
+              :columns="2"
+              :tablet-columns="isCompact ? 1 : 2"
+              :label-width="120"
+              empty-text=""
+            >
+              <template #item-hazardLevel>
+                <ArtDictDisplay
+                  dict-code="smisHazardLevel"
+                  :value="detail.hazardLevel"
+                  display="tag"
+                />
+              </template>
+              <template #item-sourceType>
+                <ArtDictDisplay
+                  dict-code="smisHiddenHazardSourceType"
+                  :value="detail.sourceType"
+                  display="auto"
+                />
+              </template>
+            </ArtDescriptions>
             <div class="hazard-governance-detail__narrative">
               <strong>隐患描述</strong>
               <p>{{ detail.description }}</p>
@@ -78,45 +67,25 @@
           ><div class="min-w-0 space-y-4"
             ><template v-if="detail.approvedAt || detail.status !== 'pending_approval'">
               <ArtSectionTitle title="核准与整改" subtitle="核准结论、责任人、时限及整改证据" />
-              <dl class="hazard-governance-detail__grid">
-                <div>
-                  <dt>核准结论</dt>
-                  <dd>
-                    <ArtDictDisplay
-                      v-if="detail.approvalResult"
-                      dict-code="smisHiddenHazardApprovalResult"
-                      :value="detail.approvalResult"
-                      display="auto"
-                    />
-                    <span v-else>—</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>核准人</dt>
-                  <dd>{{
-                    employeeText(detail.approverEmployeeName, detail.approverEmployeeNo)
-                  }}</dd>
-                </div>
-                <div
-                  ><dt>核准时间</dt><dd>{{ formatDate(detail.approvedAt) }}</dd></div
-                >
-                <div
-                  ><dt>整改时限</dt><dd>{{ formatDate(detail.rectificationDeadline) }}</dd></div
-                >
-                <div>
-                  <dt>整改责任人</dt>
-                  <dd>{{
-                    employeeText(
-                      detail.rectificationResponsibleEmployeeName,
-                      detail.rectificationResponsibleEmployeeNo
-                    )
-                  }}</dd>
-                </div>
-                <div
-                  ><dt>整改完成时间</dt
-                  ><dd>{{ formatDate(detail.rectificationCompletedAt) }}</dd></div
-                >
-              </dl>
+              <ArtDescriptions
+                class="hazard-governance-detail__grid"
+                :data="detail"
+                :items="rectificationItems"
+                :columns="2"
+                :tablet-columns="isCompact ? 1 : 2"
+                :label-width="120"
+                empty-text=""
+              >
+                <template #item-approvalResult>
+                  <ArtDictDisplay
+                    v-if="detail.approvalResult"
+                    dict-code="smisHiddenHazardApprovalResult"
+                    :value="detail.approvalResult"
+                    display="auto"
+                  />
+                  <span v-else>—</span>
+                </template>
+              </ArtDescriptions>
               <div class="hazard-governance-detail__narrative">
                 <strong>{{ detail.approvalResult === 'close' ? '关闭原因' : '整改措施' }}</strong>
                 <p>{{
@@ -139,29 +108,25 @@
           ><div class="min-w-0 space-y-4"
             ><template v-if="detail.acceptedAt || detail.acceptanceResult">
               <ArtSectionTitle title="验收信息" subtitle="验收结论、验收说明与现场照片" />
-              <dl class="hazard-governance-detail__grid">
-                <div>
-                  <dt>验收结论</dt>
-                  <dd>
-                    <ArtDictDisplay
-                      v-if="detail.acceptanceResult"
-                      dict-code="smisHiddenHazardAcceptanceResult"
-                      :value="detail.acceptanceResult"
-                      display="auto"
-                    />
-                    <span v-else>—</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>验收人</dt>
-                  <dd>{{
-                    employeeText(detail.acceptorEmployeeName, detail.acceptorEmployeeNo)
-                  }}</dd>
-                </div>
-                <div
-                  ><dt>验收时间</dt><dd>{{ formatDate(detail.acceptedAt) }}</dd></div
-                >
-              </dl>
+              <ArtDescriptions
+                class="hazard-governance-detail__grid"
+                :data="detail"
+                :items="acceptanceItems"
+                :columns="2"
+                :tablet-columns="isCompact ? 1 : 2"
+                :label-width="120"
+                empty-text=""
+              >
+                <template #item-acceptanceResult>
+                  <ArtDictDisplay
+                    v-if="detail.acceptanceResult"
+                    dict-code="smisHiddenHazardAcceptanceResult"
+                    :value="detail.acceptanceResult"
+                    display="auto"
+                  />
+                  <span v-else>—</span>
+                </template>
+              </ArtDescriptions>
               <div class="hazard-governance-detail__narrative">
                 <strong>验收说明</strong>
                 <p>{{ detail.acceptanceDescription || '—' }}</p>
@@ -207,8 +172,11 @@
 </template>
 
 <script setup lang="tsx">
+  import { useMediaQuery } from '@vueuse/core'
   import { createDateTimeFormatter } from '@/utils/ui/format'
   import { ElImage } from 'element-plus'
+  import ArtDescriptions from '@/components/core/base/art-descriptions/index.vue'
+  import type { ArtDescriptionItem } from '@/components/core/base/art-descriptions/types'
   import ArtDrawer from '@/components/core/drawers/art-drawer/index.vue'
   import type { ArtDrawerExpose } from '@/components/core/drawers/art-drawer/types'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
@@ -255,6 +223,7 @@
     </section>
   )
   const activeDetailTab = ref('section-0')
+  const isCompact = useMediaQuery('(max-width: 900px)')
   const drawerRef = ref<ArtDrawerExpose<HazardDetailDrawerOpenData>>()
   const detail = shallowRef<SmisHiddenHazardGovernanceDetail | null>(null)
   const loading = ref(false)
@@ -265,6 +234,55 @@
   })
   const employeeText = (name?: string | null, no?: string | null): string =>
     name ? name + (no ? ' · ' + no : '') : '—'
+  const informationItems: ArtDescriptionItem<SmisHiddenHazardGovernanceDetail>[] = [
+    { key: 'location', label: '隐患位置', field: 'location' },
+    { key: 'hazardLevel', label: '隐患级别', field: 'hazardLevel' },
+    { key: 'sourceType', label: '隐患来源', field: 'sourceType' },
+    { key: 'sourceRecordNo', label: '来源编号', value: (data) => data.sourceRecordNo || '—' },
+    {
+      key: 'reporter',
+      label: '上报人',
+      value: (data) => `${data.reporterEmployeeName} · ${data.reporterEmployeeNo}`
+    },
+    { key: 'reportedAt', label: '上报时间', value: (data) => formatDate(data.reportedAt) }
+  ]
+  const rectificationItems: ArtDescriptionItem<SmisHiddenHazardGovernanceDetail>[] = [
+    { key: 'approvalResult', label: '核准结论', field: 'approvalResult' },
+    {
+      key: 'approver',
+      label: '核准人',
+      value: (data) => employeeText(data.approverEmployeeName, data.approverEmployeeNo)
+    },
+    { key: 'approvedAt', label: '核准时间', value: (data) => formatDate(data.approvedAt) },
+    {
+      key: 'rectificationDeadline',
+      label: '整改时限',
+      value: (data) => formatDate(data.rectificationDeadline)
+    },
+    {
+      key: 'rectificationResponsible',
+      label: '整改责任人',
+      value: (data) =>
+        employeeText(
+          data.rectificationResponsibleEmployeeName,
+          data.rectificationResponsibleEmployeeNo
+        )
+    },
+    {
+      key: 'rectificationCompletedAt',
+      label: '整改完成时间',
+      value: (data) => formatDate(data.rectificationCompletedAt)
+    }
+  ]
+  const acceptanceItems: ArtDescriptionItem<SmisHiddenHazardGovernanceDetail>[] = [
+    { key: 'acceptanceResult', label: '验收结论', field: 'acceptanceResult' },
+    {
+      key: 'acceptor',
+      label: '验收人',
+      value: (data) => employeeText(data.acceptorEmployeeName, data.acceptorEmployeeNo)
+    },
+    { key: 'acceptedAt', label: '验收时间', value: (data) => formatDate(data.acceptedAt) }
+  ]
   const handleOpen = async (data: HazardDetailDrawerOpenData): Promise<void> => {
     detail.value = null
     await drawerRef.value?.handleOpen(data, {
@@ -301,42 +319,7 @@
     }
 
     &__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
       margin: -8px 0 0;
-      overflow: hidden;
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__grid > div {
-      display: grid;
-      grid-template-columns: 120px minmax(0, 1fr);
-      border-bottom: 1px solid var(--el-border-color-lighter);
-    }
-
-    &__grid > div:nth-child(odd) {
-      border-right: 1px solid var(--el-border-color-lighter);
-    }
-
-    &__grid dt,
-    &__grid dd {
-      min-width: 0;
-      padding: 11px 12px;
-      margin: 0;
-    }
-
-    &__grid dt {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--el-text-color-secondary);
-      background: var(--el-fill-color-light);
-    }
-
-    &__grid dd {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     &__narrative,
@@ -394,16 +377,6 @@
 
     &__event-images {
       margin-top: 10px;
-    }
-
-    @media (width <= 900px) {
-      &__grid {
-        grid-template-columns: 1fr;
-      }
-
-      &__grid > div:nth-child(odd) {
-        border-right: 0;
-      }
     }
   }
 </style>

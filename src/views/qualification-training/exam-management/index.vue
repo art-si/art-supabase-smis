@@ -372,7 +372,8 @@
                   'is-answered': Boolean(answers[question.id]?.length)
                 }"
                 type="button"
-                @click="goQuestion(index)"
+                :disabled="sessionBusy"
+                @click="goQuestion(index, $event)"
                 >{{ index + 1 }}</button
               ></div
             ><ElProgress :percentage="answerProgress" :stroke-width="8" /></aside
@@ -387,37 +388,31 @@
                 <span>第 {{ currentIndex + 1 }} / {{ session.questions.length }} 题</span></div
               ><b>{{ currentQuestion.score }} 分</b></header
             ><h3>{{ currentQuestion.stem }}</h3
-            ><ElCheckboxGroup
-              v-if="currentQuestion.questionType === 'multiple'"
-              v-model="answers[currentQuestion.id]"
-              class="exam-session__answers"
-              ><ElCheckbox
-                v-for="option in currentQuestion.options"
-                :key="option.key"
-                :value="option.key"
-                ><b>{{ option.key }}</b
-                >{{ option.content }}</ElCheckbox
-              ></ElCheckboxGroup
-            ><ElRadioGroup
-              v-else
-              v-model="singleAnswers[currentQuestion.id]"
-              class="exam-session__answers"
-              ><ElRadio
-                v-for="option in currentQuestion.options"
-                :key="option.key"
-                :value="option.key"
-                ><b>{{ option.key }}</b
-                >{{ option.content }}</ElRadio
-              ></ElRadioGroup
-            ><footer
-              ><ElButton :disabled="currentIndex === 0" @click="goQuestion(currentIndex - 1)"
+            ><ArtForm
+              v-model="sessionAnswerForm.model"
+              :items="sessionAnswerForm.items"
+              :span="24"
+              :gutter="0"
+              :label-width="0"
+              class="exam-session__answer-form p-0!"
+            />
+            <footer
+              ><ElButton
+                :disabled="sessionBusy || currentIndex === 0"
+                @click="goQuestion(currentIndex - 1, $event)"
                 >上一题</ElButton
               ><ElButton
                 v-if="currentIndex < session.questions.length - 1"
                 type="primary"
-                @click="goQuestion(currentIndex + 1)"
+                :disabled="sessionBusy"
+                @click="goQuestion(currentIndex + 1, $event)"
                 >保存并下一题</ElButton
-              ><ElButton v-else type="success" :loading="submitting" @click="finishExam"
+              ><ElButton
+                v-else
+                type="success"
+                :loading="sessionPending === 'submit'"
+                :disabled="sessionBusy"
+                @click="finishExam"
                 >提交试卷</ElButton
               ></footer
             ></main
@@ -435,10 +430,10 @@
 
   import { toDictionaryOption } from '@/utils/form/option'
 
-  import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+  import { computed, nextTick, onMounted, reactive, ref, unref, watch } from 'vue'
   import { storeToRefs } from 'pinia'
   import type { FormRules } from 'element-plus'
-  import { ElButton, ElInputNumber, ElMessage } from 'element-plus'
+  import { ElButton, ElCheckbox, ElInputNumber, ElMessage, ElRadio } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
@@ -449,7 +444,9 @@
   import type { ColumnOption } from '@/types'
   import { buildSupabasePageRange } from '@/utils/supabase/pagination'
   import { loadAllDocumentPages } from '@/utils/business/document-detail-list'
-  import { useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { notifyFriendlyError, useArtFeedback } from '@/hooks/core/useArtFeedback'
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
+  import { getFocusedKeyboardButton, restoreButtonFocusIfLost } from '@/utils/ui/button-focus'
   import { useAuth } from '@/hooks/core/useAuth'
   import { useUserStore } from '@/store/modules/user'
   import TreeUtils from '@/utils/tree'
@@ -513,7 +510,7 @@
   const userStore = useUserStore()
   const { hasAuth } = useAuth()
   const { getDictMap } = storeToRefs(userStore)
-  const { confirm, confirmDelete } = useArtFeedback()
+  const { confirm } = useArtFeedback()
   const activeTab = ref<'paper' | 'record'>('paper')
   const paperTableRef = ref<ArtTableQueryExpose>()
   const recordTableRef = ref<ArtTableQueryExpose>()
@@ -522,6 +519,9 @@
   const selectedQuestionTableRef = ref<ArtTableExpose>()
   const detailDialogRef = ref<ArtDialogExpose>()
   const sessionDialogRef = ref<ArtDialogExpose>()
+  const examSession = useArtOverlaySession(() => Boolean(unref(sessionDialogRef.value?.visible)))
+  const sessionPending = ref<'navigate' | 'submit' | null>(null)
+  const sessionBusy = computed(() => sessionPending.value !== null)
   const paperFormRef = ref<InstanceType<typeof ArtForm>>()
   const submitting = ref(false),
     generating = ref(false)
@@ -551,13 +551,55 @@
     session,
     currentIndex,
     answers,
-    singleAnswers,
     currentQuestion,
     answerProgress,
     remainingText,
     startSession,
     stopSessionClock
   } = useExamSession()
+  const currentAnswer = computed<string | string[]>({
+    get: () =>
+      currentQuestion.value.questionType === 'multiple'
+        ? (answers[currentQuestion.value.id] ?? [])
+        : (answers[currentQuestion.value.id]?.[0] ?? ''),
+    set: (value) => {
+      if (sessionBusy.value || !currentQuestion.value.id) return
+      if (currentQuestion.value.questionType === 'multiple') {
+        if (Array.isArray(value)) answers[currentQuestion.value.id] = [...value]
+      } else if (typeof value === 'string') {
+        answers[currentQuestion.value.id] = value ? [value] : []
+      }
+    }
+  })
+  const sessionAnswerForm = reactive({
+    model: { answer: currentAnswer },
+    items: computed<FormItem[]>(() => {
+      const question = currentQuestion.value
+      const multiple = question.questionType === 'multiple'
+      const AnswerOption = multiple ? ElCheckbox : ElRadio
+      return [
+        {
+          key: 'answer',
+          label: '',
+          type: multiple ? 'checkboxGroup' : 'radioGroup',
+          props: {
+            class: 'exam-session__answers',
+            disabled: sessionBusy.value,
+            'aria-label': question.stem
+          },
+          slots: {
+            default: () =>
+              (question.options ?? []).map((option) => (
+                <AnswerOption key={option.key} value={option.key}>
+                  <b>{option.key}</b>
+                  {option.content}
+                </AnswerOption>
+              ))
+          }
+        }
+      ]
+    })
+  })
   const paperForm = ref<SmisExamPaperPayload>(createExamPaperPayload())
   const categoryTree = new TreeUtils({ parentKey: 'parentId' })
   const dictOptions = (code: string) => (getDictMap.value[code] ?? []).map(toDictionaryOption)
@@ -1049,47 +1091,85 @@
       }
     })
   }
-  const beginExam = async (row: SmisExamPaper) => {
-    startSession((await startExam(row.id)) ?? undefined)
+  const beginExam = async (row: SmisExamPaper): Promise<void> => {
+    const version = examSession.invalidate()
+    const exam = await startExam(row.id)
+    if (version !== examSession.version.value) return
+    startSession(exam ?? undefined)
+    sessionPending.value = null
     await sessionDialogRef.value?.handleOpen(undefined, {
       title: row.examStatus === 'in_progress' ? '继续考试' : '开始考试',
       contentMaxHeight: '84vh'
     })
   }
-  const persistCurrent = async () => {
+  const persistCurrent = async (): Promise<void> => {
     if (!session.value?.attempt || !currentQuestion.value.id) return
-    await saveExamAnswer(
-      session.value.attempt.id,
-      currentQuestion.value.id,
-      answers[currentQuestion.value.id] ?? []
-    )
+    await saveExamAnswer(session.value.attempt.id, currentQuestion.value.id, [
+      ...(answers[currentQuestion.value.id] ?? [])
+    ])
   }
-  const goQuestion = async (index: number) => {
-    await persistCurrent()
-    currentIndex.value = Math.min(Math.max(index, 0), (session.value?.questions.length ?? 1) - 1)
-  }
-  const finishExam = async () => {
-    if (!session.value?.attempt) return
+  const goQuestion = async (index: number, event?: MouseEvent): Promise<void> => {
+    if (sessionBusy.value) return
+    const version = examSession.version.value
+    const keyboardTrigger = getFocusedKeyboardButton(event)
+    sessionPending.value = 'navigate'
     try {
       await persistCurrent()
-      submitting.value = true
-      await confirmDelete(
-        `确定提交试卷吗？当前已作答 ${Object.values(answers).filter((item) => item.length).length}/${session.value.questions.length} 题。`
-      )
-      detail.value = (await submitExam(session.value.attempt.id)) ?? undefined
+      if (examSession.isCurrent(version)) {
+        currentIndex.value = Math.min(
+          Math.max(index, 0),
+          (session.value?.questions.length ?? 1) - 1
+        )
+      }
+    } catch (error) {
+      if (examSession.isCurrent(version)) notifyFriendlyError(error, '本题答案保存失败，请重试')
+    } finally {
+      if (version === examSession.version.value) sessionPending.value = null
+      if (keyboardTrigger && examSession.isCurrent(version)) {
+        await nextTick()
+        if (examSession.isCurrent(version)) restoreButtonFocusIfLost(keyboardTrigger)
+      }
+    }
+  }
+  const finishExam = async (event?: MouseEvent): Promise<void> => {
+    if (!session.value?.attempt || sessionBusy.value) return
+    const version = examSession.version.value
+    const attemptId = session.value.attempt.id
+    const questionCount = session.value.questions.length
+    const answeredCount = Object.values(answers).filter((item) => item.length).length
+    const keyboardTrigger = getFocusedKeyboardButton(event)
+    sessionPending.value = 'submit'
+    try {
+      await persistCurrent()
+      if (!examSession.isCurrent(version)) return
+      await confirm(`确定提交试卷吗？当前已作答 ${answeredCount}/${questionCount} 题。`, {
+        title: '提交试卷',
+        confirmButtonText: '提交试卷'
+      })
+      if (!examSession.isCurrent(version)) return
+      const result = await submitExam(attemptId)
+      if (!examSession.isCurrent(version)) return
+      detail.value = result ?? undefined
       await sessionDialogRef.value?.handleClose(true)
       await Promise.all([
         paperTableRef.value?.refreshUpdate(),
         recordTableRef.value?.refreshUpdate()
       ])
+      if (version !== examSession.version.value) return
       await detailDialogRef.value?.handleOpen(undefined, {
         title: '考试结果',
         contentMaxHeight: '78vh'
       })
-    } catch {
-      /* 取消提交 */
+    } catch (error) {
+      if (error !== 'cancel' && error !== 'close' && examSession.isCurrent(version)) {
+        notifyFriendlyError(error, '试卷提交未完成，请重试')
+      }
     } finally {
-      submitting.value = false
+      if (version === examSession.version.value) sessionPending.value = null
+      if (keyboardTrigger && examSession.isCurrent(version)) {
+        await nextTick()
+        if (examSession.isCurrent(version)) restoreButtonFocusIfLost(keyboardTrigger)
+      }
     }
   }
   const removePaper = async (row: SmisExamPaper) => {
@@ -1474,6 +1554,7 @@
 
     ol {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
       padding: 0;
       margin: 0;
@@ -1484,6 +1565,7 @@
       padding: 5px 9px;
       font-size: 12px;
       color: var(--el-text-color-secondary);
+      white-space: nowrap;
       background: var(--default-box-color);
       border: 1px solid var(--el-border-color-lighter);
       border-radius: 999px;
@@ -1726,13 +1808,21 @@
 
   .exam-page__footer {
     display: flex;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: var(--art-space-2) var(--art-space-4);
     align-items: center;
-    justify-content: space-between;
 
     > div:last-child {
       display: flex;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: var(--art-space-2);
+      justify-content: flex-end;
+      min-width: 0;
+      margin-inline-start: auto;
+
+      > .el-button + .el-button {
+        margin-inline-start: 0;
+      }
     }
   }
 
@@ -1742,6 +1832,7 @@
     align-items: center;
 
     > span {
+      flex: none;
       width: 9px;
       height: 9px;
       background: var(--el-color-warning);
@@ -1932,12 +2023,17 @@
     }
   }
 
-  .exam-session__answers {
+  .exam-session__answer-form :deep(.el-form-item) {
+    margin-bottom: 0;
+  }
+
+  .exam-session__answer-form :deep(.exam-session__answers) {
     display: grid;
     gap: 12px;
+    width: 100%;
 
-    :deep(.el-checkbox),
-    :deep(.el-radio) {
+    .el-checkbox,
+    .el-radio {
       height: auto;
       padding: 14px;
       margin: 0;

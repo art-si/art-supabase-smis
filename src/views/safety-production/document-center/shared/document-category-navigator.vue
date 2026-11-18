@@ -85,6 +85,7 @@
       highlight-current
       :expand-on-click-node="false"
       @node-click="handleNodeClick"
+      @keydown.capture="handleSelectableTreeKeydown"
     >
       <template #default="{ data: node }">
         <div class="document-category-navigator__node smis-category-navigator__node">
@@ -133,6 +134,7 @@
   import ArtIconButton from '@/components/core/widget/art-icon-button/index.vue'
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisDocumentCategory } from '@smis/api'
 
   const ALL_KEY = 'all'

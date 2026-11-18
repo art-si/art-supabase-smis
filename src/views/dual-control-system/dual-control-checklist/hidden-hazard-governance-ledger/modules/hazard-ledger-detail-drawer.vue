@@ -22,87 +22,58 @@
         />
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="隐患信息"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle title="隐患信息" subtitle="来源、级别、位置与上报责任" />
-            <dl class="hazard-ledger-detail__grid">
-              <div
-                ><dt>责任单位</dt><dd>{{ current?.hazardOrganizationName || '—' }}</dd></div
-              >
-              <div
-                ><dt>隐患位置</dt><dd>{{ current?.location || '—' }}</dd></div
-              >
-              <div
-                ><dt>隐患来源</dt
-                ><dd
-                  ><ArtDictDisplay
-                    v-if="current"
-                    dict-code="smisHiddenHazardSourceType"
-                    :value="current.sourceType"
-                    display="auto" /></dd
-              ></div>
-              <div
-                ><dt>来源编号</dt><dd>{{ current?.sourceRecordNo || '—' }}</dd></div
-              >
-              <div
-                ><dt>隐患级别</dt
-                ><dd
-                  ><ArtDictDisplay
-                    v-if="current"
-                    dict-code="smisHazardLevel"
-                    :value="current.hazardLevel"
-                    display="tag" /></dd
-              ></div>
-              <div
-                ><dt>排查类型</dt><dd>{{ current?.inspectionTypeName || '—' }}</dd></div
-              >
-              <div
-                ><dt>上报人</dt
-                ><dd
-                  >{{ current?.reporterEmployeeName }} · {{ current?.reporterEmployeeNo }}</dd
-                ></div
-              >
-              <div
-                ><dt>上报时间</dt><dd>{{ formatDate(current?.reportedAt) }}</dd></div
-              >
-            </dl>
+            <ArtDescriptions
+              v-if="current"
+              :data="current"
+              :items="informationItems"
+              :columns="2"
+              :tablet-columns="isCompact ? 1 : 2"
+              :label-width="112"
+              empty-text=""
+            >
+              <template #item-sourceType>
+                <ArtDictDisplay
+                  dict-code="smisHiddenHazardSourceType"
+                  :value="current.sourceType"
+                  display="auto"
+                />
+              </template>
+              <template #item-hazardLevel>
+                <ArtDictDisplay
+                  dict-code="smisHazardLevel"
+                  :value="current.hazardLevel"
+                  display="tag"
+                />
+              </template>
+            </ArtDescriptions>
             <NarrativeBlock label="隐患描述" :content="current?.description" />
             <EvidenceGallery title="隐患照片" :images="current?.imageUrls || []" /> </div
         ></ElTabPane>
         <ElTabPane name="section-1" label="整改闭环"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle title="整改闭环" subtitle="核准、整改、验收与关闭信息" />
-            <dl class="hazard-ledger-detail__grid">
-              <div
-                ><dt>核准人</dt><dd>{{ current?.approverEmployeeName || '—' }}</dd></div
-              >
-              <div
-                ><dt>核准时间</dt><dd>{{ formatDate(current?.approvedAt) }}</dd></div
-              >
-              <div
-                ><dt>整改责任人</dt
-                ><dd>{{ current?.rectificationResponsibleEmployeeName || '—' }}</dd></div
-              >
-              <div
-                ><dt>整改时限</dt
-                ><dd :class="{ 'is-overdue': current?.overdue }">{{
-                  formatDate(current?.rectificationDeadline)
-                }}</dd></div
-              >
-              <div
-                ><dt>完成时间</dt><dd>{{ formatDate(current?.rectificationCompletedAt) }}</dd></div
-              >
-              <div
-                ><dt>验收时间</dt><dd>{{ formatDate(current?.acceptedAt) }}</dd></div
-              >
-              <div
-                ><dt>验收人</dt><dd>{{ current?.acceptorEmployeeName || '—' }}</dd></div
-              >
-              <div
-                ><dt>关闭时间</dt><dd>{{ formatDate(current?.closedAt) }}</dd></div
-              >
-            </dl>
+            <ArtDescriptions
+              v-if="current"
+              :data="current"
+              :items="closureItems"
+              :columns="2"
+              :tablet-columns="isCompact ? 1 : 2"
+              :label-width="112"
+              empty-text=""
+            >
+              <template #item-rectificationDeadline>
+                <span
+                  class="hazard-ledger-detail__deadline"
+                  :class="{ 'is-overdue': current.overdue }"
+                >
+                  {{ formatDate(current.rectificationDeadline) }}
+                </span>
+              </template>
+            </ArtDescriptions>
             <NarrativeBlock label="整改要求" :content="current?.rectificationSuggestion" />
             <NarrativeBlock label="整改措施" :content="current?.rectificationMeasures" />
             <NarrativeBlock label="整改说明" :content="current?.rectificationDescription" />
@@ -140,8 +111,11 @@
 </template>
 
 <script setup lang="tsx">
+  import { useMediaQuery } from '@vueuse/core'
   import { createDateTimeFormatter } from '@/utils/ui/format'
   import { ElImage } from 'element-plus'
+  import ArtDescriptions from '@/components/core/base/art-descriptions/index.vue'
+  import type { ArtDescriptionItem } from '@/components/core/base/art-descriptions/types'
   import ArtDrawer from '@/components/core/drawers/art-drawer/index.vue'
   import type { ArtDrawerExpose } from '@/components/core/drawers/art-drawer/types'
   import ArtDictDisplay from '@/components/core/base/art-dict-display/index.vue'
@@ -197,11 +171,64 @@
   const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<HazardLedgerDetailOpenData>>()
   const current = shallowRef<SmisHiddenHazardLedgerRecord>()
+  const isCompact = useMediaQuery('(max-width: 900px)')
   const formatDate = createDateTimeFormatter({
     format: 'YYYY-MM-DD HH:mm',
     emptyText: '—',
     invalidText: '—'
   })
+  const informationItems: ArtDescriptionItem<SmisHiddenHazardLedgerRecord>[] = [
+    {
+      key: 'hazardOrganizationName',
+      label: '责任单位',
+      value: (row) => row.hazardOrganizationName || '—'
+    },
+    { key: 'location', label: '隐患位置', value: (row) => row.location || '—' },
+    { key: 'sourceType', label: '隐患来源', field: 'sourceType' },
+    { key: 'sourceRecordNo', label: '来源编号', value: (row) => row.sourceRecordNo || '—' },
+    { key: 'hazardLevel', label: '隐患级别', field: 'hazardLevel' },
+    {
+      key: 'inspectionTypeName',
+      label: '排查类型',
+      value: (row) => row.inspectionTypeName || '—'
+    },
+    {
+      key: 'reporterEmployee',
+      label: '上报人',
+      value: (row) => `${row.reporterEmployeeName ?? ''} · ${row.reporterEmployeeNo ?? ''}`
+    },
+    { key: 'reportedAt', label: '上报时间', value: (row) => formatDate(row.reportedAt) }
+  ]
+  const closureItems: ArtDescriptionItem<SmisHiddenHazardLedgerRecord>[] = [
+    {
+      key: 'approverEmployeeName',
+      label: '核准人',
+      value: (row) => row.approverEmployeeName || '—'
+    },
+    { key: 'approvedAt', label: '核准时间', value: (row) => formatDate(row.approvedAt) },
+    {
+      key: 'rectificationResponsibleEmployeeName',
+      label: '整改责任人',
+      value: (row) => row.rectificationResponsibleEmployeeName || '—'
+    },
+    {
+      key: 'rectificationDeadline',
+      label: '整改时限',
+      field: 'rectificationDeadline'
+    },
+    {
+      key: 'rectificationCompletedAt',
+      label: '完成时间',
+      value: (row) => formatDate(row.rectificationCompletedAt)
+    },
+    { key: 'acceptedAt', label: '验收时间', value: (row) => formatDate(row.acceptedAt) },
+    {
+      key: 'acceptorEmployeeName',
+      label: '验收人',
+      value: (row) => row.acceptorEmployeeName || '—'
+    },
+    { key: 'closedAt', label: '关闭时间', value: (row) => formatDate(row.closedAt) }
+  ]
   const handleOpen = async (data: HazardLedgerDetailOpenData): Promise<void> => {
     current.value = data.row
     await drawerRef.value?.handleOpen(data, {
@@ -227,45 +254,8 @@
       @include detail.identity;
     }
 
-    &__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin: -8px 0 0;
-      overflow: hidden;
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: var(--el-border-radius-base);
-
-      > div {
-        display: grid;
-        grid-template-columns: 112px minmax(0, 1fr);
-        border-bottom: 1px solid var(--el-border-color-lighter);
-      }
-
-      > div:nth-child(odd) {
-        border-right: 1px solid var(--el-border-color-lighter);
-      }
-
-      dt,
-      dd {
-        min-width: 0;
-        padding: 11px 12px;
-        margin: 0;
-      }
-
-      dt {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--el-text-color-secondary);
-        background: var(--el-fill-color-light);
-      }
-
-      dd {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      dd.is-overdue {
+    &__deadline {
+      &.is-overdue {
         font-weight: 700;
         color: var(--el-color-danger);
       }
@@ -307,16 +297,6 @@
 
     &__event small {
       color: var(--el-text-color-secondary);
-    }
-
-    @media (width <= 900px) {
-      &__grid {
-        grid-template-columns: 1fr;
-      }
-
-      &__grid > div:nth-child(odd) {
-        border-right: 0;
-      }
     }
   }
 </style>

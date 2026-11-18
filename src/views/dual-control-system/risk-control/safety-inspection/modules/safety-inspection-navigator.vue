@@ -76,6 +76,7 @@
             highlight-current
             :current-node-key="selectedOrganizationId"
             @node-click="handleOrganizationClick"
+            @keydown.capture="handleSelectableTreeKeydown"
           >
             <template #empty>
               <ArtEmptyState
@@ -98,6 +99,7 @@
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisSafetyInspectionOrganization, SmisSafetyInspectionTypeOption } from '@smis/api'
 
   const props = withDefaults(

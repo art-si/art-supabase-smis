@@ -26,39 +26,18 @@
           display="tag"
         />
       </div>
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="任务信息"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle title="任务信息" subtitle="来源计划、排查对象与执行时限" />
-            <dl class="hidden-hazard-task-detail__grid">
-              <div
-                ><dt>源计划编号</dt><dd>{{ detail.sourcePlanNo }}</dd></div
-              >
-              <div
-                ><dt>排查类型</dt><dd>{{ detail.inspectionTypeName }}</dd></div
-              >
-              <div
-                ><dt>检查单位</dt><dd>{{ detail.inspectionOrganizationName }}</dd></div
-              >
-              <div
-                ><dt>被检查单位</dt><dd>{{ detail.inspectedOrganizationName }}</dd></div
-              >
-              <div
-                ><dt>执行人</dt
-                ><dd>{{ detail.executorEmployeeName }} · {{ detail.executorEmployeeNo }}</dd></div
-              >
-              <div
-                ><dt>计划开始</dt><dd>{{ formatDate(detail.plannedStartAt) }}</dd></div
-              >
-              <div
-                ><dt>计划结束</dt><dd>{{ formatDate(detail.plannedEndAt) }}</dd></div
-              >
-              <div
-                ><dt>完成时间</dt><dd>{{ formatDate(detail.completedAt) }}</dd></div
-              >
-            </dl>
-          </div></ElTabPane
-        >
+            <ArtDescriptions
+              :data="detail"
+              :items="taskItems"
+              :columns="2"
+              :label-width="120"
+              empty-text=""
+            /> </div
+        ></ElTabPane>
         <ElTabPane name="section-1" label="排查结果"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle
@@ -130,6 +109,9 @@
 
 <script setup lang="ts">
   import { createDateTimeFormatter } from '@/utils/ui/format'
+  import { toNameCodeOption } from '@/utils/form/option'
+  import ArtDescriptions from '@/components/core/base/art-descriptions/index.vue'
+  import type { ArtDescriptionItem } from '@/components/core/base/art-descriptions/types'
   import ArtDrawer from '@/components/core/drawers/art-drawer/index.vue'
   import type { ArtDrawerExpose } from '@/components/core/drawers/art-drawer/types'
   import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
@@ -164,6 +146,29 @@
     emptyText: '—',
     invalidText: '—'
   })
+  const taskItems: ArtDescriptionItem<SmisHiddenHazardInspectionTaskDetail>[] = [
+    { key: 'sourcePlanNo', label: '源计划编号', field: 'sourcePlanNo' },
+    { key: 'inspectionTypeName', label: '排查类型', field: 'inspectionTypeName' },
+    { key: 'inspectionOrganizationName', label: '检查单位', field: 'inspectionOrganizationName' },
+    {
+      key: 'inspectedOrganizationName',
+      label: '被检查单位',
+      field: 'inspectedOrganizationName'
+    },
+    {
+      key: 'executor',
+      label: '执行人',
+      value: (row) =>
+        toNameCodeOption({
+          id: row.executorEmployeeId ?? '',
+          name: row.executorEmployeeName,
+          code: row.executorEmployeeNo
+        }).label
+    },
+    { key: 'plannedStartAt', label: '计划开始', value: (row) => formatDate(row.plannedStartAt) },
+    { key: 'plannedEndAt', label: '计划结束', value: (row) => formatDate(row.plannedEndAt) },
+    { key: 'completedAt', label: '完成时间', value: (row) => formatDate(row.completedAt) }
+  ]
   const handleOpen = async (data: HiddenHazardTaskDetailOpenData): Promise<void> => {
     detail.value = null
     await drawerRef.value?.handleOpen(data, {
@@ -219,49 +224,6 @@
       color: var(--el-text-color-secondary);
     }
 
-    &__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin: -8px 0 0;
-      overflow: hidden;
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: var(--el-border-radius-base);
-    }
-
-    &__grid > div {
-      display: grid;
-      grid-template-columns: 120px minmax(0, 1fr);
-      border-bottom: 1px solid var(--el-border-color-lighter);
-    }
-
-    &__grid > div:nth-child(odd) {
-      border-right: 1px solid var(--el-border-color-lighter);
-    }
-
-    &__grid > div:nth-last-child(-n + 2) {
-      border-bottom: 0;
-    }
-
-    &__grid dt,
-    &__grid dd {
-      min-width: 0;
-      padding: 11px 12px;
-      margin: 0;
-    }
-
-    &__grid dt {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--el-text-color-secondary);
-      background: var(--el-fill-color-light);
-    }
-
-    &__grid dd {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     &__items {
       display: grid;
       gap: 8px;
@@ -299,13 +261,16 @@
       border-radius: var(--el-border-radius-small);
     }
 
+    &__items li > div {
+      min-width: 0;
+    }
+
     &__items strong,
     &__items small,
     &__items p {
       display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
 
     &__items p {
@@ -352,18 +317,6 @@
     }
 
     @media (width <= 900px) {
-      &__grid {
-        grid-template-columns: 1fr;
-      }
-
-      &__grid > div:nth-child(odd) {
-        border-right: 0;
-      }
-
-      &__grid > div:nth-last-child(2) {
-        border-bottom: 1px solid var(--el-border-color-lighter);
-      }
-
       &__items li {
         grid-template-columns: 32px minmax(0, 1fr);
       }

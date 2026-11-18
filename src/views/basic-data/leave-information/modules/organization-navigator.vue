@@ -36,6 +36,7 @@
           type="button"
           class="leave-organization__all"
           :class="{ 'is-current': selectedKey === ALL_KEY }"
+          :aria-pressed="selectedKey === ALL_KEY"
           @click="emit('select', ALL_KEY)"
         >
           <span aria-hidden="true"><ArtSvgIcon icon="ri:group-line" /></span>
@@ -52,12 +53,14 @@
     <ElTree
       ref="treeRef"
       :data="data"
+      aria-label="请假组织树"
       :props="treeProps"
       :filter-node-method="matchesOrganizationNodeKeyword"
       :default-expanded-keys="defaultExpandedKeys"
       node-key="id"
       highlight-current
       :expand-on-click-node="false"
+      @keydown.capture="handleSelectableTreeKeydown"
       @node-click="handleNodeClick"
     >
       <template #default="{ data: node }">
@@ -103,6 +106,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
 
   type Organization = Api.SystemManage.OrganizationListItem
 

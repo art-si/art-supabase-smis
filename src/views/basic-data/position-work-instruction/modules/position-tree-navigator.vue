@@ -63,6 +63,7 @@
       highlight-current
       :expand-on-click-node="false"
       @node-click="handleNodeClick"
+      @keydown.capture="handleSelectableTreeKeydown"
     >
       <template #default="{ data: node }">
         <div class="work-position-tree__node">
@@ -106,6 +107,7 @@
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import { flattenWorkInstructionTree, type WorkInstructionTreeNode } from './types'
 
   const props = defineProps<{

@@ -20,30 +20,19 @@
         </span>
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="风险辨识"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionTitle title="风险辨识" subtitle="辨识单元、场所设备与事故后果" />
-            <dl class="risk-information-detail__grid">
-              <div
-                ><dt>辨识单位</dt><dd>{{ current?.organizationNames || '—' }}</dd></div
-              >
-              <div
-                ><dt>场所</dt><dd>{{ current?.siteName || '—' }}</dd></div
-              >
-              <div
-                ><dt>设备设施</dt><dd>{{ current?.equipmentFacility || '—' }}</dd></div
-              >
-              <div
-                ><dt>特种设备</dt><dd>{{ current?.isSpecialEquipment ? '是' : '否' }}</dd></div
-              >
-              <div
-                ><dt>作业活动</dt><dd>{{ current?.activityNames || '—' }}</dd></div
-              >
-              <div
-                ><dt>事故类型</dt><dd>{{ accidentTypeText }}</dd></div
-              >
-            </dl>
+            <ArtDescriptions
+              v-if="current"
+              :data="current"
+              :items="identificationItems"
+              :columns="2"
+              :tablet-columns="isCompact ? 1 : 2"
+              :label-width="112"
+              empty-text=""
+            />
             <div class="risk-information-detail__narrative">
               <strong>危险有害因素</strong><p>{{ current?.hazardFactor || '—' }}</p>
               <strong>可能后果</strong><p>{{ current?.consequence || '未填写可能后果' }}</p>
@@ -83,17 +72,15 @@
                   <small>{{ measure.controlLevel }} · {{ measure.frequency }}</small>
                 </header>
                 <p>{{ measure.content }}</p>
-                <dl>
-                  <div
-                    ><dt>责任岗位</dt><dd>{{ measure.positions }}</dd></div
-                  >
-                  <div
-                    ><dt>标准依据</dt><dd>{{ measure.standardBasis || '—' }}</dd></div
-                  >
-                  <div
-                    ><dt>失效形式</dt><dd>{{ measure.failureMode || '—' }}</dd></div
-                  >
-                </dl>
+                <ArtDescriptions
+                  :data="measure"
+                  :items="measureItems"
+                  :columns="3"
+                  :tablet-columns="isCompact ? 1 : 3"
+                  :border="false"
+                  direction="vertical"
+                  empty-text=""
+                />
               </article>
             </div>
             <ArtEmptyState
@@ -107,13 +94,16 @@
 
 <script setup lang="ts">
   import type { CSSProperties } from 'vue'
+  import { useMediaQuery } from '@vueuse/core'
+  import ArtDescriptions from '@/components/core/base/art-descriptions/index.vue'
+  import type { ArtDescriptionItem } from '@/components/core/base/art-descriptions/types'
   import ArtDrawer from '@/components/core/drawers/art-drawer/index.vue'
   import type { ArtDrawerExpose } from '@/components/core/drawers/art-drawer/types'
   import ArtEmptyState from '@/components/core/feedback/art-empty-state/index.vue'
   import ArtSectionTitle from '@/components/core/surfaces/art-section-title/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import { useUserStore } from '@/store/modules/user'
-  import type { SmisRiskControlInformationRecord } from '@smis/api'
+  import type { SmisRiskControlInformationRecord, SmisRiskControlMeasureSummary } from '@smis/api'
 
   export interface RiskControlDetailOpenData {
     row: SmisRiskControlInformationRecord
@@ -124,6 +114,7 @@
   const activeDetailTab = ref('section-0')
   const drawerRef = ref<ArtDrawerExpose<RiskControlDetailOpenData>>()
   const current = shallowRef<SmisRiskControlInformationRecord>()
+  const isCompact = useMediaQuery('(max-width: 900px)')
   const riskLevelStyle = computed<CSSProperties>(() => ({
     '--risk-level-color': current.value?.riskLevelColor || 'var(--el-color-info)'
   }))
@@ -135,6 +126,27 @@
           .join('、')
       : '—'
   })
+  const identificationItems: ArtDescriptionItem<SmisRiskControlInformationRecord>[] = [
+    { key: 'organizationNames', label: '辨识单位', value: (row) => row.organizationNames || '—' },
+    { key: 'siteName', label: '场所', value: (row) => row.siteName || '—' },
+    {
+      key: 'equipmentFacility',
+      label: '设备设施',
+      value: (row) => row.equipmentFacility || '—'
+    },
+    {
+      key: 'isSpecialEquipment',
+      label: '特种设备',
+      value: (row) => (row.isSpecialEquipment ? '是' : '否')
+    },
+    { key: 'activityNames', label: '作业活动', value: (row) => row.activityNames || '—' },
+    { key: 'accidentTypes', label: '事故类型', value: () => accidentTypeText.value }
+  ]
+  const measureItems: ArtDescriptionItem<SmisRiskControlMeasureSummary>[] = [
+    { key: 'positions', label: '责任岗位', field: 'positions' },
+    { key: 'standardBasis', label: '标准依据', value: (row) => row.standardBasis || '—' },
+    { key: 'failureMode', label: '失效形式', value: (row) => row.failureMode || '—' }
+  ]
   const assessmentDetail = computed(() => {
     if (!current.value?.methodCode) return '—'
     const fields = ['L', 'E', 'C', 'S'] as const
@@ -189,45 +201,6 @@
       background: color-mix(in srgb, var(--risk-level-color) 10%, var(--default-box-color));
       border: 1px solid color-mix(in srgb, var(--risk-level-color) 35%, transparent);
       border-radius: 999px;
-    }
-
-    &__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin: -8px 0 0;
-      overflow: hidden;
-      border: 1px solid var(--el-border-color-lighter);
-      border-radius: var(--el-border-radius-base);
-
-      > div {
-        display: grid;
-        grid-template-columns: 112px minmax(0, 1fr);
-        border-bottom: 1px solid var(--el-border-color-lighter);
-      }
-
-      > div:nth-child(odd) {
-        border-right: 1px solid var(--el-border-color-lighter);
-      }
-
-      dt,
-      dd {
-        min-width: 0;
-        padding: 11px 12px;
-        margin: 0;
-      }
-
-      dt {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--el-text-color-secondary);
-        background: var(--el-fill-color-light);
-      }
-
-      dd {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
     }
 
     &__narrative {
@@ -300,43 +273,10 @@
         margin: 8px 0 12px;
         line-height: 1.7;
       }
-
-      dl {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-        margin: 0;
-      }
-
-      dl div {
-        min-width: 0;
-      }
-
-      dt {
-        margin-bottom: 3px;
-        font-size: 11px;
-        color: var(--el-text-color-secondary);
-      }
-
-      dd {
-        margin: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
     }
 
     @media (width <= 900px) {
-      &__grid,
       &__assessment {
-        grid-template-columns: 1fr;
-      }
-
-      &__grid > div:nth-child(odd) {
-        border-right: 0;
-      }
-
-      &__measures dl {
         grid-template-columns: 1fr;
       }
     }

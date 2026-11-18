@@ -53,7 +53,7 @@
           </article>
         </section>
 
-        <ElTabs v-model="activeFormTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeFormTab"
           ><ElTabPane name="sourceSection" label="计划与执行"
             ><div class="space-y-4 min-w-0"
               ><ArtSectionCard title="执行信息" subtitle="培训计划来源与实际实施情况">
@@ -112,6 +112,7 @@
                         v-for="(url, index) in detailRecord.attachmentUrls"
                         :key="url"
                         :href="safeAttachmentUrl(url)"
+                        :title="getAttachmentNameFromUrl(url, `培训附件 ${index + 1}`)"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -138,6 +139,7 @@
                         v-for="(url, index) in detailRecord.signInAttachmentUrls"
                         :key="url"
                         :href="safeAttachmentUrl(url)"
+                        :title="getAttachmentNameFromUrl(url, `签到附件 ${index + 1}`)"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -241,8 +243,8 @@
 
     <template #footer="{ api }">
       <div class="training-record-dialog__footer">
-        <span>{{ numberDescription }}</span>
-        <div>
+        <span v-if="!readonly">{{ numberDescription }}</span>
+        <div class="ml-auto">
           <ElButton @click="api.handleClose()">关闭</ElButton>
           <template v-if="!readonly">
             <ElButton :loading="submitting" @click="handleSave(false)">保存草稿</ElButton>

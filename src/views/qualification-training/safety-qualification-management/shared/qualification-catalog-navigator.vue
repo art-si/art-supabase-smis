@@ -4,6 +4,7 @@
     :title="`${title}层级`"
     subtitle="选择节点后同步筛选右侧数据"
     :loading="loading"
+    :loading-mode="data.length ? 'mask' : 'skeleton'"
     :error="error"
     :empty="!loading && !error && !data.length"
     :empty-title="`暂无${title}`"
@@ -33,6 +34,7 @@
           type="button"
           class="qualification-catalog-navigator__all"
           :class="{ 'is-current': selectedKey === ALL_KEY }"
+          :aria-pressed="selectedKey === ALL_KEY"
           @click="emit('select', ALL_KEY)"
         >
           <span aria-hidden="true"><ArtSvgIcon icon="ri:archive-stack-line" /></span>
@@ -48,12 +50,14 @@
     <ElTree
       ref="treeRef"
       :data="data"
+      :aria-label="`${title}树`"
       :props="treeProps"
       :filter-node-method="filterNode"
       node-key="id"
       default-expand-all
       highlight-current
       :expand-on-click-node="false"
+      @keydown.capture="handleSelectableTreeKeydown"
       @node-click="handleNodeClick"
     >
       <template #default="{ data: node }">
@@ -97,6 +101,7 @@
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisQualificationCatalogNavigationNode } from '@smis/api'
   const ALL_KEY = 'all'
   const props = defineProps<{

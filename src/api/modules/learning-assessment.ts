@@ -1,6 +1,7 @@
 import { normalizeNullableText } from '@/utils/form/normalize'
 import { useSupabase } from '@/hooks/core/useSupabase'
 import type { ApiFeedbackOptions } from '@/types/api/request'
+import type { QueryResult } from '@/types/api/response'
 import type {
   SmisCourseLearningListResult,
   SmisCourseLearningSearchParams,
@@ -355,13 +356,14 @@ export async function fetchCourseLearningRecordList(params: SmisCourseLearningSe
   }
 }
 
-export async function updateCourseLearning(
+export function updateCourseLearning(
   assignmentId: string,
   progressPercent: number,
   elapsedSeconds = 0,
-  complete = false
-) {
-  return await responseHandle<Record<string, unknown>>(
+  complete = false,
+  options: ApiFeedbackOptions = {}
+): Promise<QueryResult<Record<string, unknown>>> {
+  return responseHandle<Record<string, unknown>>(
     () =>
       supabase.rpc('smis_update_course_learning_secure', {
         p_assignment_id: assignmentId,
@@ -369,6 +371,11 @@ export async function updateCourseLearning(
         p_elapsed_seconds: elapsedSeconds,
         p_complete: complete
       }),
-    { showMessage: complete, breakReturn: true, message: complete ? '课程学习已完成' : undefined }
+    {
+      showMessage: options.showMessage ?? complete,
+      showErrorMessage: options.showErrorMessage ?? options.showMessage ?? complete,
+      breakReturn: true,
+      message: complete ? '课程学习已完成' : undefined
+    }
   )
 }

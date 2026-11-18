@@ -25,7 +25,7 @@
         />
       </div>
 
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="检查与整改要求"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionCard title="检查与整改要求" subtitle="隐患来源、责任单位及整改要求">

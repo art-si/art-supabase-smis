@@ -81,14 +81,18 @@
     </ArtDialog>
 
     <ArtDrawer ref="lifecycleDrawerRef" size="lg" :show-footer="false">
-      <div class="equipment-ledger-page__drawer-title">
+      <div class="equipment-ledger-page__drawer-title mb-4">
         <span><ArtSvgIcon icon="ri:history-line" /></span>
         <div>
           <strong>{{ lifecycle.row?.equipmentName }}</strong>
           <small>{{ lifecycle.row?.equipmentCode }} · 设备全生命周期</small>
         </div>
       </div>
-      <ElTabs v-if="lifecycle.row" v-model="lifecycle.active">
+      <ElTabs
+        class="art-card-xs art-overlay-tab-card"
+        v-if="lifecycle.row"
+        v-model="lifecycle.active"
+      >
         <ElTabPane name="overview" label="生命周期概览">
           <div class="equipment-ledger-page__lifecycle-grid">
             <article

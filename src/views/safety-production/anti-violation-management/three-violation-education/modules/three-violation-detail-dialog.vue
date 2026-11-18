@@ -36,7 +36,7 @@
       </div>
 
       <div class="three-violation-detail__sections">
-        <ElTabs v-model="activeDetailTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
           ><ElTabPane name="section-0" label="违章与人员"
             ><div class="space-y-4 min-w-0"
               ><ArtSectionCard title="三违检查信息" subtitle="查看被检查人、问题事实和计划教育要求">

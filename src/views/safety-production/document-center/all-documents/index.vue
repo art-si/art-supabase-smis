@@ -194,6 +194,7 @@
                 :expand-on-click-node="false"
                 :filter-node-method="filterCategoryNode"
                 @node-click="handleCategoryNodeClick"
+                @keydown.capture="handleSelectableTreeKeydown"
               >
                 <template #default="{ data: category }">
                   <span class="document-center-page__tree-node">
@@ -411,6 +412,7 @@
   import { exportExcel, type ExcelColumn } from '@/utils/file'
   import { formatSize } from '@/utils/file/format-size'
   import TreeUtils from '@/utils/tree'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import BusinessWorkspaceHeader, {
     type BusinessWorkspaceMetric
   } from '@/components/business/business-workspace-header/index.vue'

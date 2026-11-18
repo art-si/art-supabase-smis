@@ -23,7 +23,7 @@
         >
         <ArtDictDisplay dict-code="commonEnabledStatus" :value="detail.status" display="tag" />
       </div>
-      <ElTabs v-model="activeDetailTab"
+      <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
         ><ElTabPane name="section-0" label="基本信息"
           ><div class="space-y-4 min-w-0"
             ><ArtSectionCard title="基本信息" subtitle="物料识别、分类与计量口径">

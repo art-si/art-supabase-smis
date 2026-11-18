@@ -80,6 +80,7 @@
                 :expand-on-click-node="false"
                 :filter-node-method="filterTreeNode"
                 @node-click="handleStandardSelect"
+                @keydown.capture="handleSelectableTreeKeydown"
               >
                 <template #default="{ data }">
                   <div class="inspection-standard-page__tree-node">
@@ -177,6 +178,7 @@
 
 <script setup lang="tsx">
   import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
 
   import { createDateTimeFormatter } from '@/utils/ui/format'
@@ -669,6 +671,7 @@
     }
 
     &__tree-node {
+      position: relative;
       display: flex;
       gap: 8px;
       align-items: center;
@@ -712,13 +715,20 @@
     }
 
     &__tree-actions {
-      display: none;
+      position: absolute;
+      inset-inline-end: 4px;
+      display: flex;
       align-items: center;
+      pointer-events: none;
+      opacity: 0;
     }
 
     &__tree-node:hover &__tree-actions,
-    :deep(.is-current > .el-tree-node__content) &__tree-actions {
-      display: flex;
+    &__tree-node:focus-within &__tree-actions,
+    :deep(.el-tree-node:is(.is-current, :focus) > .el-tree-node__content) &__tree-actions {
+      position: static;
+      pointer-events: auto;
+      opacity: 1;
     }
 
     &__scope {

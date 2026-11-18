@@ -56,7 +56,8 @@
       default-expand-all
       highlight-current
       :current-node-key="selectedId"
-      @node-click="emit('select', $event)"
+      @node-click="requestSceneSelection"
+      @keydown.capture="handleSelectableTreeKeydown"
     >
       <template #default="{ data }">
         <div class="risk-map-scene-navigator__node" :title="data.sceneName">
@@ -107,11 +108,12 @@
   import ArtTreeExpandToggle from '@/components/core/widget/art-tree-expand-toggle/index.vue'
   import ArtSectionCard from '@/components/core/surfaces/art-section-card/index.vue'
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
+  import { handleSelectableTreeKeydown } from '@/utils/ui/selection-tree-keyboard'
   import type { SmisRiskMapScene } from '@smis/api'
 
   defineOptions({ name: 'SmisRiskMapSceneNavigator' })
 
-  defineProps<{
+  const props = defineProps<{
     rows: SmisRiskMapScene[]
     treeData: SmisRiskMapScene[]
     selectedId: string
@@ -132,6 +134,12 @@
 
   const treeRef = ref<InstanceType<typeof ElTree>>()
   const treeProps = { label: 'sceneName', children: 'children' }
+
+  const requestSceneSelection = (scene: SmisRiskMapScene): void => {
+    // ElTree changes its current node before emitting. Keep the committed scene until confirmed.
+    if (scene.id !== props.selectedId) treeRef.value?.setCurrentKey(props.selectedId || null, false)
+    emit('select', scene)
+  }
 </script>
 
 <style scoped lang="scss">

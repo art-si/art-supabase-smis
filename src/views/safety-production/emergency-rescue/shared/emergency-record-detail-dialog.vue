@@ -44,7 +44,7 @@
       </header>
 
       <template v-if="rescuePlan">
-        <ElTabs v-model="activeDetailTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
           ><ElTabPane name="section-0" label="预案与范围"
             ><div class="min-w-0 space-y-4"
               ><ArtSectionCard title="预案信息" subtitle="版本、适用范围与状态">
@@ -101,7 +101,7 @@
       </template>
 
       <template v-else-if="drillPlan">
-        <ElTabs v-model="activeDetailTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
           ><ElTabPane name="section-0" label="计划与内容"
             ><div class="min-w-0 space-y-4"
               ><ArtSectionCard title="计划信息" subtitle="计划来源、演练单位与执行安排">
@@ -143,7 +143,7 @@
       </template>
 
       <template v-else-if="drillRecord">
-        <ElTabs v-model="activeDetailTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
           ><ElTabPane name="section-0" label="演练与内容"
             ><div class="min-w-0 space-y-4"
               ><ArtSectionCard title="演练信息" subtitle="计划来源、演练单位与实际执行时间">

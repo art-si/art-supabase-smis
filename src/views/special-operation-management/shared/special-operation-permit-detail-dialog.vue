@@ -55,7 +55,7 @@
           />
         </div>
 
-        <ElTabs v-model="activeDetailTab"
+        <ElTabs class="art-card-xs art-overlay-tab-card" v-model="activeDetailTab"
           ><ElTabPane name="section-0" label="基础与专项信息"
             ><div class="min-w-0 space-y-4"
               ><ArtSectionCard title="基础信息" subtitle="作业范围、时间与当前流程节点">

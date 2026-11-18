@@ -108,26 +108,32 @@
 
       <ArtDialog ref="learningDialogRef" size="lg">
         <div v-if="learningCourse" class="grid gap-4">
-          <div class="course-page__learning-cover"
-            ><ElImage
-              v-if="learningCourse.coverUrl"
+          <div v-if="learningCourse.coverUrl" class="course-page__learning-cover">
+            <ElImage
               :src="learningCourse.coverUrl"
-              fit="cover" /><ArtSvgIcon v-else icon="ri:book-open-line"
-          /></div>
-          <div class="course-page__learning-summary"
-            ><ArtDictDisplay
-              dict-code="smisCourseType"
-              :value="learningCourse.courseType"
-              display="tag"
+              :alt="`${learningCourse.courseName}封面`"
+              fit="cover"
             />
-            <h3>{{ learningCourse.courseName }}</h3
-            ><p>{{ learningCourse.introduction || '暂无课程简介' }}</p
-            ><div
-              ><span>最低学习 {{ learningCourse.minimumLearningMinutes }} 分钟</span
-              ><span>{{ learningCourse.creditHours }} 学时</span
-              ><span v-if="learningCourse.dueDate">截止 {{ learningCourse.dueDate }}</span></div
-            ></div
+          </div>
+          <ArtEntitySummary
+            icon="ri:book-open-line"
+            :title="learningCourse.courseName"
+            :description="learningCourse.introduction || '暂无课程简介'"
+            compact
           >
+            <template #aside>
+              <ArtDictDisplay
+                dict-code="smisCourseType"
+                :value="learningCourse.courseType"
+                display="tag"
+              />
+            </template>
+          </ArtEntitySummary>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--el-text-color-secondary)]">
+            <span>最低学习 {{ learningCourse.minimumLearningMinutes }} 分钟</span>
+            <span>{{ learningCourse.creditHours }} 学时</span>
+            <span v-if="learningCourse.dueDate">截止 {{ learningCourse.dueDate }}</span>
+          </div>
           <ElProgress :percentage="learningProgress" :stroke-width="12" />
           <ElAlert
             title="学习时长和进度由服务端递增记录，不能倒退；达到最低时长后方可完成。"
@@ -139,11 +145,19 @@
             ><ArtSvgIcon icon="ri:external-link-line" />打开课程资源</ElButton
           >
         </div>
-        <template #footer="{ api }"
-          ><ElButton @click="api.handleClose()">稍后学习</ElButton
-          ><ElButton type="primary" :loading="submitting" @click="saveLearning(false)"
+        <template #footer="{ loading, api }"
+          ><ElButton :disabled="loading" @click="api.handleClose()">稍后学习</ElButton
+          ><ElButton
+            type="primary"
+            :loading="loading && learningAction === 'progress'"
+            :disabled="loading"
+            @click="handleLearningConfirm(api, 'progress', $event)"
             >保存进度</ElButton
-          ><ElButton type="success" :loading="submitting" @click="saveLearning(true)"
+          ><ElButton
+            type="success"
+            :loading="loading && learningAction === 'complete'"
+            :disabled="loading"
+            @click="handleLearningConfirm(api, 'complete', $event)"
             >完成学习</ElButton
           ></template
         >
@@ -156,11 +170,13 @@
 <script setup lang="tsx">
   import MasterDataDeleteGuard from '@/components/business/master-data-delete-guard/index.vue'
   import { useRecordDeleteGuard } from '@/hooks/core/useRecordDeleteGuard'
+  import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
 
   import { toDictionaryOption } from '@/utils/form/option'
 
   import type { FormRules } from 'element-plus'
-  import { ElProgress } from 'element-plus'
+  import { ElMessage, ElProgress } from 'element-plus'
   import type { EmployeeIntegrationItem } from '@/api/integration/employees'
   import type { SearchFormItem } from '@/components/core/forms/art-search-bar/index.vue'
   import type {
@@ -182,6 +198,7 @@
   import ArtSvgIcon from '@/components/core/base/art-svg-icon/index.vue'
   import BusinessTableIdentityCell from '@/components/business/business-table-identity-cell/index.vue'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
+  import ArtEntitySummary from '@/components/core/surfaces/art-entity-summary/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import ArtForm, { type FormItem } from '@/components/core/forms/art-form/index.vue'
   import BusinessWorkspaceHeader, {
@@ -212,6 +229,8 @@
   type CourseParams = SmisCourseSearchParams & Pick<Api.Common.PaginationParams, 'current' | 'size'>
   type RecordParams = SmisCourseLearningSearchParams &
     Pick<Api.Common.PaginationParams, 'current' | 'size'>
+  type LearningAction = 'progress' | 'complete'
+  type LearningFooterApi = Pick<ArtDialogExpose, 'handleConfirm' | 'confirmLoading'>
   const userStore = useUserStore()
   const { hasAuth } = useAuth()
   const { getDictMap } = storeToRefs(userStore)
@@ -243,6 +262,10 @@
   const learningCourse = ref<SmisLearningCourse>()
   const learningOpenedAt = ref(0)
   const learningProgress = ref(0)
+  const learningAction = ref<LearningAction>('progress')
+  const learningSession = useArtOverlaySession(() =>
+    Boolean(unref(learningDialogRef.value?.visible))
+  )
   const createCourse = (): SmisCoursePayload => ({
     courseName: '',
     courseCategory: 'safety_production',
@@ -546,37 +569,64 @@
   }
   const openLearning = async (row: SmisLearningCourse) => {
     if (!row.assignmentId) return
+    learningSession.invalidate()
     learningCourse.value = row
     learningProgress.value = Number(row.progressPercent ?? 0)
     learningOpenedAt.value = Date.now()
+    learningAction.value = 'progress'
     await learningDialogRef.value?.handleOpen(undefined, {
-      title: row.learningStatus === 'in_progress' ? '继续学习' : '开始学习'
+      title: row.learningStatus === 'in_progress' ? '继续学习' : '开始学习',
+      onConfirm: saveLearning
     })
   }
   const openResource = () => {
     if (learningCourse.value?.resourceUrl)
       window.open(learningCourse.value.resourceUrl, '_blank', 'noopener,noreferrer')
   }
-  const saveLearning = async (complete: boolean) => {
+  const saveLearning = async (): Promise<boolean> => {
     const row = learningCourse.value
-    if (!row?.assignmentId) return
+    if (!row?.assignmentId) return false
+    const session = learningSession.version.value
+    const complete = learningAction.value === 'complete'
     try {
-      submitting.value = true
       const elapsed = Math.max(Math.floor((Date.now() - learningOpenedAt.value) / 1000), 0)
       await updateCourseLearning(
         row.assignmentId,
         complete ? 100 : Math.max(learningProgress.value, 10),
         elapsed,
-        complete
+        complete,
+        { showMessage: false, showErrorMessage: false }
       )
-      await learningDialogRef.value?.handleClose(true)
+      if (learningSession.isCurrent(session)) {
+        if (complete) {
+          ElMessage.closeAll()
+          ElMessage.success('课程学习已完成')
+        }
+        await learningDialogRef.value?.handleClose(true)
+      }
       await Promise.all([
         courseTableRef.value?.refreshUpdate(),
         recordTableRef.value?.refreshUpdate()
       ])
-    } finally {
-      submitting.value = false
+      return true
+    } catch (error) {
+      if (learningSession.isCurrent(session)) {
+        notifyFriendlyError(
+          error,
+          complete ? '完成学习失败，请稍后重试' : '学习进度保存失败，请重试'
+        )
+      }
+      return false
     }
+  }
+  const handleLearningConfirm = (
+    api: LearningFooterApi,
+    action: LearningAction,
+    event: MouseEvent
+  ): void => {
+    if (api.confirmLoading.value) return
+    learningAction.value = action
+    void api.handleConfirm(event)
   }
   const courseMore = (row: SmisLearningCourse): ButtonMoreItem[] => [
     {
@@ -891,41 +941,14 @@
   }
 
   .course-page__learning-cover {
-    display: grid;
-    place-items: center;
     height: 210px;
     overflow: hidden;
-    font-size: 64px;
-    color: var(--theme-color);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--theme-color) 13%, var(--el-bg-color)),
-      var(--el-fill-color-lighter)
-    );
+    background: var(--el-fill-color-lighter);
     border-radius: var(--custom-radius);
 
     .el-image {
       width: 100%;
       height: 100%;
-    }
-  }
-
-  .course-page__learning-summary {
-    h3 {
-      margin: 10px 0 6px;
-      font-size: 20px;
-    }
-
-    p {
-      color: var(--el-text-color-secondary);
-    }
-
-    div {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 13px;
-      color: var(--el-text-color-secondary);
     }
   }
 </style>
