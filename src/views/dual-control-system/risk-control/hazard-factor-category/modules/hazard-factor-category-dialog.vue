@@ -3,7 +3,9 @@
     <div class="hazard-factor-category-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:shield-check-line" /></template>
-        <strong>{{ targetTenantName }} · 风险辨识基础口径</strong>
+        <strong class="wrap-anywhere whitespace-normal!">
+          {{ targetTenantName }} · 风险辨识基础口径
+        </strong>
         <p>因素类型用于一级分组，类别用于具体风险项；禁用后保留历史数据。</p>
       </ArtEntitySummary>
 

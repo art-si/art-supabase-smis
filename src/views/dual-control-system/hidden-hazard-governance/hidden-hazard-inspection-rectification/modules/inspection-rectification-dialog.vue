@@ -34,6 +34,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import dayjs from 'dayjs'
@@ -61,6 +62,7 @@
 
   const emit = defineEmits<{ success: [] }>()
   const dialogRef = ref<ArtDialogExpose<InspectionRectificationDialogOpenData>>()
+  const session = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const formRef = ref<FormExpose>()
   const records = ref<SmisRectificationNoticeRecord[]>([])
   const loadError = ref(false)
@@ -154,18 +156,23 @@
     }
   }
   const loadRecords = async (): Promise<void> => {
-    if (!recordsLoader.value) return
+    const loader = recordsLoader.value
+    if (!loader) return
+    const version = session.invalidate()
+    if (!session.isCurrent(version)) return
     loadError.value = false
     dialogRef.value?.setLoading(true)
     try {
-      records.value = await recordsLoader.value()
+      const loadedRecords = await loader()
+      if (session.isCurrent(version)) records.value = loadedRecords
     } catch {
-      loadError.value = true
+      if (session.isCurrent(version)) loadError.value = true
     } finally {
-      dialogRef.value?.setLoading(false)
+      if (session.isCurrent(version)) dialogRef.value?.setLoading(false)
     }
   }
   const handleOpen = async (data: InspectionRectificationDialogOpenData): Promise<void> => {
+    session.invalidate()
     records.value = data.records
     loadError.value = false
     recordsLoader.value = data.loadRecords
@@ -178,9 +185,22 @@
       loading: Boolean(data.loadRecords),
       loadingText: '正在加载待整改隐患…',
       onOpen: async () => {
-        await Promise.all([nextTick().then(() => formRef.value?.clearValidate()), loadRecords()])
+        const recordsRequest = loadRecords()
+        const version = session.version.value
+        await Promise.all([
+          nextTick().then(() => {
+            if (session.isCurrent(version)) formRef.value?.clearValidate()
+          }),
+          recordsRequest
+        ])
       },
-      onConfirm: handleSubmit
+      onConfirm: handleSubmit,
+      onClose: () => {
+        session.invalidate()
+      },
+      onReset: () => {
+        session.invalidate()
+      }
     })
   }
   defineExpose({ handleOpen })

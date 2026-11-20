@@ -3,7 +3,9 @@
     <div class="special-operation-catalog-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon :icon="contextIcon" /></template>
-        <strong>{{ targetTenantName }} · {{ title }}</strong>
+        <strong class="wrap-anywhere whitespace-normal!"
+          >{{ targetTenantName }} · {{ title }}</strong
+        >
         <p>{{ contextDescription }}</p>
       </ArtEntitySummary>
 

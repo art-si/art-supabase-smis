@@ -12,7 +12,9 @@
     <div class="operation-type-dialog">
       <ArtEntitySummary spaced>
         <template #icon><ArtSvgIcon icon="ri:tools-line" /></template>
-        <strong>{{ targetTenantName }} · 作业类型主数据</strong>
+        <strong class="wrap-anywhere whitespace-normal!">
+          {{ targetTenantName }} · 作业类型主数据
+        </strong>
         <p>基础信息统一作业票入口；专有字段仅对当前作业类型生效，可按现场业务继续扩展。</p>
       </ArtEntitySummary>
 

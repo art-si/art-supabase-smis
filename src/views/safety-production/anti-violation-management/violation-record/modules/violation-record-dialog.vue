@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { normalizeNullableText } from '@/utils/form/normalize'
@@ -76,6 +77,7 @@
 
   const emit = defineEmits<{ success: [mode: ViolationRecordDialogMode] }>()
   const dialogRef = ref<ArtDialogExpose<ViolationRecordDialogOpenData>>()
+  const session = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const recordTenantId = ref<string>()
   const formRef = ref<FormExpose>()
   const mode = ref<ViolationRecordDialogMode>('add')
@@ -250,6 +252,7 @@
   watch(
     standardSelection,
     (rows) => {
+      if (!unref(dialogRef.value?.visible)) return
       form.model.deductionPoints = rows.reduce(
         (total, item) => total + Number(item.deductionPoints || 0),
         0
@@ -294,14 +297,15 @@
     }
   ]
 
-  const resetForm = async (): Promise<void> => {
+  const resetForm = async (version: number): Promise<void> => {
+    if (!session.isCurrent(version)) return
     Object.assign(form.model, createInitialForm())
     violatorSelection.value = []
     checkerSelection.value = []
     siteSelection.value = []
     standardSelection.value = []
     await nextTick()
-    formRef.value?.clearValidate()
+    if (session.isCurrent(version)) formRef.value?.clearValidate()
   }
 
   const initializeFromRow = (row: SmisViolationRecord): void => {
@@ -362,21 +366,26 @@
   }
 
   const loadOptions = async (): Promise<void> => {
-    if (!optionsLoader.value) return
+    const loader = optionsLoader.value
+    if (!loader) return
+    const version = session.invalidate()
+    if (!session.isCurrent(version)) return
     optionsError.value = false
     dialogRef.value?.setLoading(true)
     try {
-      const options = await optionsLoader.value()
+      const options = await loader()
+      if (!session.isCurrent(version)) return
       sites.value = options.sites
       standards.value = options.standards
     } catch {
-      optionsError.value = true
+      if (session.isCurrent(version)) optionsError.value = true
     } finally {
-      dialogRef.value?.setLoading(false)
+      if (session.isCurrent(version)) dialogRef.value?.setLoading(false)
     }
   }
 
   const handleOpen = async (data: ViolationRecordDialogOpenData): Promise<void> => {
+    const version = session.invalidate()
     mode.value = data.mode
     recordTenantId.value = data.row?.tenantId
     sites.value = data.sites
@@ -397,15 +406,22 @@
       loadingText: '正在加载场所和违章标准…',
       onOpen: async (_data, api) => {
         try {
-          await resetForm()
+          await resetForm(version)
+          if (!session.isCurrent(version)) return
           form.model.operation = data.mode
           if (data.row) initializeFromRow(data.row)
           await loadOptions()
         } finally {
-          api.setLoading(false)
+          if (session.isCurrent(version)) api.setLoading(false)
         }
       },
-      onConfirm: handleSubmit
+      onConfirm: handleSubmit,
+      onClose: () => {
+        session.invalidate()
+      },
+      onReset: () => {
+        session.invalidate()
+      }
     })
   }
 

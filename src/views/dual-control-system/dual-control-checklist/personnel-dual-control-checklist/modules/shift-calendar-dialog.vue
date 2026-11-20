@@ -64,8 +64,9 @@
 </template>
 
 <script setup lang="ts">
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import dayjs from 'dayjs'
-  import { computed, nextTick, ref } from 'vue'
+  import { computed, nextTick, ref, unref } from 'vue'
   import ArtDialog from '@/components/core/dialogs/art-dialog/index.vue'
   import type { ArtDialogExpose } from '@/components/core/dialogs/art-dialog/types'
   import {
@@ -81,6 +82,7 @@
   }
 
   const dialogRef = ref<ArtDialogExpose<ShiftCalendarOpenData>>()
+  const session = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const employee = ref<SmisPersonnelChecklistRecord>()
   const calendar = ref<SmisEmployeeShiftCalendar | null>(null)
   const month = ref(dayjs().format('YYYY-MM'))
@@ -96,15 +98,21 @@
   }
   const loadCalendar = async (): Promise<void> => {
     if (!employee.value) return
-    calendarDate.value = dayjs(`${month.value}-01`).toDate()
+    const employeeId = employee.value.id
+    const requestedMonth = month.value
+    const version = session.invalidate()
+    if (!session.isCurrent(version)) return
+    calendarDate.value = dayjs(`${requestedMonth}-01`).toDate()
     dialogRef.value?.setLoading(true)
     try {
-      calendar.value = await fetchEmployeeShiftCalendar(employee.value.id, month.value)
+      const loadedCalendar = await fetchEmployeeShiftCalendar(employeeId, requestedMonth)
+      if (session.isCurrent(version)) calendar.value = loadedCalendar
     } finally {
-      dialogRef.value?.setLoading(false)
+      if (session.isCurrent(version)) dialogRef.value?.setLoading(false)
     }
   }
   const handleOpen = async (data: ShiftCalendarOpenData): Promise<void> => {
+    const version = session.invalidate()
     employee.value = data.employee
     month.value = data.month || dayjs().format('YYYY-MM')
     calendar.value = null
@@ -114,7 +122,14 @@
       loading: true,
       onOpen: async () => {
         await nextTick()
+        if (!session.isCurrent(version)) return
         await loadCalendar()
+      },
+      onClose: () => {
+        session.invalidate()
+      },
+      onReset: () => {
+        session.invalidate()
       }
     })
   }

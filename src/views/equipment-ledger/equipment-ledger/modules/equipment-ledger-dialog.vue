@@ -43,6 +43,7 @@
   import { toDictionaryOption } from '@/utils/form/option'
 
   import { notifyFriendlyError } from '@/hooks/core/useArtFeedback'
+  import { useArtOverlaySession } from '@/hooks/core/useArtOverlay'
   import { validateArtFormForSubmit } from '@/utils/form/validate-art-form'
   import { ElButton, type FormRules } from 'element-plus'
   import { uniq, uniqBy } from 'lodash-es'
@@ -163,6 +164,7 @@
   const { getDictMap, getUserInfo } = storeToRefs(userStore)
   const activeFormTab = ref('basicSection')
   const dialogRef = ref<ArtDialogExpose<EquipmentLedgerDialogOpenData>>()
+  const session = useArtOverlaySession(() => Boolean(unref(dialogRef.value?.visible)))
   const loadError = ref<string | null>(null)
   const currentOpenData = shallowRef<EquipmentLedgerDialogOpenData>()
   const formRef = ref<FormExpose>()
@@ -939,12 +941,13 @@
       safetyValveIds: [...form.model.safetyValveIds]
     }
   }
-  const resetForm = async () => {
+  const resetForm = async (requestVersion: number): Promise<void> => {
     Object.assign(form.model, initialForm())
     supplierSelection.value = []
     pressureGaugeSelection.value = []
     safetyValveSelection.value = []
     await nextTick()
+    if (requestVersion !== session.version.value) return
     formRef.value?.clearValidate()
   }
   const handleSubmit = async (): Promise<boolean> => {
@@ -958,11 +961,19 @@
       return false
     }
   }
-  const prepareForm = async (data: EquipmentLedgerDialogOpenData): Promise<void> => {
-    await resetForm()
+  const prepareForm = async (
+    data: EquipmentLedgerDialogOpenData,
+    requestVersion: number
+  ): Promise<void> => {
+    await resetForm(requestVersion)
+    if (!session.isCurrent(requestVersion)) return
     source.categoryTree = data.categoryTree
     source.locationTree = data.locationTree
-    if (data.loadDetail) data.row = await data.loadDetail()
+    if (data.loadDetail) {
+      const row = await data.loadDetail()
+      if (!session.isCurrent(requestVersion)) return
+      data.row = row
+    }
     if (data.row) {
       Object.assign(form.model, {
         ...data.row,
@@ -1014,10 +1025,13 @@
           : initialForm().boiler
       })
       supplierSelection.value = data.row.supplier ? [{ ...data.row.supplier }] : []
-      ;[pressureGaugeSelection.value, safetyValveSelection.value] = await Promise.all([
+      const [pressureGaugeRows, safetyValveRows] = await Promise.all([
         selectedRows(data.row.pressureGaugeIds, 'pressure_gauge'),
         selectedRows(data.row.safetyValveIds, 'safety_valve')
       ])
+      if (!session.isCurrent(requestVersion)) return
+      pressureGaugeSelection.value = pressureGaugeRows
+      safetyValveSelection.value = safetyValveRows
     } else {
       form.model.categoryId = data.presetCategoryId || ''
       form.model.locationId = data.presetLocationId
@@ -1027,10 +1041,12 @@
   const loadInitialData = async (): Promise<void> => {
     const data = currentOpenData.value
     if (!data) return
+    const requestVersion = session.invalidate()
     loadError.value = null
     dialogRef.value?.setLoading(true)
     try {
-      await prepareForm(data)
+      await prepareForm(data, requestVersion)
+      if (!session.isCurrent(requestVersion)) return
       await Promise.all([
         numberRule.loadRule(),
         ...[
@@ -1047,12 +1063,14 @@
         formRef.value?.reloadOptions('managingOrganizationId')
       ])
     } catch (error) {
+      if (!session.isCurrent(requestVersion)) return
       loadError.value = getFriendlySupabaseErrorMessage(error, '设备资料加载失败，请重新加载后重试')
     } finally {
-      dialogRef.value?.setLoading(false)
+      if (session.isCurrent(requestVersion)) dialogRef.value?.setLoading(false)
     }
   }
   const handleOpen = async (data: EquipmentLedgerDialogOpenData): Promise<void> => {
+    session.invalidate()
     currentOpenData.value = data
     loadError.value = null
     await dialogRef.value?.handleOpen(data, {
@@ -1069,9 +1087,13 @@
       loading: true,
       onOpen: loadInitialData,
       onConfirm: async () => (loadError.value ? false : handleSubmit()),
+      onClose: () => {
+        session.invalidate()
+      },
       onReset: () => {
+        const requestVersion = session.invalidate()
         currentOpenData.value = undefined
-        void resetForm()
+        void resetForm(requestVersion)
       }
     })
   }
